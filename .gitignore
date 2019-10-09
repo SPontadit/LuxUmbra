@@ -1,3 +1,16 @@
+# Libs docs, tests & examples folders
+libs/volk/test/
+libs/glfw-3.3/docs/
+libs/glm/doc/
+libs/glm/test/
+libs/stb/data/
+libs/stb/docs/
+libs/stb/tests/
+libs/tinyobjloader/examples/
+libs/tinyobjloader/tests/
+libs/tinyobjloader/pybind11/docs/
+libs/tinyobjloader/pybind11/tests/
+
 # User-specific files
 *.rsuser
 *.suo
