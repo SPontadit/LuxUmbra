@@ -16,7 +16,7 @@ namespace lux
 	template<class T, class... Types>
 	void Logger::Log(T arg1, Types... arg2)
 	{
-		std::cout << arg1 << " ";
+		std::cout << arg1 << ' ';
 		Log(arg2...);
 	}
 
@@ -25,13 +25,13 @@ namespace lux
 	{
 		switch (logLevel)
 		{
-		case LogLevel::LOG_EVEL_INFO:
+		case LogLevel::LOG_LEVEL_INFO:
 			std::cout << "[INFO] ";
 			break;
-		case LogLevel::LOG_EVEL_WARNING:
+		case LogLevel::LOG_LEVEL_WARNING:
 			std::cout << "[WARNING] ";
 			break;
-		case LogLevel::LOG_EVEL_ERROR:
+		case LogLevel::LOG_LEVEL_ERROR:
 			std::cout << "[ERROR] ";
 			break;
 		default:
