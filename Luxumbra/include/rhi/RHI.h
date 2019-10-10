@@ -1,6 +1,8 @@
 #ifndef RHI_H_INCLUDED
 #define RHI_H_INCLUDED
 
+#include "Luxumbra.h"
+
 #include "Window.h"
 
 namespace lux::rhi

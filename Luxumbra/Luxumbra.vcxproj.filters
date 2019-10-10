@@ -62,6 +62,9 @@
     <ClInclude Include="include\rhi\LuxVkImpl.h">
       <Filter>Header Files\RHI</Filter>
     </ClInclude>
+    <ClInclude Include="include\Luxumbra.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="include\Logger.inl">

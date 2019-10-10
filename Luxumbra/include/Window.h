@@ -1,7 +1,7 @@
 #ifndef WINDOW_H_INCLUDED
 #define WINDOW_H_INCLUDED
 
-#include <stdint.h>
+#include "Luxumbra.h"
 
 namespace lux
 {

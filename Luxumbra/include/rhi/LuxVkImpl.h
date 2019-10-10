@@ -1,6 +1,8 @@
 #ifndef LUX_VK_IMPL_H_INCLUDED
 #define LUX_VK_IMPL_H_INCLUDED
 
+#include "Luxumbra.h"
+
 #include "volk\volk.h"
 
 #ifdef _DEBUG

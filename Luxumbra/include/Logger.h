@@ -1,6 +1,8 @@
 #ifndef LOGGER_H_INCLUDED
 #define LOGGER_H_INCLUDED
 
+#include "Luxumbra.h"
+
 namespace lux
 {
 

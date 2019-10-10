@@ -1,7 +1,7 @@
 #ifndef ENGINE_H_INCLUDED
 #define ENGINE_H_INCLUDED
 
-#include <stdint.h>
+#include "Luxumbra.h"
 
 #include "Window.h"
 #include "rhi/RHI.h"

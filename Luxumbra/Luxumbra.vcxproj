@@ -149,6 +149,7 @@
     <ClInclude Include="..\libs\volk\volk.h" />
     <ClInclude Include="include\Engine.h" />
     <ClInclude Include="include\Logger.h" />
+    <ClInclude Include="include\Luxumbra.h" />
     <ClInclude Include="include\rhi\LuxVkImpl.h" />
     <ClInclude Include="include\rhi\RHI.h" />
     <ClInclude Include="include\Window.h" />
