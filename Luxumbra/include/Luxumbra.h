@@ -5,7 +5,7 @@
 
 #include <memory>
 
-#define SIZE_T(x) static_cast<size_t>(x)
-#define UINT32_T(x) static_cast<uint32_t>(x)
+#define TO_SIZE_T(x) static_cast<size_t>(x)
+#define TO_UINT32_T(x) static_cast<uint32_t>(x)
 
 #endif // LUXUMBRA_H_INCLUDED
