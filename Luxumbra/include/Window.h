@@ -3,6 +3,14 @@
 
 #include "Luxumbra.h"
 
+
+#ifdef _WIN32
+#define GLFW_EXPOSE_NATIVE_WIN32
+#endif // _WIN32
+
+#include "GLFW\glfw3.h"
+#include "GLFW\glfw3native.h"
+
 namespace lux
 {
 
@@ -22,6 +30,8 @@ namespace lux
 
 	private:
 		bool isInitialized;
+
+		std::unique_ptr<GLFWwindow, decltype(&glfwDestroyWindow)> window;
 	};
 
 } // namespace lux
