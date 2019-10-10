@@ -6,11 +6,11 @@
 namespace lux
 {
 
-	enum class LOG_LEVEL
+	enum class LogLevel
 	{
-		INFO = 0,
-		WARNING = 1,
-		ERROR = 2
+		LOG_LEVEL_INFO = 0,
+		LOG_LEVEL_WARNING = 1,
+		LOG_LEVEL_ERROR = 2
 	};
 
 	class Logger
@@ -23,7 +23,7 @@ namespace lux
 		static void Log(T arg1, Types... arg2);
 
 		template<class T, class... Types>
-		static void Log(LOG_LEVEL logLevel, T arg1, Types... arg2);
+		static void Log(LogLevel logLevel, T arg1, Types... arg2);
 	};
 
 }
