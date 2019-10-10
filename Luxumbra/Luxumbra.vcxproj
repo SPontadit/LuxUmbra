@@ -139,15 +139,22 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\libs\volk\volk.c" />
     <ClCompile Include="source\Engine.cpp" />
     <ClCompile Include="source\main.cpp" />
     <ClCompile Include="source\rhi\RHI.cpp" />
     <ClCompile Include="source\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\libs\volk\volk.h" />
     <ClInclude Include="include\Engine.h" />
+    <ClInclude Include="include\Logger.h" />
+    <ClInclude Include="include\rhi\LuxVkImpl.h" />
     <ClInclude Include="include\rhi\RHI.h" />
     <ClInclude Include="include\Window.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="include\Logger.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

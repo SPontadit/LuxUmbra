@@ -19,6 +19,12 @@
     <Filter Include="Source Files\RHI">
       <UniqueIdentifier>{a668ff6d-60e2-45bd-85a9-968b1d9125a2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\RHI\Volk">
+      <UniqueIdentifier>{8781e80b-7dba-4247-9621-56916e1bd496}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\RHI\Volk">
+      <UniqueIdentifier>{2f71b992-0379-41b7-8ba0-6371524a068d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\main.cpp">
@@ -33,6 +39,9 @@
     <ClCompile Include="source\rhi\RHI.cpp">
       <Filter>Source Files\RHI</Filter>
     </ClCompile>
+    <ClCompile Include="..\libs\volk\volk.c">
+      <Filter>Source Files\RHI\Volk</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\rhi\RHI.h">
@@ -44,5 +53,19 @@
     <ClInclude Include="include\Window.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\libs\volk\volk.h">
+      <Filter>Header Files\RHI\Volk</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Logger.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\rhi\LuxVkImpl.h">
+      <Filter>Header Files\RHI</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="include\Logger.inl">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
