@@ -42,6 +42,9 @@
     <ClCompile Include="..\libs\volk\volk.c">
       <Filter>Source Files\RHI\Volk</Filter>
     </ClCompile>
+    <ClCompile Include="source\Utility.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\rhi\RHI.h">
@@ -63,6 +66,9 @@
       <Filter>Header Files\RHI</Filter>
     </ClInclude>
     <ClInclude Include="include\Luxumbra.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Utility.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
