@@ -3,9 +3,8 @@
 
 #include "volk\volk.h"
 
-#include "Logger.h"
-
 #ifdef _DEBUG
+#include "Logger.h"
 #define CHECK_VK(vkFunctionCall) if (VK_SUCCESS != (vkFunctionCall)) { Logger::Log(#vkFunctionCall); __debugbreak(); }
 #else // !DEBUG
 #define CHECK_VK(vkFunctionCall) vkFunctionCall
