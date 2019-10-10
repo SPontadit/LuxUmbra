@@ -31,4 +31,9 @@ namespace lux
 
 		return true;
 	}
+
+	HWND Window::GetHandle() const
+	{
+		return glfwGetWin32Window(window.get());
+	}
 }

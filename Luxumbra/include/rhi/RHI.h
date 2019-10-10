@@ -3,6 +3,9 @@
 
 #include "Luxumbra.h"
 
+#include <vector>
+
+#include "rhi\LuxVkImpl.h"
 #include "Window.h"
 
 namespace lux::rhi
@@ -22,8 +25,33 @@ namespace lux::rhi
 
 		bool Initialize(const Window& window);
 
+		static const uint32_t SWAPCHAIN_MIN_IMAGE_COUNT = 2;
+
 	private:
 		bool isInitialized;
+
+		VkInstance instance;
+		VkSurfaceKHR surface;
+		VkPhysicalDevice physicalDevice;
+		VkDevice device;
+
+		uint32_t graphicsQueueIndex;
+		uint32_t presentQueueIndex;
+		VkQueue graphicsQueue;
+		VkQueue presentQueue;
+
+		VkFormat swapchainImageFormat;
+		VkExtent2D swapchainExtent;
+		VkSwapchainKHR swapchain;
+		uint32_t swapchainImageCount;
+		std::vector<VkImage> swapchainImages;
+		std::vector<VkImageView> swapchainImageViews;
+
+		VkDebugReportCallbackEXT debugReportCallback;
+
+#ifdef VULKAN_ENABLE_VALIDATION
+		static VKAPI_ATTR VkBool32 VKAPI_CALL VulkanDebugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData);
+#endif // VULKAN_ENABLE_VALIDATION
 	};
 
 } // namespace lux::rhi

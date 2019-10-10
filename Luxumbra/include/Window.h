@@ -28,6 +28,8 @@ namespace lux
 
 		bool Initialize(uint32_t width, uint32_t height);
 
+		HWND GetHandle() const;
+
 	private:
 		bool isInitialized;
 
