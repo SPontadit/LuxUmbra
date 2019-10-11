@@ -49,8 +49,26 @@ namespace lux::rhi
 		std::vector<VkImage> swapchainImages;
 		std::vector<VkImageView> swapchainImageViews;
 
+		VkRenderPass forwardRenderPass;
+
+		enum ForwardAttachmentBindPoints : uint32_t
+		{
+			FORWARD_SWAPCHAIN_ATTACHMENT_BIND_POINT = 0,
+			FORWARD_RT_COLOR_ATTACHMENT_BIND_POINT,
+			FORWARD_RT_DEPTH_ATTACHMENT_BIND_POINT,
+			FORWARD_ATTACHMENT_BIND_POINT_COUNT
+		};
+
+		enum ForwardSubpassess : uint32_t
+		{
+			FORWARD_SUBPASS_RENDER_TO_TARGET = 0,
+			FORWARD_SUBPASS_COPY,
+			FORWARD_SUBPASS_COUNT
+		};
+
 		void InitInstanceAndDevice(const Window& window);
 		void InitSwapchain();
+		void InitForwardRenderPass();
 
 		uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const noexcept;
 		VkFormat FindSupportedImageFormat(const std::vector<VkFormat>& formats, VkImageTiling tiling, VkFormatFeatureFlags features) const;

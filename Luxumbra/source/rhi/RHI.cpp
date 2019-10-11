@@ -1,5 +1,7 @@
 #include "rhi\RHI.h"
 
+#include <array>
+
 namespace lux::rhi
 {
 	RHI::RHI()
@@ -24,6 +26,8 @@ namespace lux::rhi
 		InitInstanceAndDevice(window);
 
 		InitSwapchain();
+		
+		InitForwardRenderPass();
 
 		// End
 
@@ -318,8 +322,103 @@ namespace lux::rhi
 
 			CHECK_VK(vkCreateImageView(device, &swapchainImageViewCI, nullptr, &swapchainImageViews[TO_SIZE_T(i)]));
 		}
+	}
 
+	void RHI::InitForwardRenderPass()
+	{
+		VkAttachmentDescription swapchainAttachment = {};
+		swapchainAttachment.format = swapchainImageFormat;
+		swapchainAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		swapchainAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		swapchainAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		swapchainAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		swapchainAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		swapchainAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		swapchainAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
+		VkAttachmentDescription rtColorAttachment = {};
+		rtColorAttachment.format = swapchainImageFormat;
+		rtColorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		rtColorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		rtColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		rtColorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		rtColorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		rtColorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		rtColorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+		VkAttachmentDescription rtDepthAttachment = {};
+
+		std::vector<VkFormat> depthAttachmentFormats{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT };
+		rtDepthAttachment.format = FindSupportedImageFormat(depthAttachmentFormats, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+		ASSERT(rtDepthAttachment.format != VK_FORMAT_MAX_ENUM);
+
+		rtDepthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		rtDepthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		rtDepthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		rtDepthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		rtDepthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		rtDepthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		rtDepthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+		VkAttachmentReference swapchainAttachmentRef = {};
+		swapchainAttachmentRef.attachment = FORWARD_SWAPCHAIN_ATTACHMENT_BIND_POINT;
+		swapchainAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+		VkAttachmentReference rtColorAttachmentRef = {};
+		rtColorAttachmentRef.attachment = FORWARD_RT_COLOR_ATTACHMENT_BIND_POINT;
+		rtColorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+		VkAttachmentReference swapchainInputAttachmentRef = {};
+		swapchainInputAttachmentRef.attachment = FORWARD_RT_COLOR_ATTACHMENT_BIND_POINT;
+		swapchainInputAttachmentRef.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		VkAttachmentReference rtDepthAttachmentRef = {};
+		rtDepthAttachmentRef.attachment = 2;
+		rtColorAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+		VkSubpassDescription renderToTargetSubpass = {};
+		renderToTargetSubpass.colorAttachmentCount = FORWARD_RT_DEPTH_ATTACHMENT_BIND_POINT;
+		renderToTargetSubpass.pColorAttachments = &rtColorAttachmentRef;
+		renderToTargetSubpass.pDepthStencilAttachment = &rtDepthAttachmentRef;
+		renderToTargetSubpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+
+		VkSubpassDescription copySubpass = {};
+		copySubpass.colorAttachmentCount = 1;
+		copySubpass.pColorAttachments = &swapchainAttachmentRef;
+		copySubpass.inputAttachmentCount = 1;
+		copySubpass.pInputAttachments = &swapchainInputAttachmentRef;
+		copySubpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+
+		std::array<VkAttachmentDescription, TO_SIZE_T(FORWARD_ATTACHMENT_BIND_POINT_COUNT)> attachments {
+			swapchainAttachment,
+			rtColorAttachment,
+			rtDepthAttachment
+		};
+
+		std::array<VkSubpassDescription, TO_SIZE_T(FORWARD_SUBPASS_COUNT)> subpasses{
+			renderToTargetSubpass,
+			copySubpass
+		};
+
+		VkSubpassDependency subpassDependency = {};
+		subpassDependency.dependencyFlags = 0;
+		subpassDependency.srcSubpass = FORWARD_SUBPASS_RENDER_TO_TARGET;
+		subpassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		subpassDependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		subpassDependency.dstSubpass = FORWARD_SUBPASS_COPY;
+		subpassDependency.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		subpassDependency.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+		VkRenderPassCreateInfo renderPassCI = {};
+		renderPassCI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+		renderPassCI.attachmentCount = FORWARD_ATTACHMENT_BIND_POINT_COUNT;
+		renderPassCI.pAttachments = attachments.data();
+		renderPassCI.subpassCount = FORWARD_SUBPASS_COUNT;
+		renderPassCI.pSubpasses = subpasses.data();
+		renderPassCI.dependencyCount = 1;
+		renderPassCI.pDependencies = &subpassDependency;
+
+		CHECK_VK(vkCreateRenderPass(device, &renderPassCI, nullptr, &forwardRenderPass));
 	}
 
 	uint32_t RHI::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const noexcept
