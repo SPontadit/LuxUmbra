@@ -8,6 +8,7 @@
 #include "rhi\LuxVkImpl.h"
 #include "Window.h"
 #include "GraphicsPipeline.h"
+#include "ForwardRenderPass.h"
 #include "Buffer.h"
 
 namespace lux::rhi
@@ -16,16 +17,16 @@ namespace lux::rhi
 	class RHI
 	{
 	public:
-		RHI();
+		RHI() noexcept;
 		RHI(const RHI&) = delete;
 		RHI(RHI&&) = delete;
 
-		~RHI();
+		~RHI() noexcept;
 
 		const RHI& operator=(const RHI&) = delete;
 		const RHI& operator=(RHI&&) = delete;
 
-		bool Initialize(const Window& window);
+		bool Initialize(const Window& window) noexcept;
 
 		static const uint32_t SWAPCHAIN_MIN_IMAGE_COUNT = 2;
 
@@ -44,6 +45,7 @@ namespace lux::rhi
 
 		VkFormat swapchainImageFormat;
 		VkExtent2D swapchainExtent;
+		VkImageSubresourceRange swapchainImageSubresourceRange;
 		VkSwapchainKHR swapchain;
 		uint32_t swapchainImageCount;
 		std::vector<VkImage> swapchainImages;
@@ -52,30 +54,16 @@ namespace lux::rhi
 		VkCommandPool commandPool;
 		VkCommandBuffer commandBuffer;
 
-		VkRenderPass forwardRenderPass;
+		ForwardRenderer forward;
 
-		enum ForwardAttachmentBindPoints : uint32_t
-		{
-			FORWARD_SWAPCHAIN_ATTACHMENT_BIND_POINT = 0,
-			FORWARD_RT_COLOR_ATTACHMENT_BIND_POINT,
-			FORWARD_RT_DEPTH_ATTACHMENT_BIND_POINT,
-			FORWARD_ATTACHMENT_BIND_POINT_COUNT
-		};
-
-		enum ForwardSubpassess : uint32_t
-		{
-			FORWARD_SUBPASS_RENDER_TO_TARGET = 0,
-			FORWARD_SUBPASS_COPY,
-			FORWARD_SUBPASS_COUNT
-		};
-
-		void InitInstanceAndDevice(const Window& window);
-		void InitSwapchain();
-		void InitForwardRenderPass();
+		void InitInstanceAndDevice(const Window& window) noexcept;
+		void InitSwapchain() noexcept;
 		void InitCommandBuffer() noexcept;
+		void InitForwardRenderPass() noexcept;
+		void InitForwardFramebuffers() noexcept;
 
 		uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const noexcept;
-		VkFormat FindSupportedImageFormat(const std::vector<VkFormat>& formats, VkImageTiling tiling, VkFormatFeatureFlags features) const;
+		VkFormat FindSupportedImageFormat(const std::vector<VkFormat>& formats, VkImageTiling tiling, VkFormatFeatureFlags features) const noexcept;
 
 		void CreateGraphicsPipeline(const GraphicsPipelineCreateInfo& luxGraphicsPipelineCI, GraphicsPipeline& graphicsPipeline) noexcept;
 		void CreateShaderModule(const std::string& binaryFilePath, VkShaderStageFlagBits pipelineStage, VkShaderModule* shaderModule) const noexcept;
