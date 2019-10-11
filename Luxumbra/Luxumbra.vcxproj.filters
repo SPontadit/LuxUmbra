@@ -51,6 +51,9 @@
     <ClCompile Include="source\rhi\RHI_GraphicsPipeline.cpp">
       <Filter>Source Files\RHI</Filter>
     </ClCompile>
+    <ClCompile Include="source\rhi\RHI_Buffer.cpp">
+      <Filter>Source Files\RHI</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\rhi\RHI.h">
@@ -82,6 +85,9 @@
     </ClInclude>
     <ClInclude Include="include\Vertex.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\rhi\Buffer.h">
+      <Filter>Header Files\RHI</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

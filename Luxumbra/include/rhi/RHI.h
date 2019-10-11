@@ -8,6 +8,7 @@
 #include "rhi\LuxVkImpl.h"
 #include "Window.h"
 #include "GraphicsPipeline.h"
+#include "Buffer.h"
 
 namespace lux::rhi
 {
@@ -54,6 +55,10 @@ namespace lux::rhi
 		void CreateGraphicsPipeline(const GraphicsPipelineCreateInfo& luxGraphicsPipelineCI, GraphicsPipeline& graphicsPipeline) noexcept;
 		void CreateShaderModule(const std::string& binaryFilePath, VkShaderStageFlagBits pipelineStage, VkShaderModule* shaderModule) const noexcept;
 		void DestroyGraphicsPipeline(GraphicsPipeline& graphicsPipeline) noexcept;
+
+		void CreateBuffer(const BufferCreateInfo& luxBufferCI, Buffer& buffer) noexcept;
+		void UpdateBuffer(Buffer& buffer, void* newData) noexcept;
+		void DestroyBuffer(Buffer& buffer) noexcept;
 
 #ifdef VULKAN_ENABLE_VALIDATION
 		VkDebugReportCallbackEXT debugReportCallback;

@@ -142,6 +142,7 @@
     <ClCompile Include="..\libs\volk\volk.c" />
     <ClCompile Include="source\Engine.cpp" />
     <ClCompile Include="source\main.cpp" />
+    <ClCompile Include="source\rhi\RHI_Buffer.cpp" />
     <ClCompile Include="source\rhi\RHI_GraphicsPipeline.cpp" />
     <ClCompile Include="source\rhi\RHI.cpp" />
     <ClCompile Include="source\Utility.cpp" />
@@ -153,6 +154,7 @@
     <ClInclude Include="include\Engine.h" />
     <ClInclude Include="include\Logger.h" />
     <ClInclude Include="include\Luxumbra.h" />
+    <ClInclude Include="include\rhi\Buffer.h" />
     <ClInclude Include="include\rhi\LuxVkImpl.h" />
     <ClInclude Include="include\rhi\GraphicsPipeline.h" />
     <ClInclude Include="include\rhi\RHI.h" />
