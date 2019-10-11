@@ -21,7 +21,19 @@ namespace lux::rhi
 	{
 		CHECK_VK(volkInitialize());
 
+		InitInstanceAndDevice(window);
 
+		InitSwapchain();
+
+		// End
+
+		isInitialized = true;
+
+		return true;
+	}
+
+	void RHI::InitInstanceAndDevice(const Window& window)
+	{
 		// Instance
 
 		VkApplicationInfo appInfo = {};
@@ -195,7 +207,10 @@ namespace lux::rhi
 
 		vkGetDeviceQueue(device, graphicsQueueIndex, 0, &graphicsQueue);
 		vkGetDeviceQueue(device, presentQueueIndex, 0, &presentQueue);
+	}
 
+	void RHI::InitSwapchain()
+	{
 		// Swapchain
 
 		VkSurfaceCapabilitiesKHR surfaceCapabilities;
@@ -304,11 +319,7 @@ namespace lux::rhi
 			CHECK_VK(vkCreateImageView(device, &swapchainImageViewCI, nullptr, &swapchainImageViews[TO_SIZE_T(i)]));
 		}
 
-		// End
 
-		isInitialized = true;
-
-		return true;
 	}
 
 	uint32_t RHI::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const noexcept
@@ -327,7 +338,34 @@ namespace lux::rhi
 		return UINT32_MAX;
 	}
 
+	VkFormat RHI::FindSupportedImageFormat(const std::vector<VkFormat>& formats, VkImageTiling tiling, VkFormatFeatureFlags features) const
+	{
+		ASSERT(tiling == VK_IMAGE_TILING_LINEAR || tiling == VK_IMAGE_TILING_OPTIMAL);
 
+		VkFormatProperties formatProperties;
+
+		for (size_t i = 0, formatCount = formats.size(); i < formatCount; i++)
+		{
+			vkGetPhysicalDeviceFormatProperties(physicalDevice, formats[i], &formatProperties);
+
+			switch (tiling)
+			{
+			case VK_IMAGE_TILING_LINEAR:
+				if ((formatProperties.linearTilingFeatures & features) == features)
+					return formats[i];
+				break;
+
+			case VK_IMAGE_TILING_OPTIMAL:
+				if ((formatProperties.optimalTilingFeatures & features) == features)
+					return formats[i];
+				break;
+			}
+		}
+
+		return VK_FORMAT_MAX_ENUM;
+	}
+
+#ifdef VULKAN_ENABLE_VALIDATION
 	VKAPI_ATTR VkBool32 VKAPI_CALL RHI::VulkanDebugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData)
 	{
 		Logger::Log(layerPrefix, msg);
@@ -341,4 +379,5 @@ namespace lux::rhi
 #endif
 		return VK_FALSE;
 	}
+#endif
 }
