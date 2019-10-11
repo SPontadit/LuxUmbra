@@ -440,6 +440,42 @@ namespace lux::rhi
 		CHECK_VK(vkAllocateCommandBuffers(device, &commandBufferAI, &commandBuffer));
 	}
 
+	VkCommandBuffer RHI::BeginSingleTimeCommandBuffer() const noexcept
+	{
+		VkCommandBufferAllocateInfo commandBufferAI = {};
+		commandBufferAI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		commandBufferAI.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		commandBufferAI.commandBufferCount = 1;
+		commandBufferAI.commandPool = commandPool;
+
+		VkCommandBuffer commandBuffer;
+		CHECK_VK(vkAllocateCommandBuffers(device, &commandBufferAI, &commandBuffer));
+
+
+		VkCommandBufferBeginInfo commandBufferCI = {};
+		commandBufferCI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		commandBufferCI.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+		CHECK_VK(vkBeginCommandBuffer(commandBuffer, &commandBufferCI));
+	
+		return commandBuffer;
+	}
+
+	void RHI::EndSingleTimeCommandBuffer(VkCommandBuffer& commandBuffer) const noexcept
+	{
+		CHECK_VK(vkEndCommandBuffer(commandBuffer));
+
+		VkSubmitInfo submitInfo = {};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &commandBuffer;
+
+		CHECK_VK(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
+		CHECK_VK(vkQueueWaitIdle(graphicsQueue));
+
+		vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
+	}
+
 	uint32_t RHI::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const noexcept
 	{
 		VkPhysicalDeviceMemoryProperties deviceMemoryProperties;
