@@ -311,6 +311,21 @@ namespace lux::rhi
 		return true;
 	}
 
+	uint32_t RHI::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const noexcept
+	{
+		VkPhysicalDeviceMemoryProperties deviceMemoryProperties;
+		vkGetPhysicalDeviceMemoryProperties(physicalDevice, &deviceMemoryProperties);
+
+		for (uint32_t memoryIndex = 0; memoryIndex < deviceMemoryProperties.memoryTypeCount; memoryIndex++)
+		{
+			if ((typeFilter & (1 << memoryIndex)) && (deviceMemoryProperties.memoryTypes[memoryIndex].propertyFlags & properties) == properties)
+			{
+				return memoryIndex;
+			}
+		}
+	}
+
+
 	VKAPI_ATTR VkBool32 VKAPI_CALL RHI::VulkanDebugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData)
 	{
 		Logger::Log(layerPrefix, msg);
