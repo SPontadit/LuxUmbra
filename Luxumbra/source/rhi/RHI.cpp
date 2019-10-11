@@ -323,6 +323,8 @@ namespace lux::rhi
 				return memoryIndex;
 			}
 		}
+
+		return UINT32_MAX;
 	}
 
 
