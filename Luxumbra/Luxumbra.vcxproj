@@ -142,8 +142,10 @@
     <ClCompile Include="..\libs\volk\volk.c" />
     <ClCompile Include="source\Engine.cpp" />
     <ClCompile Include="source\main.cpp" />
+    <ClCompile Include="source\rhi\RHI_GraphicsPipeline.cpp" />
     <ClCompile Include="source\rhi\RHI.cpp" />
     <ClCompile Include="source\Utility.cpp" />
+    <ClCompile Include="source\Vertex.cpp" />
     <ClCompile Include="source\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -152,8 +154,10 @@
     <ClInclude Include="include\Logger.h" />
     <ClInclude Include="include\Luxumbra.h" />
     <ClInclude Include="include\rhi\LuxVkImpl.h" />
+    <ClInclude Include="include\rhi\GraphicsPipeline.h" />
     <ClInclude Include="include\rhi\RHI.h" />
     <ClInclude Include="include\Utility.h" />
+    <ClInclude Include="include\Vertex.h" />
     <ClInclude Include="include\Window.h" />
   </ItemGroup>
   <ItemGroup>

@@ -7,6 +7,7 @@
 
 #include "rhi\LuxVkImpl.h"
 #include "Window.h"
+#include "GraphicsPipeline.h"
 
 namespace lux::rhi
 {
@@ -49,6 +50,10 @@ namespace lux::rhi
 
 		uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const noexcept;
 
+
+		void CreateGraphicsPipeline(const GraphicsPipelineCreateInfo& luxGraphicsPipelineCI, GraphicsPipeline& graphicsPipeline) noexcept;
+		void CreateShaderModule(const std::string& binaryFilePath, VkShaderStageFlagBits pipelineStage, VkShaderModule* shaderModule) const noexcept;
+		void DestroyGraphicsPipeline(GraphicsPipeline& graphicsPipeline) noexcept;
 
 #ifdef VULKAN_ENABLE_VALIDATION
 		VkDebugReportCallbackEXT debugReportCallback;
