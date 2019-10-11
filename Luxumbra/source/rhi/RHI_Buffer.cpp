@@ -28,12 +28,12 @@ namespace lux::rhi
 		uint32_t memoryIndex = FindMemoryType(memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 		ASSERT(memoryIndex != UINT32_MAX);
 
-		VkMemoryAllocateInfo memoryAllocateCI = {};
-		memoryAllocateCI.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		memoryAllocateCI.allocationSize = memoryRequirements.size;
-		memoryAllocateCI.memoryTypeIndex = memoryIndex;
+		VkMemoryAllocateInfo memoryAI = {};
+		memoryAI.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		memoryAI.allocationSize = memoryRequirements.size;
+		memoryAI.memoryTypeIndex = memoryIndex;
 
-		CHECK_VK(vkAllocateMemory(device, &memoryAllocateCI, nullptr, &buffer.memory));
+		CHECK_VK(vkAllocateMemory(device, &memoryAI, nullptr, &buffer.memory));
 		CHECK_VK(vkBindBufferMemory(device, buffer.buffer, buffer.memory, 0));
 
 		UpdateBuffer(buffer, luxBufferCI.data);
