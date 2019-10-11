@@ -47,9 +47,11 @@ namespace lux::rhi
 		std::vector<VkImage> swapchainImages;
 		std::vector<VkImageView> swapchainImageViews;
 
-		VkDebugReportCallbackEXT debugReportCallback;
+		uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const noexcept;
+
 
 #ifdef VULKAN_ENABLE_VALIDATION
+		VkDebugReportCallbackEXT debugReportCallback;
 		static VKAPI_ATTR VkBool32 VKAPI_CALL VulkanDebugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData);
 #endif // VULKAN_ENABLE_VALIDATION
 	};
