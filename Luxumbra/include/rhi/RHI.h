@@ -49,6 +49,9 @@ namespace lux::rhi
 		std::vector<VkImage> swapchainImages;
 		std::vector<VkImageView> swapchainImageViews;
 
+		VkCommandPool commandPool;
+		VkCommandBuffer commandBuffer;
+
 		VkRenderPass forwardRenderPass;
 
 		enum ForwardAttachmentBindPoints : uint32_t
@@ -69,6 +72,7 @@ namespace lux::rhi
 		void InitInstanceAndDevice(const Window& window);
 		void InitSwapchain();
 		void InitForwardRenderPass();
+		void InitCommandBuffer() noexcept;
 
 		uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const noexcept;
 		VkFormat FindSupportedImageFormat(const std::vector<VkFormat>& formats, VkImageTiling tiling, VkFormatFeatureFlags features) const;

@@ -421,6 +421,25 @@ namespace lux::rhi
 		CHECK_VK(vkCreateRenderPass(device, &renderPassCI, nullptr, &forwardRenderPass));
 	}
 
+	void RHI::InitCommandBuffer() noexcept
+	{
+		VkCommandPoolCreateInfo commandPoolCI = {};
+		commandPoolCI.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		commandPoolCI.queueFamilyIndex = graphicsQueueIndex;
+		commandPoolCI.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+		CHECK_VK(vkCreateCommandPool(device, &commandPoolCI, nullptr, &commandPool));
+
+
+		VkCommandBufferAllocateInfo commandBufferAI = {};
+		commandBufferAI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		commandBufferAI.commandPool = commandPool;
+		commandBufferAI.commandBufferCount = swapchainImageCount;
+		commandBufferAI.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+		CHECK_VK(vkAllocateCommandBuffers(device, &commandBufferAI, &commandBuffer));
+	}
+
 	uint32_t RHI::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const noexcept
 	{
 		VkPhysicalDeviceMemoryProperties deviceMemoryProperties;
