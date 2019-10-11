@@ -3,7 +3,7 @@
 namespace lux
 {
 
-	VkVertexInputBindingDescription Vertex::GetBindingDescription()
+	VkVertexInputBindingDescription Vertex::GetBindingDescription() noexcept
 	{
 		VkVertexInputBindingDescription bindingDescription = {};
 		bindingDescription.binding = 0;
@@ -13,7 +13,7 @@ namespace lux
 		return bindingDescription;
 	}
 
-	std::array<VkVertexInputAttributeDescription, 3> Vertex::GetAttributeDescriptions()
+	std::array<VkVertexInputAttributeDescription, 3> Vertex::GetAttributeDescriptions() noexcept
 	{
 		std::array<VkVertexInputAttributeDescription, 3> attributeDescription = {};
 
@@ -35,7 +35,7 @@ namespace lux
 		return attributeDescription;
 	}
 
-	bool Vertex::operator==(const Vertex& lhs) const
+	bool Vertex::operator==(const Vertex& lhs) const noexcept
 	{
 		return position == lhs.position && textureCoordinate == lhs.textureCoordinate && normal == lhs.normal;
 	}

@@ -16,10 +16,10 @@ namespace lux
 		glm::vec2 textureCoordinate;
 		glm::vec3 normal;
 
-		static VkVertexInputBindingDescription GetBindingDescription();
-		static std::array<VkVertexInputAttributeDescription, 3> GetAttributeDescriptions();
+		static VkVertexInputBindingDescription GetBindingDescription() noexcept;
+		static std::array<VkVertexInputAttributeDescription, 3> GetAttributeDescriptions() noexcept;
 
-		bool operator==(const Vertex& lhs) const;
+		bool operator==(const Vertex& lhs) const noexcept;
 	};
 
 } // namespace lux
