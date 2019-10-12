@@ -146,6 +146,7 @@
     <ClCompile Include="source\rhi\RHI_ForwardRenderer.cpp" />
     <ClCompile Include="source\rhi\RHI_GraphicsPipeline.cpp" />
     <ClCompile Include="source\rhi\RHI.cpp" />
+    <ClCompile Include="source\rhi\RHI_Image.cpp" />
     <ClCompile Include="source\Utility.cpp" />
     <ClCompile Include="source\Vertex.cpp" />
     <ClCompile Include="source\Window.cpp" />
@@ -157,6 +158,7 @@
     <ClInclude Include="include\Luxumbra.h" />
     <ClInclude Include="include\rhi\Buffer.h" />
     <ClInclude Include="include\rhi\ForwardRenderer.h" />
+    <ClInclude Include="include\rhi\Image.h" />
     <ClInclude Include="include\rhi\LuxVkImpl.h" />
     <ClInclude Include="include\rhi\GraphicsPipeline.h" />
     <ClInclude Include="include\rhi\RHI.h" />

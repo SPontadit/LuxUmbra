@@ -8,7 +8,8 @@
 #include "rhi\LuxVkImpl.h"
 #include "Window.h"
 #include "GraphicsPipeline.h"
-#include "ForwardRenderPass.h"
+#include "Image.h"
+#include "ForwardRenderer.h"
 #include "Buffer.h"
 
 namespace lux::rhi
@@ -66,7 +67,9 @@ namespace lux::rhi
 		VkFormat FindSupportedImageFormat(const std::vector<VkFormat>& formats, VkImageTiling tiling, VkFormatFeatureFlags features) const noexcept;
 
 		VkCommandBuffer BeginSingleTimeCommandBuffer() const noexcept;
-		void EndSingleTimeCommandBuffer(VkCommandBuffer& commandBuffer) const noexcept;
+		void EndSingleTimeCommandBuffer(VkCommandBuffer commandBuffer) const noexcept;
+
+		void CommandTransitionImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags subresourceRangeAspectMask) noexcept;
 
 		void CreateGraphicsPipeline(const GraphicsPipelineCreateInfo& luxGraphicsPipelineCI, GraphicsPipeline& graphicsPipeline) noexcept;
 		void CreateShaderModule(const std::string& binaryFilePath, VkShaderStageFlagBits pipelineStage, VkShaderModule* shaderModule) const noexcept;
@@ -75,6 +78,9 @@ namespace lux::rhi
 		void CreateBuffer(const BufferCreateInfo& luxBufferCI, Buffer& buffer) noexcept;
 		void UpdateBuffer(Buffer& buffer, void* newData) noexcept;
 		void DestroyBuffer(Buffer& buffer) noexcept;
+
+		void CreateImage(const ImageCreateInfo& luxImageCI, Image& image) noexcept;
+
 
 #ifdef VULKAN_ENABLE_VALIDATION
 		VkDebugReportCallbackEXT debugReportCallback;

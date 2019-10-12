@@ -1,5 +1,4 @@
 #include "rhi\RHI.h"
-#include "rhi\ForwardRenderPass.h"
 
 #include <array>
 
