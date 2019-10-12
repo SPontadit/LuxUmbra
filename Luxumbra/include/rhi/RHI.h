@@ -73,7 +73,7 @@ namespace lux::rhi
 		VkCommandBuffer BeginSingleTimeCommandBuffer() const noexcept;
 		void EndSingleTimeCommandBuffer(VkCommandBuffer commandBuffer) const noexcept;
 
-		void CommandTransitionImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags subresourceRangeAspectMask) noexcept;
+		void CommandTransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) noexcept;
 
 		void CreateGraphicsPipeline(const GraphicsPipelineCreateInfo& luxGraphicsPipelineCI, GraphicsPipeline& graphicsPipeline) noexcept;
 		void CreateShaderModule(const std::string& binaryFilePath, VkShaderStageFlagBits pipelineStage, VkShaderModule* shaderModule) const noexcept;

@@ -350,6 +350,7 @@ namespace lux::rhi
 
 	void RHI::InitCommandBuffer() noexcept
 	{
+		// TODO: Use present queue
 		VkCommandPoolCreateInfo commandPoolCI = {};
 		commandPoolCI.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 		commandPoolCI.queueFamilyIndex = graphicsQueueIndex;
@@ -433,6 +434,7 @@ namespace lux::rhi
 		submitInfo.signalSemaphoreCount = 1;
 		submitInfo.pSignalSemaphores = presentSemaphore;
 
+		// TODO: Use present queue
 		CHECK_VK(vkQueueSubmit(graphicsQueue, 1, &submitInfo, *fence));
 
 
@@ -445,7 +447,7 @@ namespace lux::rhi
 		presentInfo.pSwapchains = &swapchain;
 		presentInfo.pImageIndices = &imageIndex;
 
-		CHECK_VK(vkQueuePresentKHR(presentQueue, &presentInfo));
+		CHECK_VK(vkQueuePresentKHR(graphicsQueue, &presentInfo));
 
 		frameCount++;
 		currentFrame = frameCount % swapchainImageCount;
@@ -487,7 +489,7 @@ namespace lux::rhi
 		vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
 	}
 
-	void RHI::CommandTransitionImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags subresourceRangeAspectMask) noexcept
+	void RHI::CommandTransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) noexcept
 	{
 		VkCommandBuffer commandBuffer = BeginSingleTimeCommandBuffer();
 
@@ -496,7 +498,7 @@ namespace lux::rhi
 		imageMemoryBarrier.oldLayout = oldLayout;
 		imageMemoryBarrier.newLayout = newLayout;
 		imageMemoryBarrier.image = image;
-		imageMemoryBarrier.subresourceRange.aspectMask = subresourceRangeAspectMask;
+		imageMemoryBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		imageMemoryBarrier.subresourceRange.levelCount = 1;
 		imageMemoryBarrier.subresourceRange.baseMipLevel = 0;
 		imageMemoryBarrier.subresourceRange.layerCount = 1;
@@ -507,26 +509,40 @@ namespace lux::rhi
 
 		switch (oldLayout)
 		{
-		case VK_IMAGE_LAYOUT_UNDEFINED:
-			imageMemoryBarrier.srcAccessMask = 0;
-			srcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-			break;
-		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-			imageMemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
-			break;
+			case VK_IMAGE_LAYOUT_UNDEFINED:
+				imageMemoryBarrier.srcAccessMask = 0;
+				srcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+				break;
+			
+			case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+				imageMemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+				break;
 		}
 
 		switch (newLayout)
 		{
-		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-			imageMemoryBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			dstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
-			break;
-		case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-			imageMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-			dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-			break;
+			case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+				imageMemoryBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				dstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+				break;
+			
+			case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+				imageMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+				dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+				break;
+			
+			case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+				imageMemoryBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+				
+				if (format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT)
+				{
+					imageMemoryBarrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+				}
+
+				imageMemoryBarrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+				dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+				break;
 		}
 
 		vkCmdPipelineBarrier(commandBuffer, srcStageMask, dstStageMask, 0, 0, nullptr, 0, nullptr, 1, &imageMemoryBarrier);
