@@ -7,8 +7,11 @@ namespace lux::rhi
 		graphicsQueueIndex(UINT32_MAX), presentQueueIndex(UINT32_MAX), graphicsQueue(VK_NULL_HANDLE), presentQueue(VK_NULL_HANDLE),
 		swapchainImageFormat(VK_FORMAT_UNDEFINED), swapchainExtent({ 0, 0 }), swapchainImageSubresourceRange{}, swapchain(VK_NULL_HANDLE),
 		swapchainImageCount(0), swapchainImages(0), swapchainImageViews(0),
-		forward(),
-		debugReportCallback(VK_NULL_HANDLE)
+		commandPool(VK_NULL_HANDLE), commandBuffer(VK_NULL_HANDLE),
+		forward()
+#ifdef VULKAN_ENABLE_VALIDATION
+		, debugReportCallback(VK_NULL_HANDLE)
+#endif // VULKAN_ENABLE_VALIDATION
 	{
 
 	}
@@ -58,7 +61,7 @@ namespace lux::rhi
 		std::vector<const char*> enabledLayerNames = {
 #ifdef VULKAN_ENABLE_VALIDATION
 			"VK_LAYER_LUNARG_standard_validation"
-#endif
+#endif // VULKAN_ENABLE_VALIDATION
 		};
 
 		VkInstanceCreateInfo instanceCI = {};
@@ -96,7 +99,7 @@ namespace lux::rhi
 		win32SurfaceCI.hwnd = window.GetHandle();
 
 		CHECK_VK(vkCreateWin32SurfaceKHR(instance, &win32SurfaceCI, nullptr, &surface));
-#endif
+#endif // defined(_WIN32)
 
 		// Physical device
 
@@ -191,7 +194,7 @@ namespace lux::rhi
 		std::vector<const char*> deviceLayerNames{
 #ifdef VULKAN_ENABLE_VALIDATION
 			"VK_LAYER_LUNARG_standard_validation"
-#endif
+#endif // VULKAN_ENABLE_VALIDATION
 		};
 
 		VkDeviceCreateInfo deviceCI = {};
@@ -479,8 +482,8 @@ namespace lux::rhi
 			OutputDebugStringA(msg);
 			OutputDebugStringA("\n");
 		}
-#endif
+#endif // _WIN32
 		return VK_FALSE;
 	}
-#endif
+#endif // VULKAN_ENABLE_VALIDATION
 }
