@@ -20,8 +20,8 @@ namespace lux::rhi
 	struct Image
 	{
 		Image() noexcept;
-		Image(const Image&) noexcept;
-		Image(Image&&) noexcept;
+		Image(const Image&) = delete;
+		Image(Image&&) = delete;
 
 		~Image() noexcept = default;
 

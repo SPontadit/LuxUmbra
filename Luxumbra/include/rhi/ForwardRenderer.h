@@ -16,7 +16,7 @@ namespace lux::rhi
 		ForwardRenderer(const ForwardRenderer&) = delete;
 		ForwardRenderer(ForwardRenderer&&) = delete;
 
-		~ForwardRenderer() noexcept;
+		~ForwardRenderer() noexcept = default;
 
 		const ForwardRenderer& operator=(const ForwardRenderer&) = delete;
 		const ForwardRenderer& operator=(ForwardRenderer&&) = delete;

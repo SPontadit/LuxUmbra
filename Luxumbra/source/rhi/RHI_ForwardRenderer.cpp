@@ -12,11 +12,6 @@ namespace lux::rhi
 
 	}
 
-	ForwardRenderer::~ForwardRenderer() noexcept
-	{
-
-	}
-
 	void RHI::InitForwardRenderPass() noexcept
 	{
 		VkAttachmentDescription swapchainAttachment = {};

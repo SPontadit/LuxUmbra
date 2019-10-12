@@ -30,7 +30,6 @@ namespace lux::rhi
 
 		CHECK_VK(vkCreateImage(device, &imageCI, nullptr, &image.image));
 	
-		// TODO: Use staging buffer
 		VkMemoryRequirements memoryRequirements;
 		vkGetImageMemoryRequirements(device, image.image, &memoryRequirements);
 		uint32_t memoryType = FindMemoryType(memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
