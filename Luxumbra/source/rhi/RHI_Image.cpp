@@ -58,4 +58,12 @@ namespace lux::rhi
 		CHECK_VK(vkCreateImageView(device, &imageViewCI, nullptr, &image.imageView));
 	}
 
+	void RHI::DestroyImage(Image& image) noexcept
+	{
+		vkDestroyImageView(device, image.imageView, nullptr);
+		vkDestroyImage(device, image.image, nullptr);
+		vkFreeMemory(device, image.memory, nullptr);
+	}
+
+
 } // namespace lux::rhi

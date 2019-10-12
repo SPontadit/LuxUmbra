@@ -80,7 +80,7 @@ namespace lux::rhi
 		void DestroyBuffer(Buffer& buffer) noexcept;
 
 		void CreateImage(const ImageCreateInfo& luxImageCI, Image& image) noexcept;
-
+		void DestroyImage(Image& image) noexcept;
 
 #ifdef VULKAN_ENABLE_VALIDATION
 		VkDebugReportCallbackEXT debugReportCallback;
