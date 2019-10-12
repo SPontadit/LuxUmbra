@@ -28,6 +28,7 @@ namespace lux::rhi
 		const RHI& operator=(RHI&&) = delete;
 
 		bool Initialize(const Window& window) noexcept;
+		void RenderForward() noexcept;
 
 		static const uint32_t SWAPCHAIN_MIN_IMAGE_COUNT = 2;
 
@@ -53,9 +54,12 @@ namespace lux::rhi
 		std::vector<VkImageView> swapchainImageViews;
 
 		VkCommandPool commandPool;
-		VkCommandBuffer commandBuffer;
+		std::vector<VkCommandBuffer> commandBuffers;
 
 		ForwardRenderer forward;
+		uint32_t frameCount;
+		uint32_t currentFrame;
+
 
 		void InitInstanceAndDevice(const Window& window) noexcept;
 		void InitSwapchain() noexcept;

@@ -5,7 +5,7 @@
 
 #ifdef _DEBUG
 #include "Logger.h"
-#define CHECK_VK(vkFunctionCall) if (VK_SUCCESS != (vkFunctionCall)) { Logger::Log(LogLevel::LOG_LEVEL_ERROR, #vkFunctionCall); __debugbreak(); }
+#define CHECK_VK(vkFunctionCall) { VkResult result = vkFunctionCall; if (VK_SUCCESS != (result)) { Logger::Log(LogLevel::LOG_LEVEL_ERROR, #vkFunctionCall); __debugbreak(); } }
 #define VULKAN_ENABLE_VALIDATION
 #else // !_DEBUG
 #define CHECK_VK(vkFunctionCall) vkFunctionCall

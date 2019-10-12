@@ -32,10 +32,10 @@ namespace lux::rhi
 		VkDeviceMemory rtDepthAttachmentMemory;
 		VkImageView rtDepthAttachmentImageView;
 
-		std::vector<VkSemaphore> rtPresentSemaphores;
-		std::vector<VkSemaphore> rtAcquireSemaphores;
+		std::vector<VkSemaphore> presentSemaphores;
+		std::vector<VkSemaphore> acquireSemaphores;
 
-		std::vector<VkFence> rtFences;
+		std::vector<VkFence> fences;
 
 		enum ForwardAttachmentBindPoints : uint32_t
 		{

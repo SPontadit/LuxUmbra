@@ -2,7 +2,8 @@
 
 namespace lux
 {
-	Engine::Engine()
+
+	Engine::Engine() noexcept
 		: isInitialized(false), window(), rhi()
 	{
 
@@ -13,7 +14,7 @@ namespace lux
 
 	}
 
-	bool Engine::Initialize(uint32_t windowWidth, uint32_t windowHeight)
+	bool Engine::Initialize(uint32_t windowWidth, uint32_t windowHeight) noexcept
 	{
 		if (!window.Initialize(windowWidth, windowHeight))
 			return false;
@@ -25,4 +26,13 @@ namespace lux
 
 		return true;
 	}
+
+	bool Engine::Run() noexcept
+	{
+		while (true)
+		{
+			rhi.RenderForward();
+		}
+	}
+
 } // namespace lux

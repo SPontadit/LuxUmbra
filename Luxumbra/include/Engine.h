@@ -12,7 +12,7 @@ namespace lux
 	class Engine
 	{
 	public:
-		Engine();
+		Engine() noexcept;
 		Engine(const Engine&) = delete;
 		Engine(Engine&&) = delete;
 
@@ -21,7 +21,8 @@ namespace lux
 		const Engine& operator=(const Engine&) = delete;
 		const Engine& operator=(Engine&&) = delete;
 
-		bool Initialize(uint32_t windowWidth, uint32_t windowHeight);
+		bool Initialize(uint32_t windowWidth, uint32_t windowHeight) noexcept;
+		bool Run() noexcept;
 
 	private:
 		bool isInitialized;

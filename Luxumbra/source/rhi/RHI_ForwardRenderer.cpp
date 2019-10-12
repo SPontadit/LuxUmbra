@@ -65,7 +65,7 @@ namespace lux::rhi
 		rtColorAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 		VkSubpassDescription renderToTargetSubpass = {};
-		renderToTargetSubpass.colorAttachmentCount = ForwardRenderer::FORWARD_RT_DEPTH_ATTACHMENT_BIND_POINT;
+		renderToTargetSubpass.colorAttachmentCount = 1;
 		renderToTargetSubpass.pColorAttachments = &rtColorAttachmentRef;
 		renderToTargetSubpass.pDepthStencilAttachment = &rtDepthAttachmentRef;
 		renderToTargetSubpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
@@ -141,20 +141,13 @@ namespace lux::rhi
 		rtColorAttachmentImageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
 		rtColorAttachmentImageViewCI.subresourceRange = swapchainImageSubresourceRange;
 
-		// Fences and Semaphore
-		VkSemaphoreCreateInfo rtSemaphoreCI = {};
-		rtSemaphoreCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-		VkFenceCreateInfo rtFenceCI = {};
-		rtFenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-		rtFenceCI.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
 		forward.rtColorAttachmentImages.resize(TO_SIZE_T(swapchainImageCount));
 		forward.rtColorAttachmentImageMemories.resize(TO_SIZE_T(swapchainImageCount));
 		forward.rtColorAttachmentImageViews.resize(TO_SIZE_T(swapchainImageCount));
-		forward.rtPresentSemaphores.resize(TO_SIZE_T(swapchainImageCount));
-		forward.rtAcquireSemaphores.resize(TO_SIZE_T(swapchainImageCount));
-		forward.rtFences.resize(TO_SIZE_T(swapchainImageCount));
+		forward.presentSemaphores.resize(TO_SIZE_T(swapchainImageCount));
+		forward.acquireSemaphores.resize(TO_SIZE_T(swapchainImageCount));
+		forward.fences.resize(TO_SIZE_T(swapchainImageCount));
 
 
 		for (uint32_t i = 0; i < swapchainImageCount; i++)
@@ -175,11 +168,6 @@ namespace lux::rhi
 			rtColorAttachmentImageViewCI.image = *rtColorAttachmentImage;
 
 			CHECK_VK(vkCreateImageView(device, &rtColorAttachmentImageViewCI, nullptr, rtColorAttachmentImageView));
-
-			CHECK_VK(vkCreateSemaphore(device, &rtSemaphoreCI, nullptr, &forward.rtPresentSemaphores[TO_SIZE_T(i)]));
-			CHECK_VK(vkCreateSemaphore(device, &rtSemaphoreCI, nullptr, &forward.rtAcquireSemaphores[TO_SIZE_T(i)]));
-		
-			CHECK_VK(vkCreateFence(device, &rtFenceCI, nullptr, &forward.rtFences[TO_SIZE_T(i)]));
 		}
 
 		// Depth attachment
@@ -245,6 +233,27 @@ namespace lux::rhi
 			attachments[TO_SIZE_T(ForwardRenderer::FORWARD_RT_DEPTH_ATTACHMENT_BIND_POINT)] = forward.rtDepthAttachmentImageView;
 
 			CHECK_VK(vkCreateFramebuffer(device, &framebufferCI, nullptr, &forward.frameBuffers[TO_SIZE_T(i)]));
+		}
+
+
+		// Fences and semaphores
+		VkSemaphoreCreateInfo rtSemaphoreCI = {};
+		rtSemaphoreCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+		VkFenceCreateInfo rtFenceCI = {};
+		rtFenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		rtFenceCI.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+		forward.presentSemaphores.resize(TO_SIZE_T(swapchainImageCount));
+		forward.acquireSemaphores.resize(TO_SIZE_T(swapchainImageCount));
+		forward.fences.resize(TO_SIZE_T(swapchainImageCount));
+
+		for (uint32_t i = 0; i < swapchainImageCount; i++)
+		{
+			CHECK_VK(vkCreateSemaphore(device, &rtSemaphoreCI, nullptr, &forward.presentSemaphores[TO_SIZE_T(i)]));
+			CHECK_VK(vkCreateSemaphore(device, &rtSemaphoreCI, nullptr, &forward.acquireSemaphores[TO_SIZE_T(i)]));
+
+			CHECK_VK(vkCreateFence(device, &rtFenceCI, nullptr, &forward.fences[TO_SIZE_T(i)]));
 		}
 	}
 } // namespace lux::rhi
