@@ -15,4 +15,6 @@
 #define ASSERT(x)
 #endif // _DEBUG
 
+#define GLM_FORCE_SWIZZLE
+
 #endif // LUXUMBRA_H_INCLUDED

@@ -147,6 +147,7 @@
     <ClCompile Include="source\rhi\RHI_GraphicsPipeline.cpp" />
     <ClCompile Include="source\rhi\RHI.cpp" />
     <ClCompile Include="source\rhi\RHI_Image.cpp" />
+    <ClCompile Include="source\scene\Node.cpp" />
     <ClCompile Include="source\scene\Scene.cpp" />
     <ClCompile Include="source\Utility.cpp" />
     <ClCompile Include="source\Vertex.cpp" />
@@ -163,6 +164,7 @@
     <ClInclude Include="include\rhi\LuxVkImpl.h" />
     <ClInclude Include="include\rhi\GraphicsPipeline.h" />
     <ClInclude Include="include\rhi\RHI.h" />
+    <ClInclude Include="include\scene\Node.h" />
     <ClInclude Include="include\scene\Scene.h" />
     <ClInclude Include="include\Utility.h" />
     <ClInclude Include="include\Vertex.h" />

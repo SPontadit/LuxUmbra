@@ -69,6 +69,9 @@
     <ClCompile Include="source\scene\Scene.cpp">
       <Filter>Source Files\Scene</Filter>
     </ClCompile>
+    <ClCompile Include="source\scene\Node.cpp">
+      <Filter>Source Files\Scene</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\rhi\RHI.h">
@@ -111,6 +114,9 @@
       <Filter>Header Files\RHI</Filter>
     </ClInclude>
     <ClInclude Include="include\scene\Scene.h">
+      <Filter>Header Files\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="include\scene\Node.h">
       <Filter>Header Files\Scene</Filter>
     </ClInclude>
   </ItemGroup>
