@@ -486,4 +486,4 @@ namespace lux::rhi
 		return VK_FALSE;
 	}
 #endif // VULKAN_ENABLE_VALIDATION
-}
+} // namespace lux::rhi

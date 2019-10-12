@@ -40,6 +40,7 @@ namespace lux
 
 		Log(arg1, arg2...);
 	}
-}
+
+} // namespace lux
 
 #endif // LOGGER_INL_INCLUDED

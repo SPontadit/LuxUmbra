@@ -53,6 +53,6 @@ namespace lux::rhi
 		};
 	};
 
-}
+} // namespace lux::rhi
 
 #endif // FORWARD_RENDER_PASS_H_INCLUDED

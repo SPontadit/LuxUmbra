@@ -247,4 +247,4 @@ namespace lux::rhi
 			CHECK_VK(vkCreateFramebuffer(device, &framebufferCI, nullptr, &forward.frameBuffers[TO_SIZE_T(i)]));
 		}
 	}
-}
+} // namespace lux::rhi

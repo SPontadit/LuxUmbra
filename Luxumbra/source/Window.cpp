@@ -36,4 +36,4 @@ namespace lux
 	{
 		return glfwGetWin32Window(window.get());
 	}
-}
+} // neamspace lux

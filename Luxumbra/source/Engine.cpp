@@ -25,4 +25,4 @@ namespace lux
 
 		return true;
 	}
-}
+} // namespace lux

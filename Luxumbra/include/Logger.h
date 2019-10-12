@@ -26,7 +26,7 @@ namespace lux
 		static void Log(LogLevel logLevel, T arg1, Types... arg2);
 	};
 
-}
+} // namespace lux
 
 #include "Logger.inl"
 
