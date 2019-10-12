@@ -25,6 +25,12 @@
     <Filter Include="Header Files\RHI\Volk">
       <UniqueIdentifier>{2f71b992-0379-41b7-8ba0-6371524a068d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Scene">
+      <UniqueIdentifier>{8d4db85f-e696-454a-8c10-9baf58329227}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Scene">
+      <UniqueIdentifier>{6634046f-25b1-4e6f-8e93-d65f2ffa2c52}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\main.cpp">
@@ -59,6 +65,9 @@
     </ClCompile>
     <ClCompile Include="source\rhi\RHI_Image.cpp">
       <Filter>Source Files\RHI</Filter>
+    </ClCompile>
+    <ClCompile Include="source\scene\Scene.cpp">
+      <Filter>Source Files\Scene</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -100,6 +109,9 @@
     </ClInclude>
     <ClInclude Include="include\rhi\Image.h">
       <Filter>Header Files\RHI</Filter>
+    </ClInclude>
+    <ClInclude Include="include\scene\Scene.h">
+      <Filter>Header Files\Scene</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
