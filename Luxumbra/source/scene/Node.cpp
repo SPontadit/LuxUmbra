@@ -54,4 +54,38 @@ namespace lux::scene
 
 		return transform;
 	}
-}
+
+	void Node::SetLocalPosition(glm::vec3 newPosition) noexcept
+	{
+		position = newPosition;
+	}
+
+	void Node::SetLocalRotation(glm::quat newRotation) noexcept
+	{
+		rotation = newRotation;
+	}
+
+	void Node::SetWorldPosition(glm::vec3 newPosition) noexcept
+	{
+		if (parent)
+			position = glm::rotate(glm::conjugate(parent->GetWorldRotation()), position - parent->GetWorldPosition());
+
+		SetLocalPosition(newPosition);
+	}
+
+	void Node::SetWorldRotation(glm::quat newRotation) noexcept
+	{
+		if (parent)
+		{
+			glm::quat parentWorlRotation = parent->GetWorldRotation();
+
+			if (glm::dot(parentWorlRotation, newRotation) >= 0.f)
+				newRotation = glm::conjugate(parentWorlRotation) * newRotation;
+			else
+				newRotation = -glm::conjugate(parentWorlRotation) * newRotation;
+		}
+
+		SetLocalRotation(newRotation);
+	}
+
+} // namespace lux::scene

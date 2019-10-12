@@ -29,6 +29,12 @@ namespace lux::scene
 		glm::quat GetWorldRotation() const noexcept;
 		glm::mat4 GetWorldTransform() const noexcept;
 
+		void SetLocalPosition(glm::vec3 newPosition) noexcept;
+		void SetLocalRotation(glm::quat newRotation) noexcept;
+
+		void SetWorldPosition(glm::vec3 newPosition) noexcept;
+		void SetWorldRotation(glm::quat newRotation) noexcept;
+
 	private:
 		Node* parent;
 
