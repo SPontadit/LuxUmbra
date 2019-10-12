@@ -151,6 +151,8 @@ namespace lux::rhi
 			}
 		}
 
+		ASSERT(physicalDevice != VK_NULL_HANDLE);
+
 		// Device
 
 		uint32_t queueFamilieCount;
@@ -188,11 +190,25 @@ namespace lux::rhi
 		}
 
 		float queuePriority = 1.0f;
-		VkDeviceQueueCreateInfo deviceQueueCI = {};
-		deviceQueueCI.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		deviceQueueCI.queueFamilyIndex = graphicsQueueIndex;
-		deviceQueueCI.queueCount = 1;
-		deviceQueueCI.pQueuePriorities = &queuePriority;
+
+		VkDeviceQueueCreateInfo graphicsQueueCI = {};
+		graphicsQueueCI.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		graphicsQueueCI.queueFamilyIndex = graphicsQueueIndex;
+		graphicsQueueCI.queueCount = 1;
+		graphicsQueueCI.pQueuePriorities = &queuePriority;
+
+		std::vector<VkDeviceQueueCreateInfo> deviceQueueCIs{ graphicsQueueCI };
+
+		if (presentQueueIndex != graphicsQueueIndex)
+		{
+			VkDeviceQueueCreateInfo presentQueueCI = {};
+			presentQueueCI.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+			presentQueueCI.queueFamilyIndex = presentQueueIndex;
+			presentQueueCI.queueCount = 1;
+			presentQueueCI.pQueuePriorities = &queuePriority;
+
+			deviceQueueCIs.push_back(presentQueueCI);
+		}
 
 		VkPhysicalDeviceFeatures physicalDeviceFeatures = {};
 
@@ -205,8 +221,8 @@ namespace lux::rhi
 
 		VkDeviceCreateInfo deviceCI = {};
 		deviceCI.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-		deviceCI.queueCreateInfoCount = 1;
-		deviceCI.pQueueCreateInfos = &deviceQueueCI;
+		deviceCI.queueCreateInfoCount = TO_UINT32_T(deviceQueueCIs.size());
+		deviceCI.pQueueCreateInfos = deviceQueueCIs.data();
 		deviceCI.pEnabledFeatures = &physicalDeviceFeatures;
 		deviceCI.enabledExtensionCount = TO_UINT32_T(deviceExtensionNames.size());
 		deviceCI.ppEnabledExtensionNames = deviceExtensionNames.data();
@@ -398,6 +414,8 @@ namespace lux::rhi
 
 		vkCmdBeginRenderPass(commandBuffer, &renderPassBI, VK_SUBPASS_CONTENTS_INLINE);
 	
+		vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
+
 		vkCmdEndRenderPass(commandBuffer);
 
 		CHECK_VK(vkEndCommandBuffer(commandBuffer));
@@ -566,7 +584,7 @@ namespace lux::rhi
 
 #ifdef _WIN32
 		if (IsDebuggerPresent()) {
-			OutputDebugStringA("[VULKAN VALIDATION] ");
+			OutputDebugStringA(layerPrefix);
 			OutputDebugStringA(msg);
 			OutputDebugStringA("\n");
 		}

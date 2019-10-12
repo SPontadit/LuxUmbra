@@ -61,7 +61,7 @@ namespace lux::rhi
 		swapchainInputAttachmentRef.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 		VkAttachmentReference rtDepthAttachmentRef = {};
-		rtDepthAttachmentRef.attachment = 2;
+		rtDepthAttachmentRef.attachment = ForwardRenderer::FORWARD_RT_DEPTH_ATTACHMENT_BIND_POINT;
 		rtColorAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 		VkSubpassDescription renderToTargetSubpass = {};
@@ -145,10 +145,6 @@ namespace lux::rhi
 		forward.rtColorAttachmentImages.resize(TO_SIZE_T(swapchainImageCount));
 		forward.rtColorAttachmentImageMemories.resize(TO_SIZE_T(swapchainImageCount));
 		forward.rtColorAttachmentImageViews.resize(TO_SIZE_T(swapchainImageCount));
-		forward.presentSemaphores.resize(TO_SIZE_T(swapchainImageCount));
-		forward.acquireSemaphores.resize(TO_SIZE_T(swapchainImageCount));
-		forward.fences.resize(TO_SIZE_T(swapchainImageCount));
-
 
 		for (uint32_t i = 0; i < swapchainImageCount; i++)
 		{
@@ -172,14 +168,14 @@ namespace lux::rhi
 
 		// Depth attachment
 
+		std::vector<VkFormat> depthAttachmentFormats{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT };
+		VkFormat depthImageFormat = FindSupportedImageFormat(depthAttachmentFormats, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+		ASSERT(depthImageFormat != VK_FORMAT_MAX_ENUM);
+
 		VkImageCreateInfo rtDepthAttachmentImageCI = {};
 		rtDepthAttachmentImageCI.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 		rtDepthAttachmentImageCI.imageType = VK_IMAGE_TYPE_2D;
-
-		std::vector<VkFormat> depthAttachmentFormats{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT };
-		rtDepthAttachmentImageCI.format = FindSupportedImageFormat(depthAttachmentFormats, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
-		ASSERT(rtDepthAttachmentImageCI.format != VK_FORMAT_MAX_ENUM);
-
+		rtDepthAttachmentImageCI.format = depthImageFormat;
 		rtDepthAttachmentImageCI.extent = { swapchainExtent.width, swapchainExtent.height, 1 };
 		rtDepthAttachmentImageCI.mipLevels = 1;
 		rtDepthAttachmentImageCI.arrayLayers = 1;
@@ -204,7 +200,7 @@ namespace lux::rhi
 		rtDepthAttachmentImageViewCI.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		rtDepthAttachmentImageViewCI.image = forward.rtDepthAttachmentImage;
 		rtDepthAttachmentImageViewCI.components = { VK_COMPONENT_SWIZZLE_IDENTITY };
-		rtDepthAttachmentImageViewCI.format = swapchainImageFormat;
+		rtDepthAttachmentImageViewCI.format = depthImageFormat;
 		rtDepthAttachmentImageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
 		rtDepthAttachmentImageViewCI.subresourceRange = swapchainImageSubresourceRange;
 		rtDepthAttachmentImageViewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -226,13 +222,13 @@ namespace lux::rhi
 
 		forward.frameBuffers.resize(TO_SIZE_T(swapchainImageCount));
 
-		for (uint32_t i = 0; i < swapchainImageCount; i++)
+		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
-			attachments[TO_SIZE_T(ForwardRenderer::FORWARD_SWAPCHAIN_ATTACHMENT_BIND_POINT)] = swapchainImageViews[TO_SIZE_T(i)];
-			attachments[TO_SIZE_T(ForwardRenderer::FORWARD_RT_COLOR_ATTACHMENT_BIND_POINT)] = forward.rtColorAttachmentImageViews[TO_SIZE_T(i)];
+			attachments[TO_SIZE_T(ForwardRenderer::FORWARD_SWAPCHAIN_ATTACHMENT_BIND_POINT)] = swapchainImageViews[i];
+			attachments[TO_SIZE_T(ForwardRenderer::FORWARD_RT_COLOR_ATTACHMENT_BIND_POINT)] = forward.rtColorAttachmentImageViews[i];
 			attachments[TO_SIZE_T(ForwardRenderer::FORWARD_RT_DEPTH_ATTACHMENT_BIND_POINT)] = forward.rtDepthAttachmentImageView;
 
-			CHECK_VK(vkCreateFramebuffer(device, &framebufferCI, nullptr, &forward.frameBuffers[TO_SIZE_T(i)]));
+			CHECK_VK(vkCreateFramebuffer(device, &framebufferCI, nullptr, &forward.frameBuffers[i]));
 		}
 
 
@@ -248,12 +244,12 @@ namespace lux::rhi
 		forward.acquireSemaphores.resize(TO_SIZE_T(swapchainImageCount));
 		forward.fences.resize(TO_SIZE_T(swapchainImageCount));
 
-		for (uint32_t i = 0; i < swapchainImageCount; i++)
+		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
-			CHECK_VK(vkCreateSemaphore(device, &rtSemaphoreCI, nullptr, &forward.presentSemaphores[TO_SIZE_T(i)]));
-			CHECK_VK(vkCreateSemaphore(device, &rtSemaphoreCI, nullptr, &forward.acquireSemaphores[TO_SIZE_T(i)]));
+			CHECK_VK(vkCreateSemaphore(device, &rtSemaphoreCI, nullptr, &forward.presentSemaphores[i]));
+			CHECK_VK(vkCreateSemaphore(device, &rtSemaphoreCI, nullptr, &forward.acquireSemaphores[i]));
 
-			CHECK_VK(vkCreateFence(device, &rtFenceCI, nullptr, &forward.fences[TO_SIZE_T(i)]));
+			CHECK_VK(vkCreateFence(device, &rtFenceCI, nullptr, &forward.fences[i]));
 		}
 	}
 } // namespace lux::rhi
