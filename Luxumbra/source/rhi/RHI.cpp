@@ -37,6 +37,12 @@ namespace lux::rhi
 
 		InitForwardFramebuffers();
 
+		InitForwardDescriptorPool();
+		
+		InitForwardGraphicsPipelines();
+
+		InitForwardDescriptorSets();
+
 		// End
 
 		isInitialized = true;
@@ -350,10 +356,9 @@ namespace lux::rhi
 
 	void RHI::InitCommandBuffer() noexcept
 	{
-		// TODO: Use present queue
 		VkCommandPoolCreateInfo commandPoolCI = {};
 		commandPoolCI.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		commandPoolCI.queueFamilyIndex = graphicsQueueIndex;
+		commandPoolCI.queueFamilyIndex = presentQueueIndex;
 		commandPoolCI.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
 		CHECK_VK(vkCreateCommandPool(device, &commandPoolCI, nullptr, &commandPool));
@@ -367,90 +372,6 @@ namespace lux::rhi
 
 		commandBuffers.resize(TO_SIZE_T(swapchainImageCount));
 		CHECK_VK(vkAllocateCommandBuffers(device, &commandBufferAI, commandBuffers.data()));
-	}
-
-	void RHI::RenderForward() noexcept
-	{
-		// Acquire next image
-		VkFence* fence = &forward.fences[currentFrame];
-		VkCommandBuffer commandBuffer = commandBuffers[currentFrame];
-
-		vkWaitForFences(device, 1, fence, false, UINT64_MAX);
-		vkResetFences(device, 1, fence);
-		vkResetCommandBuffer(commandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
-
-		VkSemaphore* acquireSemaphore = &forward.acquireSemaphores[currentFrame];
-		VkSemaphore* presentSemaphore = &forward.presentSemaphores[currentFrame];
-
-		uint32_t imageIndex;
-		uint64_t timeout = UINT64_MAX;
-
-		CHECK_VK(vkAcquireNextImageKHR(device, swapchain, timeout, *acquireSemaphore, VK_NULL_HANDLE, &imageIndex));
-
-
-		// Begin Command Buffer
-		VkCommandBufferBeginInfo commandBufferBI = {};
-		commandBufferBI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		commandBufferBI.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-	
-		CHECK_VK(vkBeginCommandBuffer(commandBuffer, &commandBufferBI));
-
-
-		VkClearColorValue clearColor{ 0.5f, 0.5703125f, 0.6171875f };
-
-		std::array<VkClearValue, 3> clearValues = {};
-		clearValues[ForwardRenderer::FORWARD_SWAPCHAIN_ATTACHMENT_BIND_POINT].color = clearColor;
-		clearValues[ForwardRenderer::FORWARD_RT_COLOR_ATTACHMENT_BIND_POINT].color = clearColor;
-		clearValues[ForwardRenderer::FORWARD_RT_DEPTH_ATTACHMENT_BIND_POINT].depthStencil = { 1.0f, 0 };
-	
-	
-		// Begin Render Pass
-		VkRenderPassBeginInfo renderPassBI = {};
-		renderPassBI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassBI.renderPass = forward.renderPass;
-		renderPassBI.framebuffer = forward.frameBuffers[imageIndex];
-		renderPassBI.renderArea.extent = swapchainExtent;
-		renderPassBI.clearValueCount = TO_UINT32_T(clearValues.size());
-		renderPassBI.pClearValues = clearValues.data();
-
-		vkCmdBeginRenderPass(commandBuffer, &renderPassBI, VK_SUBPASS_CONTENTS_INLINE);
-	
-		vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
-
-		vkCmdEndRenderPass(commandBuffer);
-
-		CHECK_VK(vkEndCommandBuffer(commandBuffer));
-
-		// Submit Command Buffer
-		VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-		VkSubmitInfo submitInfo = {};
-		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &commandBuffer;
-		submitInfo.pWaitDstStageMask = &stageMask;
-		submitInfo.waitSemaphoreCount = 1;
-		submitInfo.pWaitSemaphores = acquireSemaphore;
-		submitInfo.signalSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = presentSemaphore;
-
-		// TODO: Use present queue
-		CHECK_VK(vkQueueSubmit(graphicsQueue, 1, &submitInfo, *fence));
-
-
-		// Present
-		VkPresentInfoKHR presentInfo = {};
-		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-		presentInfo.waitSemaphoreCount = 1;
-		presentInfo.pWaitSemaphores = presentSemaphore;
-		presentInfo.swapchainCount = 1;
-		presentInfo.pSwapchains = &swapchain;
-		presentInfo.pImageIndices = &imageIndex;
-
-		CHECK_VK(vkQueuePresentKHR(graphicsQueue, &presentInfo));
-
-		frameCount++;
-		currentFrame = frameCount % swapchainImageCount;
 	}
 
 	VkCommandBuffer RHI::BeginSingleTimeCommandBuffer() const noexcept

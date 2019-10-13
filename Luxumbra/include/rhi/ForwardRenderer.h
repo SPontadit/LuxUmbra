@@ -23,6 +23,10 @@ namespace lux::rhi
 
 		VkRenderPass renderPass;
 		std::vector<VkFramebuffer> frameBuffers;
+		VkDescriptorPool descriptorPool;
+
+		GraphicsPipeline blitGraphicsPipeline;
+		std::vector<VkDescriptorSet> blitDescriptorSets;
 
 		std::vector<VkImage> rtColorAttachmentImages;
 		std::vector<VkDeviceMemory> rtColorAttachmentImageMemories;

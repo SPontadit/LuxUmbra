@@ -12,8 +12,11 @@ namespace lux::rhi
 {
 	struct GraphicsPipelineCreateInfo
 	{
-		std::string binerayVertexFilePath;
-		std::string binerayFragmentFilePath;
+		VkRenderPass renderPass;
+		uint32_t subpassIndex;
+		std::string binaryVertexFilePath;
+		std::string binaryFragmentFilePath;
+		bool emptyVertexInput;
 		VkPrimitiveTopology primitiveTopology;
 		float viewportWidth;
 		float viewportHeight;
@@ -23,6 +26,7 @@ namespace lux::rhi
 		bool enableDepthWrite;
 		std::vector<VkDescriptorSetLayoutBinding> descriptorSetLayoutBindings;
 		std::vector<VkPushConstantRange> pushConstants;
+		std::vector<VkDynamicState> dynamicStates;
 	};
 
 	struct GraphicsPipeline

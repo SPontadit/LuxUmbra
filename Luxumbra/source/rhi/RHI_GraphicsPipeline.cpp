@@ -20,8 +20,8 @@ namespace lux::rhi
 		VkShaderModule vertexShaderModule;
 		VkShaderModule fragmentShaderModule;
 
-		CreateShaderModule(luxGraphicsPipelineCI.binerayVertexFilePath, VK_SHADER_STAGE_VERTEX_BIT, &vertexShaderModule);
-		CreateShaderModule(luxGraphicsPipelineCI.binerayFragmentFilePath, VK_SHADER_STAGE_FRAGMENT_BIT, &fragmentShaderModule);
+		CreateShaderModule(luxGraphicsPipelineCI.binaryVertexFilePath, &vertexShaderModule);
+		CreateShaderModule(luxGraphicsPipelineCI.binaryFragmentFilePath, &fragmentShaderModule);
 
 		VkPipelineShaderStageCreateInfo vertexStageCI = {};
 		vertexStageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -30,10 +30,10 @@ namespace lux::rhi
 		vertexStageCI.pName = "main";
 
 		VkPipelineShaderStageCreateInfo fragmentStageCI = {};
-		vertexStageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		vertexStageCI.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-		vertexStageCI.module = fragmentShaderModule;
-		vertexStageCI.pName = "main";
+		fragmentStageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		fragmentStageCI.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+		fragmentStageCI.module = fragmentShaderModule;
+		fragmentStageCI.pName = "main";
 
 		std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages = { vertexStageCI, fragmentStageCI };
 
@@ -43,10 +43,21 @@ namespace lux::rhi
 
 		VkPipelineVertexInputStateCreateInfo vertexInputStateCI = {};
 		vertexInputStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-		vertexInputStateCI.vertexBindingDescriptionCount = 1;
-		vertexInputStateCI.pVertexBindingDescriptions = &bindingDescription;
-		vertexInputStateCI.vertexAttributeDescriptionCount = TO_UINT32_T(attributesDescription.size());
-		vertexInputStateCI.pVertexAttributeDescriptions = attributesDescription.data();
+
+		if (luxGraphicsPipelineCI.emptyVertexInput)
+		{
+			vertexInputStateCI.vertexBindingDescriptionCount = 0;
+			vertexInputStateCI.pVertexBindingDescriptions = nullptr;
+			vertexInputStateCI.vertexAttributeDescriptionCount = 0;
+			vertexInputStateCI.pVertexAttributeDescriptions = nullptr;
+		}
+		else
+		{
+			vertexInputStateCI.vertexBindingDescriptionCount = 1;
+			vertexInputStateCI.pVertexBindingDescriptions = &bindingDescription;
+			vertexInputStateCI.vertexAttributeDescriptionCount = TO_UINT32_T(attributesDescription.size());
+			vertexInputStateCI.pVertexAttributeDescriptions = attributesDescription.data();
+		}
 
 
 		VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateCI = {};
@@ -122,21 +133,25 @@ namespace lux::rhi
 		colorBlendStateCI.blendConstants[3] = 0.0f;
 
 
-		std::array<VkDynamicState, 2> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_LINE_WIDTH };
-
 		VkPipelineDynamicStateCreateInfo dynamicStateCI = {};
 		dynamicStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-		dynamicStateCI.dynamicStateCount = TO_UINT32_T(dynamicStates.size());
-		dynamicStateCI.pDynamicStates = dynamicStates.data();
+		dynamicStateCI.dynamicStateCount = TO_UINT32_T(luxGraphicsPipelineCI.dynamicStates.size());
+		dynamicStateCI.pDynamicStates = luxGraphicsPipelineCI.dynamicStates.data();
 
 
-		VkPipelineDepthStencilStateCreateInfo depthStencilStateInfo = {};
-		depthStencilStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-		depthStencilStateInfo.depthTestEnable = luxGraphicsPipelineCI.enableDepthTest;
-		depthStencilStateInfo.depthWriteEnable = luxGraphicsPipelineCI.enableDepthWrite;
-		depthStencilStateInfo.depthCompareOp = VK_COMPARE_OP_LESS;
-		depthStencilStateInfo.depthBoundsTestEnable = VK_FALSE;
+		VkPipelineDepthStencilStateCreateInfo depthStencilStateCI = {};
+		depthStencilStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+		depthStencilStateCI.depthTestEnable = luxGraphicsPipelineCI.enableDepthTest;
+		depthStencilStateCI.depthWriteEnable = luxGraphicsPipelineCI.enableDepthWrite;
+		depthStencilStateCI.depthCompareOp = VK_COMPARE_OP_LESS;
+		depthStencilStateCI.depthBoundsTestEnable = VK_FALSE;
 
+
+		VkDescriptorSetLayoutBinding blitDescriptorSetLayoutBinding = {};
+		blitDescriptorSetLayoutBinding.binding = 0;
+		blitDescriptorSetLayoutBinding.descriptorCount = 1;
+		blitDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+		blitDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 		VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI = {};
 		descriptorSetLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -154,7 +169,7 @@ namespace lux::rhi
 		pipelineLayoutCI.pPushConstantRanges = luxGraphicsPipelineCI.pushConstants.data();
 
 		CHECK_VK(vkCreatePipelineLayout(device, &pipelineLayoutCI, nullptr, &graphicsPipeline.pipelineLayout));
-		
+
 
 		VkGraphicsPipelineCreateInfo pipelineCI = {};
 		pipelineCI.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -165,26 +180,22 @@ namespace lux::rhi
 		pipelineCI.pViewportState = &viewportStateCI;
 		pipelineCI.pRasterizationState = &rasterizerStateCI;
 		pipelineCI.pMultisampleState = &multisampleStateCI;
-		pipelineCI.pDepthStencilState = &depthStencilStateInfo;
+		pipelineCI.pDepthStencilState = &depthStencilStateCI;
 		pipelineCI.pColorBlendState = &colorBlendStateCI;
 		pipelineCI.pDynamicState = &dynamicStateCI;
 		pipelineCI.layout = graphicsPipeline.pipelineLayout;
-
-		// TODO: Complete renderpass and subpass
-		//pipelineCI.renderPass = ???
-		//pipelineCI.subpass = ???
-
+		pipelineCI.renderPass = luxGraphicsPipelineCI.renderPass;
+		pipelineCI.subpass = luxGraphicsPipelineCI.subpassIndex;
 		pipelineCI.basePipelineHandle = VK_NULL_HANDLE;
 		pipelineCI.basePipelineIndex = -1;
 
 		CHECK_VK(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineCI, nullptr, &graphicsPipeline.pipeline));
-
-
+	
 		vkDestroyShaderModule(device, vertexShaderModule, nullptr);
 		vkDestroyShaderModule(device, fragmentShaderModule, nullptr);
 	}
 
-	void RHI::CreateShaderModule(const std::string& binaryFilePath, VkShaderStageFlagBits pipelineStage, VkShaderModule* shaderModule) const noexcept
+	void RHI::CreateShaderModule(const std::string& binaryFilePath, VkShaderModule* shaderModule) const noexcept
 	{
 		std::vector<char> shaderCode = lux::utility::ReadFile(binaryFilePath);
 

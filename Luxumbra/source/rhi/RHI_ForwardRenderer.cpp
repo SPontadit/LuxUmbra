@@ -5,7 +5,7 @@
 namespace lux::rhi
 {
 	ForwardRenderer::ForwardRenderer() noexcept
-		: renderPass(VK_NULL_HANDLE), frameBuffers(0),
+		: renderPass(VK_NULL_HANDLE), frameBuffers(0), blitGraphicsPipeline(),
 		rtColorAttachmentImages(0), rtColorAttachmentImageMemories(0), rtColorAttachmentImageViews(0),
 		rtDepthAttachmentImage(VK_NULL_HANDLE), rtDepthAttachmentMemory(VK_NULL_HANDLE), rtDepthAttachmentImageView(VK_NULL_HANDLE)
 	{
@@ -62,7 +62,7 @@ namespace lux::rhi
 
 		VkAttachmentReference rtDepthAttachmentRef = {};
 		rtDepthAttachmentRef.attachment = ForwardRenderer::FORWARD_RT_DEPTH_ATTACHMENT_BIND_POINT;
-		rtColorAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		rtDepthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 		VkSubpassDescription renderToTargetSubpass = {};
 		renderToTargetSubpass.colorAttachmentCount = 1;
@@ -254,4 +254,173 @@ namespace lux::rhi
 			CHECK_VK(vkCreateFence(device, &rtFenceCI, nullptr, &forward.fences[i]));
 		}
 	}
+
+	void RHI::InitForwardDescriptorPool() noexcept
+	{
+		VkDescriptorPoolSize blitDescriptorPoolSize = {};
+		blitDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+		blitDescriptorPoolSize.descriptorCount = swapchainImageCount;
+
+		std::array<VkDescriptorPoolSize, 1> descriptorPoolSizes = { blitDescriptorPoolSize };
+
+		VkDescriptorPoolCreateInfo descriptorPoolCI = {};
+		descriptorPoolCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		descriptorPoolCI.poolSizeCount = TO_UINT32_T(descriptorPoolSizes.size());
+		descriptorPoolCI.pPoolSizes = descriptorPoolSizes.data();
+		descriptorPoolCI.maxSets = swapchainImageCount;
+
+		CHECK_VK(vkCreateDescriptorPool(device, &descriptorPoolCI, nullptr, &forward.descriptorPool));
+	}
+
+	void RHI::InitForwardGraphicsPipelines() noexcept
+	{
+		// Blit Graphics Pipeline
+		VkDescriptorSetLayoutBinding blitDescriptorSetLayoutBinding = {};
+		blitDescriptorSetLayoutBinding.binding = 0;
+		blitDescriptorSetLayoutBinding.descriptorCount = 1;
+		blitDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+		blitDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		GraphicsPipelineCreateInfo blitGraphicsPipelineCI = {};
+		blitGraphicsPipelineCI.renderPass = forward.renderPass;
+		blitGraphicsPipelineCI.subpassIndex = ForwardRenderer::FORWARD_SUBPASS_COPY;
+		blitGraphicsPipelineCI.binaryVertexFilePath = "data/shaders/blit/blit.vert.spv";
+		blitGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/blit/blit.frag.spv";
+		blitGraphicsPipelineCI.emptyVertexInput = true;
+		blitGraphicsPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+		blitGraphicsPipelineCI.viewportWidth = TO_FLOAT(swapchainExtent.width);
+		blitGraphicsPipelineCI.viewportHeight = TO_FLOAT(swapchainExtent.height);
+		blitGraphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_BACK_BIT;
+		blitGraphicsPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_CLOCKWISE;
+		blitGraphicsPipelineCI.enableDepthTest = VK_TRUE;
+		blitGraphicsPipelineCI.enableDepthWrite = VK_TRUE;
+		blitGraphicsPipelineCI.descriptorSetLayoutBindings = { blitDescriptorSetLayoutBinding };
+
+		CreateGraphicsPipeline(blitGraphicsPipelineCI, forward.blitGraphicsPipeline);
+	}
+
+	void RHI::InitForwardDescriptorSets() noexcept
+	{
+		// Allocate Blit Descriptor Sets
+		std::vector<VkDescriptorSetLayout> descriptorSetLayout(swapchainImageCount, forward.blitGraphicsPipeline.descriptorSetLayout);
+		VkDescriptorSetAllocateInfo descriptorSetAI = {};
+		descriptorSetAI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		descriptorSetAI.descriptorPool = forward.descriptorPool;
+		descriptorSetAI.descriptorSetCount = swapchainImageCount;
+		descriptorSetAI.pSetLayouts = descriptorSetLayout.data();
+
+		forward.blitDescriptorSets.resize(TO_SIZE_T(swapchainImageCount));
+		CHECK_VK(vkAllocateDescriptorSets(device, &descriptorSetAI, forward.blitDescriptorSets.data()));
+	
+	
+		// Update Blit Descriptor Sets
+		VkDescriptorImageInfo blitDescriptorImageInfo = {};
+		blitDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		blitDescriptorImageInfo.sampler = VK_NULL_HANDLE;
+
+		VkWriteDescriptorSet blitWriteDescriptorSet = {};
+		blitWriteDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		blitWriteDescriptorSet.descriptorCount = 1;
+		blitWriteDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+		blitWriteDescriptorSet.dstBinding = 0;
+		blitWriteDescriptorSet.pImageInfo = &blitDescriptorImageInfo;
+
+		for (size_t i = 0; i < swapchainImageCount; i++)
+		{
+			blitDescriptorImageInfo.imageView = forward.rtColorAttachmentImageViews[i];
+			blitWriteDescriptorSet.dstSet = forward.blitDescriptorSets[i];
+		
+			vkUpdateDescriptorSets(device, 1, &blitWriteDescriptorSet, 0, nullptr);
+		}
+	}
+
+	void RHI::RenderForward() noexcept
+	{
+		// Acquire next image
+		VkFence* fence = &forward.fences[currentFrame];
+		VkCommandBuffer commandBuffer = commandBuffers[currentFrame];
+
+		vkWaitForFences(device, 1, fence, false, UINT64_MAX);
+		vkResetFences(device, 1, fence);
+		vkResetCommandBuffer(commandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+
+		VkSemaphore* acquireSemaphore = &forward.acquireSemaphores[currentFrame];
+		VkSemaphore* presentSemaphore = &forward.presentSemaphores[currentFrame];
+
+		uint32_t imageIndex;
+		uint64_t timeout = UINT64_MAX;
+
+		CHECK_VK(vkAcquireNextImageKHR(device, swapchain, timeout, *acquireSemaphore, VK_NULL_HANDLE, &imageIndex));
+
+
+		// Begin Command Buffer
+		VkCommandBufferBeginInfo commandBufferBI = {};
+		commandBufferBI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		commandBufferBI.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+		CHECK_VK(vkBeginCommandBuffer(commandBuffer, &commandBufferBI));
+
+
+		VkClearColorValue clearColor{ 0.5f, 0.5703125f, 0.6171875f, 1.0F };
+
+		std::array<VkClearValue, 3> clearValues = {};
+		clearValues[ForwardRenderer::FORWARD_SWAPCHAIN_ATTACHMENT_BIND_POINT].color = clearColor;
+		clearValues[ForwardRenderer::FORWARD_RT_COLOR_ATTACHMENT_BIND_POINT].color = clearColor;
+		clearValues[ForwardRenderer::FORWARD_RT_DEPTH_ATTACHMENT_BIND_POINT].depthStencil = { 1.0f, 0 };
+
+
+		// Begin Render Pass
+		VkRenderPassBeginInfo renderPassBI = {};
+		renderPassBI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassBI.renderPass = forward.renderPass;
+		renderPassBI.framebuffer = forward.frameBuffers[imageIndex];
+		renderPassBI.renderArea.extent = swapchainExtent;
+		renderPassBI.clearValueCount = TO_UINT32_T(clearValues.size());
+		renderPassBI.pClearValues = clearValues.data();
+
+		vkCmdBeginRenderPass(commandBuffer, &renderPassBI, VK_SUBPASS_CONTENTS_INLINE);
+
+		// Blit Subpass
+		vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
+		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.blitGraphicsPipeline.pipeline);
+		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.blitGraphicsPipeline.pipelineLayout, 0, 1, &forward.blitDescriptorSets[currentFrame], 0, NULL);
+
+		vkCmdDraw(commandBuffer, 4, 1, 0, 0);
+
+		vkCmdEndRenderPass(commandBuffer);
+
+		CHECK_VK(vkEndCommandBuffer(commandBuffer));
+
+		// Submit Command Buffer
+		VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+		VkSubmitInfo submitInfo = {};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &commandBuffer;
+		submitInfo.pWaitDstStageMask = &stageMask;
+		submitInfo.waitSemaphoreCount = 1;
+		submitInfo.pWaitSemaphores = acquireSemaphore;
+		submitInfo.signalSemaphoreCount = 1;
+		submitInfo.pSignalSemaphores = presentSemaphore;
+
+		CHECK_VK(vkQueueSubmit(presentQueue, 1, &submitInfo, *fence));
+
+
+		// Present
+		VkPresentInfoKHR presentInfo = {};
+		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		presentInfo.waitSemaphoreCount = 1;
+		presentInfo.pWaitSemaphores = presentSemaphore;
+		presentInfo.swapchainCount = 1;
+		presentInfo.pSwapchains = &swapchain;
+		presentInfo.pImageIndices = &imageIndex;
+
+		CHECK_VK(vkQueuePresentKHR(graphicsQueue, &presentInfo));
+
+		frameCount++;
+		currentFrame = frameCount % swapchainImageCount;
+	}
+
+
 } // namespace lux::rhi

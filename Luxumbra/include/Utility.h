@@ -9,7 +9,7 @@
 namespace lux::utility
 {
 
-	std::vector<char> ReadFile(std::string filePath);
+	std::vector<char> ReadFile(const std::string& filePath);
 
 } // namespace lux::utility
 

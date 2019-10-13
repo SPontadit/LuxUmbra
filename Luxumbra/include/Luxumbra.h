@@ -7,6 +7,7 @@
 
 #define TO_SIZE_T(x) static_cast<size_t>(x)
 #define TO_UINT32_T(x) static_cast<uint32_t>(x)
+#define TO_FLOAT(x) static_cast<float>(x)
 
 #ifdef _DEBUG
 #include <cassert>
