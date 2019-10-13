@@ -22,7 +22,7 @@ namespace lux
 		const Engine& operator=(Engine&&) = delete;
 
 		bool Initialize(uint32_t windowWidth, uint32_t windowHeight) noexcept;
-		bool Run() noexcept;
+		void Run() noexcept;
 
 	private:
 		bool isInitialized;

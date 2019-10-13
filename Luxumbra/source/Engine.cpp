@@ -27,11 +27,13 @@ namespace lux
 		return true;
 	}
 
-	bool Engine::Run() noexcept
+	void Engine::Run() noexcept
 	{
-		while (true)
+		while (!window.ShouldClose())
 		{
 			rhi.RenderForward();
+
+			window.PollEvents();
 		}
 	}
 

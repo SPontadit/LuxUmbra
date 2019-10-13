@@ -17,23 +17,25 @@ namespace lux
 	class Window
 	{
 	public:
-		Window();
+		Window() noexcept;
 		Window(const Window&) = delete;
 		Window(Window&&) = delete;
 
-		~Window();
+		~Window() noexcept;
 
 		const Window& operator=(const Window&) = delete;
 		const Window& operator=(Window&&) = delete;
 
-		bool Initialize(uint32_t width, uint32_t height);
+		bool Initialize(uint32_t width, uint32_t height) noexcept;
+		HWND GetHandle() const noexcept;
 
-		HWND GetHandle() const;
+		void PollEvents() const noexcept;
+		bool ShouldClose() const noexcept;
 
 	private:
 		bool isInitialized;
 
-		std::unique_ptr<GLFWwindow, decltype(&glfwDestroyWindow)> window;
+		GLFWwindow* window;
 	};
 
 } // namespace lux
