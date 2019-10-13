@@ -5,7 +5,9 @@
 
 #include <vector>
 
+#include "Window.h"
 #include "scene\Node.h"
+#include "scene\CameraNode.h"
 
 namespace lux::scene
 {
@@ -22,9 +24,16 @@ namespace lux::scene
 		const Scene& operator=(const Scene&) = delete;
 		const Scene& operator=(Scene&&) = delete;
 
-		Node* AddNode(glm::vec3 position, glm::quat rotation, Node* parent, bool isWorldPosition = false) noexcept;
+		bool Initialize(const Window& window) noexcept;
+
+		Node* AddNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition) noexcept;
+		CameraNode* AddCameraNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition, float fovy, float nearDist, float farDist) noexcept;
 
 	private:
+		bool isInititalized;
+
+		const Window* window;
+
 		std::vector<Node*> nodes;
 	};
 

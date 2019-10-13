@@ -4,12 +4,7 @@ namespace lux
 {
 
 	Engine::Engine() noexcept
-		: isInitialized(false), window(), rhi()
-	{
-
-	}
-
-	Engine::~Engine()
+		: isInitialized(false), window(), rhi(), scene()
 	{
 
 	}
@@ -20,6 +15,9 @@ namespace lux
 			return false;
 
 		if (!rhi.Initialize(window))
+			return false;
+
+		if (!scene.Initialize(window))
 			return false;
 
 		isInitialized = true;

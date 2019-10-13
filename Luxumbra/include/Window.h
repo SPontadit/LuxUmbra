@@ -32,9 +32,12 @@ namespace lux
 		void PollEvents() const noexcept;
 		bool ShouldClose() const noexcept;
 
+		float GetAspect() const noexcept;
+
 	private:
 		bool isInitialized;
 
+		uint32_t width, height;
 		GLFWwindow* window;
 	};
 

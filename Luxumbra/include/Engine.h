@@ -4,7 +4,8 @@
 #include "Luxumbra.h"
 
 #include "Window.h"
-#include "rhi/RHI.h"
+#include "rhi\RHI.h"
+#include "scene\Scene.h"
 
 namespace lux
 {
@@ -16,7 +17,7 @@ namespace lux
 		Engine(const Engine&) = delete;
 		Engine(Engine&&) = delete;
 
-		~Engine();
+		~Engine() noexcept = default;
 
 		const Engine& operator=(const Engine&) = delete;
 		const Engine& operator=(Engine&&) = delete;
@@ -29,6 +30,7 @@ namespace lux
 
 		Window window;
 		rhi::RHI rhi;
+		scene::Scene scene;
 	};
 
 } // namespace lux

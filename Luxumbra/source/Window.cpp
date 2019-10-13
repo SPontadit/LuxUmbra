@@ -3,7 +3,7 @@
 namespace lux
 {
 	Window::Window() noexcept
-		: isInitialized(false), window(nullptr)
+		: isInitialized(false), width(0), height(0), window(nullptr)
 	{
 
 	}
@@ -33,6 +33,9 @@ namespace lux
 			return false;
 		}
 
+		this->width = width;
+		this->height = height;
+
 		isInitialized = true;
 
 		return true;
@@ -51,6 +54,11 @@ namespace lux
 	bool Window::ShouldClose() const noexcept
 	{
 		return glfwWindowShouldClose(window);
+	}
+
+	float Window::GetAspect() const noexcept
+	{
+		return TO_FLOAT(width) / TO_FLOAT(height);
 	}
 
 } // namespace lux

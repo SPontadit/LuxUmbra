@@ -78,6 +78,9 @@
     <ClCompile Include="source\scene\Node.cpp">
       <Filter>Source Files\Scene</Filter>
     </ClCompile>
+    <ClCompile Include="source\scene\CameraNode.cpp">
+      <Filter>Source Files\Scene</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\rhi\RHI.h">
@@ -123,6 +126,9 @@
       <Filter>Header Files\Scene</Filter>
     </ClInclude>
     <ClInclude Include="include\scene\Node.h">
+      <Filter>Header Files\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="include\scene\CameraNode.h">
       <Filter>Header Files\Scene</Filter>
     </ClInclude>
   </ItemGroup>

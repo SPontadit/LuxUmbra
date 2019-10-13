@@ -18,7 +18,7 @@ namespace lux::scene
 		Node(const Node&) = delete;
 		Node(Node&&) = delete;
 
-		~Node() = default;
+		virtual ~Node() noexcept = default;
 
 		const Node& operator=(const Node&) = delete;
 		const Node& operator=(Node&&) = delete;
