@@ -28,6 +28,8 @@ namespace lux::rhi
 		GraphicsPipeline blitGraphicsPipeline;
 		std::vector<VkDescriptorSet> blitDescriptorSets;
 
+		GraphicsPipeline rtGraphicsPipeline;
+
 		std::vector<VkImage> rtColorAttachmentImages;
 		std::vector<VkDeviceMemory> rtColorAttachmentImageMemories;
 		std::vector<VkImageView> rtColorAttachmentImageViews;

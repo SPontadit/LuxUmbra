@@ -297,6 +297,36 @@ namespace lux::rhi
 		blitGraphicsPipelineCI.descriptorSetLayoutBindings = { blitDescriptorSetLayoutBinding };
 
 		CreateGraphicsPipeline(blitGraphicsPipelineCI, forward.blitGraphicsPipeline);
+
+
+		// Render Target Graphics Pipeline
+		VkDescriptorSetLayoutBinding rtUboDescriptorSetLayoutBinding = {};
+		rtUboDescriptorSetLayoutBinding.binding = 0;
+		rtUboDescriptorSetLayoutBinding.descriptorCount = 1;
+		rtUboDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		rtUboDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+		VkDescriptorSetLayoutBinding rtSamplerDescriptorSetLayoutBinding = {};
+		rtSamplerDescriptorSetLayoutBinding.binding = 1;
+		rtSamplerDescriptorSetLayoutBinding.descriptorCount = 1;
+		rtSamplerDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		rtSamplerDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		GraphicsPipelineCreateInfo rtGraphicsPipelineCI = {};
+		rtGraphicsPipelineCI.renderPass = forward.renderPass;
+		rtGraphicsPipelineCI.subpassIndex = ForwardRenderer::FORWARD_SUBPASS_RENDER_TO_TARGET;
+		rtGraphicsPipelineCI.binaryVertexFilePath = "data/shaders/triangle/triangle.vert.spv";
+		rtGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/triangle/triangle.frag.spv";
+		blitGraphicsPipelineCI.emptyVertexInput = false;
+		rtGraphicsPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		rtGraphicsPipelineCI.viewportWidth = TO_FLOAT(swapchainExtent.width);
+		rtGraphicsPipelineCI.viewportHeight = TO_FLOAT(swapchainExtent.height);
+		rtGraphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_BACK_BIT;
+		rtGraphicsPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+		rtGraphicsPipelineCI.enableDepthTest = VK_TRUE;
+		rtGraphicsPipelineCI.enableDepthWrite = VK_TRUE;
+
+		CreateGraphicsPipeline(rtGraphicsPipelineCI, forward.rtGraphicsPipeline);
 	}
 
 	void RHI::InitForwardDescriptorSets() noexcept
@@ -379,6 +409,12 @@ namespace lux::rhi
 		renderPassBI.pClearValues = clearValues.data();
 
 		vkCmdBeginRenderPass(commandBuffer, &renderPassBI, VK_SUBPASS_CONTENTS_INLINE);
+
+
+		// Render Target Subpass
+		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.rtGraphicsPipeline.pipeline);
+
+		vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 
 		// Blit Subpass
 		vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);

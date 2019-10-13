@@ -34,6 +34,9 @@
     <Filter Include="Resource Files\blit">
       <UniqueIdentifier>{f42031fd-70d3-41cc-8c74-672f0054a2c5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resource Files\triangle">
+      <UniqueIdentifier>{050aedd5-974b-421c-a901-66c92e5cfa2d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\main.cpp">
@@ -132,6 +135,12 @@
     </None>
     <None Include="data\shaders\blit\blit.vert">
       <Filter>Resource Files\blit</Filter>
+    </None>
+    <None Include="data\shaders\texture\triangle.frag">
+      <Filter>Resource Files\triangle</Filter>
+    </None>
+    <None Include="data\shaders\texture\triangle.vert">
+      <Filter>Resource Files\triangle</Filter>
     </None>
   </ItemGroup>
 </Project>

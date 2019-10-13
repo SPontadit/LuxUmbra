@@ -173,6 +173,8 @@
   <ItemGroup>
     <None Include="data\shaders\blit\blit.frag" />
     <None Include="data\shaders\blit\blit.vert" />
+    <None Include="data\shaders\texture\triangle.frag" />
+    <None Include="data\shaders\texture\triangle.vert" />
     <None Include="include\Logger.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
