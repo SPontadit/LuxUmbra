@@ -9,6 +9,18 @@ namespace lux::scene
 	{
 	}
 
+	Node::Node(Node* parent) noexcept
+		: parent(parent), position(0.f), rotation(glm::identity<glm::quat>())
+	{
+
+	}
+
+	Node::Node(Node* parent, glm::vec3 position, glm::quat rotation) noexcept
+		: parent(parent), position(position), rotation(rotation)
+	{
+
+	}
+
 	glm::vec3 Node::GetLocalPosition() const noexcept
 	{
 		return position;

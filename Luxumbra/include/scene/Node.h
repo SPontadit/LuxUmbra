@@ -13,6 +13,8 @@ namespace lux::scene
 	{
 	public:
 		Node() noexcept;
+		Node(Node* parent) noexcept;
+		Node(Node* parent, glm::vec3 position, glm::quat rotation) noexcept;
 		Node(const Node&) = delete;
 		Node(Node&&) = delete;
 
