@@ -31,6 +31,9 @@
     <Filter Include="Source Files\Scene">
       <UniqueIdentifier>{6634046f-25b1-4e6f-8e93-d65f2ffa2c52}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resource Files\blit">
+      <UniqueIdentifier>{f42031fd-70d3-41cc-8c74-672f0054a2c5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\main.cpp">
@@ -123,6 +126,12 @@
   <ItemGroup>
     <None Include="include\Logger.inl">
       <Filter>Header Files</Filter>
+    </None>
+    <None Include="data\shaders\blit\blit.frag">
+      <Filter>Resource Files\blit</Filter>
+    </None>
+    <None Include="data\shaders\blit\blit.vert">
+      <Filter>Resource Files\blit</Filter>
     </None>
   </ItemGroup>
 </Project>
