@@ -17,4 +17,8 @@ namespace lux::scene
 
 	}
 
+	const resource::Mesh& MeshNode::GetMesh() const noexcept
+	{
+		return *mesh.get();
+	}
 }

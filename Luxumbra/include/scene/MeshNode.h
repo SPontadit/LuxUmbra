@@ -25,6 +25,8 @@ namespace lux::scene
 		const MeshNode& operator=(const MeshNode&) = delete;
 		const MeshNode& operator=(MeshNode&&) = delete;
 
+		const resource::Mesh& GetMesh() const noexcept;
+
 	private:
 		std::shared_ptr<resource::Mesh> mesh;
 	};
