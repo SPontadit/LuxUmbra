@@ -2,6 +2,9 @@
 
 #include <array>
 
+#include "glm\gtc\matrix_transform.hpp"
+
+
 namespace lux::rhi
 {
 	ForwardRenderer::ForwardRenderer() noexcept
@@ -312,21 +315,34 @@ namespace lux::rhi
 		rtSamplerDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		rtSamplerDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
+		VkPushConstantRange rtPushConstantRange = {};
+		rtPushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		rtPushConstantRange.size = sizeof(RtConstants);
+		rtPushConstantRange.offset = 0;
+
 		GraphicsPipelineCreateInfo rtGraphicsPipelineCI = {};
 		rtGraphicsPipelineCI.renderPass = forward.renderPass;
 		rtGraphicsPipelineCI.subpassIndex = ForwardRenderer::FORWARD_SUBPASS_RENDER_TO_TARGET;
 		rtGraphicsPipelineCI.binaryVertexFilePath = "data/shaders/triangle/triangle.vert.spv";
 		rtGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/triangle/triangle.frag.spv";
-		blitGraphicsPipelineCI.emptyVertexInput = false;
 		rtGraphicsPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		rtGraphicsPipelineCI.emptyVertexInput = true;
 		rtGraphicsPipelineCI.viewportWidth = TO_FLOAT(swapchainExtent.width);
 		rtGraphicsPipelineCI.viewportHeight = TO_FLOAT(swapchainExtent.height);
 		rtGraphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_BACK_BIT;
 		rtGraphicsPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		rtGraphicsPipelineCI.enableDepthTest = VK_TRUE;
 		rtGraphicsPipelineCI.enableDepthWrite = VK_TRUE;
+		//rtGraphicsPipelineCI.pushConstants = { rtPushConstantRange };
 
 		CreateGraphicsPipeline(rtGraphicsPipelineCI, forward.rtGraphicsPipeline);
+
+		float aspectRatio = TO_FLOAT(swapchainExtent.width) / TO_FLOAT(swapchainExtent.height);
+		forward.rtConstants.projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
+		forward.rtConstants.projection[1][1] *= -1.0f;
+
+		glm::vec3 cameraPosition = glm::vec3(0.0f, 0.0f, -5.0f);
+		forward.rtConstants.view = glm::translate(glm::mat4(1.0f), cameraPosition);
 	}
 
 	void RHI::InitForwardDescriptorSets() noexcept
@@ -412,8 +428,14 @@ namespace lux::rhi
 
 
 		// Render Target Subpass
+		//vkCmdPushConstants(commandBuffer, forward.rtGraphicsPipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(RtConstants), &forward.rtConstants);
+		//
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.rtGraphicsPipeline.pipeline);
 
+		//VkDeviceSize offset[] = { 0 };
+		//vkCmdBindVertexBuffers(commandBuffer, 0, 1, &mesh->vertexBuffer.buffer, offset);
+		//vkCmdBindIndexBuffer(commandBuffer, mesh->indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);	
+		//vkCmdDrawIndexed(commandBuffer, mesh->indexCount, 1, 0, 0, 0);
 		vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 
 		// Blit Subpass

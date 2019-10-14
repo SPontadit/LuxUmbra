@@ -37,6 +37,15 @@
     <Filter Include="Resource Files\triangle">
       <UniqueIdentifier>{050aedd5-974b-421c-a901-66c92e5cfa2d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Resource">
+      <UniqueIdentifier>{1d8fa256-1b7b-48ef-9cc5-1326c063fb10}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Resource">
+      <UniqueIdentifier>{a37d6dc9-7eda-4009-a2e4-4ebc69ed53fd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\mesh">
+      <UniqueIdentifier>{aa24ac1b-caed-44d8-b823-6f8d222147fc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\main.cpp">
@@ -80,6 +89,12 @@
     </ClCompile>
     <ClCompile Include="source\scene\CameraNode.cpp">
       <Filter>Source Files\Scene</Filter>
+	</ClCompile>
+    <ClCompile Include="source\resource\Mesh.cpp">
+      <Filter>Source Files\Resource</Filter>
+    </ClCompile>
+    <ClCompile Include="source\resource\ResourceManager.cpp">
+      <Filter>Source Files\Resource</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -131,6 +146,12 @@
     <ClInclude Include="include\scene\CameraNode.h">
       <Filter>Header Files\Scene</Filter>
     </ClInclude>
+	<ClInclude Include="include\resource\Mesh.h">
+      <Filter>Header Files\Resource</Filter>
+    </ClInclude>
+    <ClInclude Include="include\resource\ResourceManager.h">
+      <Filter>Header Files\Resource</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="include\Logger.inl">
@@ -147,6 +168,12 @@
     </None>
     <None Include="data\shaders\texture\triangle.vert">
       <Filter>Resource Files\triangle</Filter>
+    </None>
+    <None Include="data\shaders\mesh\mesh.frag">
+      <Filter>Resource Files\mesh</Filter>
+    </None>
+    <None Include="data\shaders\mesh\mesh.vert">
+      <Filter>Resource Files\mesh</Filter>
     </None>
   </ItemGroup>
 </Project>

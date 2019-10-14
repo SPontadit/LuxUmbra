@@ -6,6 +6,8 @@
 #include "Window.h"
 #include "rhi\RHI.h"
 #include "scene\Scene.h"
+#include "resource/ResourceManager.h"
+
 
 namespace lux
 {
@@ -17,7 +19,7 @@ namespace lux
 		Engine(const Engine&) = delete;
 		Engine(Engine&&) = delete;
 
-		~Engine() noexcept = default;
+		~Engine() noexcept;
 
 		const Engine& operator=(const Engine&) = delete;
 		const Engine& operator=(Engine&&) = delete;
@@ -31,6 +33,7 @@ namespace lux
 		Window window;
 		rhi::RHI rhi;
 		scene::Scene scene;
+		resource::ResourceManager resourceManager;
 	};
 
 } // namespace lux

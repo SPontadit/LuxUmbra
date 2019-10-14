@@ -17,5 +17,7 @@
 #endif // _DEBUG
 
 #define GLM_FORCE_SWIZZLE
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 
 #endif // LUXUMBRA_H_INCLUDED

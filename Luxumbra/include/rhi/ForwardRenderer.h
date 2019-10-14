@@ -3,12 +3,21 @@
 
 #include "Luxumbra.h"
 
+#include <vector>
+
+#include "glm\glm.hpp"
+
 #include "LuxVkImpl.h"
 
-#include <vector>
+
 
 namespace lux::rhi
 {
+	struct RtConstants
+	{
+		glm::mat4 projection;
+		glm::mat4 view;
+	};
 
 	struct ForwardRenderer
 	{
@@ -29,6 +38,7 @@ namespace lux::rhi
 		std::vector<VkDescriptorSet> blitDescriptorSets;
 
 		GraphicsPipeline rtGraphicsPipeline;
+		RtConstants rtConstants;
 
 		std::vector<VkImage> rtColorAttachmentImages;
 		std::vector<VkDeviceMemory> rtColorAttachmentImageMemories;

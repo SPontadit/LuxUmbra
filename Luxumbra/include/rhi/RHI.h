@@ -11,6 +11,7 @@
 #include "Image.h"
 #include "ForwardRenderer.h"
 #include "Buffer.h"
+#include "resource\Mesh.h"
 
 namespace lux::rhi
 {
@@ -29,6 +30,10 @@ namespace lux::rhi
 
 		bool Initialize(const Window& window) noexcept;
 		void RenderForward() noexcept;
+
+		void CreateBuffer(const BufferCreateInfo& luxBufferCI, Buffer& buffer) noexcept;
+		void UpdateBuffer(Buffer& buffer, void* newData) noexcept;
+		void DestroyBuffer(Buffer& buffer) noexcept;
 
 		static const uint32_t SWAPCHAIN_MIN_IMAGE_COUNT = 2;
 
@@ -81,10 +86,6 @@ namespace lux::rhi
 		void CreateGraphicsPipeline(const GraphicsPipelineCreateInfo& luxGraphicsPipelineCI, GraphicsPipeline& graphicsPipeline) noexcept;
 		void CreateShaderModule(const std::string& binaryFilePath, VkShaderModule* shaderModule) const noexcept;
 		void DestroyGraphicsPipeline(GraphicsPipeline& graphicsPipeline) noexcept;
-
-		void CreateBuffer(const BufferCreateInfo& luxBufferCI, Buffer& buffer) noexcept;
-		void UpdateBuffer(Buffer& buffer, void* newData) noexcept;
-		void DestroyBuffer(Buffer& buffer) noexcept;
 
 		void CreateImage(const ImageCreateInfo& luxImageCI, Image& image) noexcept;
 		void DestroyImage(Image& image) noexcept;

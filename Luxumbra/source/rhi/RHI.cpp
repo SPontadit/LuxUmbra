@@ -2,6 +2,8 @@
 
 #include <array>
 
+#include "resource\ResourceManager.h"
+
 namespace lux::rhi
 {
 	RHI::RHI() noexcept
