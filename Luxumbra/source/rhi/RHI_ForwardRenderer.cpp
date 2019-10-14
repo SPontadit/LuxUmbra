@@ -7,6 +7,9 @@
 
 namespace lux::rhi
 {
+	using MeshNodeIterator = std::vector<scene::MeshNode*>::iterator;
+	using MeshNodeConstIterator = std::vector<scene::MeshNode*>::const_iterator;
+	
 	ForwardRenderer::ForwardRenderer() noexcept
 		: renderPass(VK_NULL_HANDLE), frameBuffers(0), blitGraphicsPipeline(),
 		rtColorAttachmentImages(0), rtColorAttachmentImageMemories(0), rtColorAttachmentImageViews(0),
@@ -319,6 +322,12 @@ namespace lux::rhi
 		//rtSamplerDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		//rtSamplerDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
+		VkPushConstantRange rtModelPushConstantRange = {};
+		rtModelPushConstantRange.offset = 0;
+		rtModelPushConstantRange.size = sizeof(RtModelConstant);
+		rtModelPushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+
 		GraphicsPipelineCreateInfo rtGraphicsPipelineCI = {};
 		rtGraphicsPipelineCI.renderPass = forward.renderPass;
 		rtGraphicsPipelineCI.subpassIndex = ForwardRenderer::FORWARD_SUBPASS_RENDER_TO_TARGET;
@@ -332,6 +341,7 @@ namespace lux::rhi
 		rtGraphicsPipelineCI.enableDepthTest = VK_TRUE;
 		rtGraphicsPipelineCI.enableDepthWrite = VK_TRUE;
 		rtGraphicsPipelineCI.descriptorSetLayoutBindings = { rtViewProjDescriptorSetLayoutBinding };
+		rtGraphicsPipelineCI.pushConstants = { rtModelPushConstantRange };
 
 		CreateGraphicsPipeline(rtGraphicsPipelineCI, forward.rtGraphicsPipeline);
 	}
@@ -431,6 +441,7 @@ namespace lux::rhi
 		UpdateBuffer(forward.viewProjUniformBuffers[currentFrame], &viewProj);
 	}
 
+	// TODO: Ref sur le vecteur de meshes ?
 	void RHI::RenderForward(const scene::CameraNode* camera, const std::vector<scene::MeshNode*> meshes) noexcept
 	{
 		// Acquire next image
@@ -486,9 +497,19 @@ namespace lux::rhi
 		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.rtGraphicsPipeline.pipelineLayout, 0, 1, &forward.rtDescriptorSets[currentFrame], 0, nullptr);
 
 		VkDeviceSize offset[] = { 0 };
-		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &forward.mesh->vertexBuffer.buffer, offset);
-		vkCmdBindIndexBuffer(commandBuffer, forward.mesh->indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-		vkCmdDrawIndexed(commandBuffer, forward.mesh->indexCount, 1, 0, 0, 0);
+
+		MeshNodeConstIterator it = meshes.cbegin();
+		MeshNodeConstIterator itE = meshes.cend();
+		for (; it != itE; ++it)
+		{
+			forward.modelConstant.model = (*it)->GetWorldTransform();
+			vkCmdPushConstants(commandBuffer, forward.rtGraphicsPipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(RtModelConstant), &forward.modelConstant);
+
+			const resource::Mesh& currentMesh = (*it)->GetMesh();
+			vkCmdBindVertexBuffers(commandBuffer, 0, 1, &currentMesh.vertexBuffer.buffer, offset);
+			vkCmdBindIndexBuffer(commandBuffer, currentMesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(commandBuffer, currentMesh.indexCount, 1, 0, 0, 0);
+		}
 //		vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 
 		RenderImgui();

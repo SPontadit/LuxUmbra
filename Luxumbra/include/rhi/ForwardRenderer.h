@@ -19,6 +19,11 @@ namespace lux::rhi
 		glm::mat4 view;
 	};
 
+	struct RtModelConstant
+	{
+		glm::mat4 model;
+	};
+
 	struct ForwardRenderer
 	{
 		ForwardRenderer() noexcept;
@@ -40,9 +45,8 @@ namespace lux::rhi
 		GraphicsPipeline rtGraphicsPipeline;
 		std::vector<VkDescriptorSet> rtDescriptorSets;
 
+		RtModelConstant modelConstant;
 		std::vector<Buffer> viewProjUniformBuffers;
-
-		std::shared_ptr<resource::Mesh> mesh;
 
 		std::vector<VkImage> rtColorAttachmentImages;
 		std::vector<VkDeviceMemory> rtColorAttachmentImageMemories;

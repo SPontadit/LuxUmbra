@@ -13,9 +13,14 @@ layout(binding = 0) uniform ViewProj
 	mat4 view;
 } vp;
 
+layout(push_constant) uniform Model
+{
+	mat4 model;
+} m;
+
 void main() 
 {
-    gl_Position = vp.proj * vp.view * vec4(inPosition, 1.0);
+    gl_Position = vp.proj * vp.view * m.model * vec4(inPosition, 1.0);
 
 	outNormal = inNormal;
 }

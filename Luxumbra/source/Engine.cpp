@@ -40,7 +40,6 @@ namespace lux
 
 		isInitialized = true;
 
-		rhi.forward.mesh = resourceManager.GetMesh(resource::MeshPrimitive::MESH_SPHERE_PRIMITIVE);
 
 		return true;
 	}
@@ -70,7 +69,6 @@ namespace lux
 
 		ImGui::Begin("Luxumbra Engine");
 		
-
 		ImGui::End();
 
 		ImGui::Render();
