@@ -33,6 +33,7 @@ namespace lux::rhi
 		const RHI& operator=(RHI&&) = delete;
 
 		bool Initialize(const Window& window) noexcept;
+		void InitImgui() noexcept;
 		void RenderForward(const scene::CameraNode* camera, const std::vector<scene::MeshNode*> meshes) noexcept;
 
 		void CreateBuffer(const BufferCreateInfo& luxBufferCI, Buffer& buffer) noexcept;
@@ -40,6 +41,7 @@ namespace lux::rhi
 		void DestroyBuffer(Buffer& buffer) noexcept;
 
 		static const uint32_t SWAPCHAIN_MIN_IMAGE_COUNT = 2;
+		ForwardRenderer forward;
 
 	private:
 		bool isInitialized;
@@ -62,10 +64,11 @@ namespace lux::rhi
 		std::vector<VkImage> swapchainImages;
 		std::vector<VkImageView> swapchainImageViews;
 
+		VkDescriptorPool imguiDescriptorPool;
+
 		VkCommandPool commandPool;
 		std::vector<VkCommandBuffer> commandBuffers;
 
-		ForwardRenderer forward;
 		uint32_t frameCount;
 		uint32_t currentFrame;
 
@@ -78,6 +81,11 @@ namespace lux::rhi
 		void InitForwardGraphicsPipelines() noexcept;
 		void InitForwardDescriptorPool() noexcept;
 		void InitForwardDescriptorSets() noexcept;
+		void InitForwardUniformBuffers() noexcept;
+
+		void UpdateForwardUnitformBuffers(const scene::CameraNode* camera) noexcept;
+
+		void RenderImgui() noexcept;
 
 		uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const noexcept;
 		VkFormat FindSupportedImageFormat(const std::vector<VkFormat>& formats, VkImageTiling tiling, VkFormatFeatureFlags features) const noexcept;

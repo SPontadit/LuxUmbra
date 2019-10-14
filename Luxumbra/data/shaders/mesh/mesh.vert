@@ -7,15 +7,15 @@ layout(location = 2) in vec3 inNormal;
 
 layout(location = 0) out vec3 outNormal;
 
-layout(push_constant) uniform PusConstantes
+layout(binding = 0) uniform ViewProj
 {
 	mat4 proj;
 	mat4 view;
-} mvp;
+} vp;
 
 void main() 
 {
-    gl_Position = mvp.proj * mvp.view * vec4(inPosition, 1.0);
+    gl_Position = vp.proj * vp.view * vec4(inPosition, 1.0);
 
 	outNormal = inNormal;
 }

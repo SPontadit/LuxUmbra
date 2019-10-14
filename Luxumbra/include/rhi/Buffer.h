@@ -21,7 +21,7 @@ namespace lux::rhi
 	{
 		Buffer() noexcept;
 		Buffer(const Buffer&) = delete;
-		Buffer(Buffer&&) = delete;
+		Buffer(Buffer&&) = default;
 
 		~Buffer() noexcept = default;
 

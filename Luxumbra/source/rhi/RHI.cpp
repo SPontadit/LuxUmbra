@@ -2,6 +2,9 @@
 
 #include <array>
 
+#include "imgui\imgui.h"
+#include "imgui\imgui_impl_vulkan.h"
+
 #include "resource\ResourceManager.h"
 
 namespace lux::rhi
@@ -42,6 +45,8 @@ namespace lux::rhi
 		InitForwardDescriptorPool();
 		
 		InitForwardGraphicsPipelines();
+
+		InitForwardUniformBuffers();
 
 		InitForwardDescriptorSets();
 
@@ -374,6 +379,86 @@ namespace lux::rhi
 
 		commandBuffers.resize(TO_SIZE_T(swapchainImageCount));
 		CHECK_VK(vkAllocateCommandBuffers(device, &commandBufferAI, commandBuffers.data()));
+	}
+
+	void RHI::InitImgui() noexcept
+	{
+		VkDescriptorPoolSize pool_sizes[] =
+		{
+			{ VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+			{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+			{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
+		};
+		VkDescriptorPoolCreateInfo pool_info = {};
+		pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+		pool_info.maxSets = 1000 * IM_ARRAYSIZE(pool_sizes);
+		pool_info.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
+		pool_info.pPoolSizes = pool_sizes;
+		vkCreateDescriptorPool(device, &pool_info, nullptr, &imguiDescriptorPool);
+
+
+
+		ImGui_ImplVulkan_InitInfo imguiInitInfo = {};
+		imguiInitInfo.Instance = instance;
+		imguiInitInfo.PhysicalDevice = physicalDevice;
+		imguiInitInfo.Device = device;
+		imguiInitInfo.QueueFamily = graphicsQueueIndex;
+		imguiInitInfo.Queue = graphicsQueue;
+		imguiInitInfo.PipelineCache = VK_NULL_HANDLE;
+		imguiInitInfo.DescriptorPool = imguiDescriptorPool;
+		imguiInitInfo.Allocator = VK_NULL_HANDLE;
+		imguiInitInfo.MinImageCount = SWAPCHAIN_MIN_IMAGE_COUNT;
+		imguiInitInfo.ImageCount = swapchainImageCount;
+
+		ImGui_ImplVulkan_Init(&imguiInitInfo, forward.renderPass);
+
+		ImGui::StyleColorsDark();
+
+		VkCommandBufferAllocateInfo allocateInfo = {};
+		allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		allocateInfo.commandPool = commandPool;
+		allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		allocateInfo.commandBufferCount = 1;
+
+		VkCommandBuffer buffer;
+		vkAllocateCommandBuffers(device, &allocateInfo, &buffer);
+
+
+		VkCommandBufferBeginInfo beginInfo = {};
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+		vkBeginCommandBuffer(buffer, &beginInfo);
+
+		ImGui_ImplVulkan_CreateFontsTexture(buffer);
+
+		vkEndCommandBuffer(buffer);
+
+		VkSubmitInfo submitInfo = {};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &buffer;
+
+		vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+		vkQueueWaitIdle(graphicsQueue);
+
+		vkFreeCommandBuffers(device, commandPool, 1, &buffer);
+
+		ImGui_ImplVulkan_DestroyFontUploadObjects();
+	}
+
+	void RHI::RenderImgui() noexcept
+	{
+		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffers[currentFrame]);
 	}
 
 	VkCommandBuffer RHI::BeginSingleTimeCommandBuffer() const noexcept

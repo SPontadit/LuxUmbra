@@ -28,6 +28,7 @@ namespace lux
 
 		bool Initialize(uint32_t width, uint32_t height) noexcept;
 		HWND GetHandle() const noexcept;
+		GLFWwindow* GetGLFWWindow() const noexcept;
 
 		void PollEvents() const noexcept;
 		bool ShouldClose() const noexcept;

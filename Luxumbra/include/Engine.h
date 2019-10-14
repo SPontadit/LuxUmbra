@@ -30,6 +30,8 @@ namespace lux
 		scene::Scene& GetScene() noexcept;
 
 	private:
+		void DrawImgui() noexcept;
+
 		bool isInitialized;
 
 		Window window;

@@ -36,7 +36,8 @@ namespace lux::rhi
 		CHECK_VK(vkAllocateMemory(device, &memoryAI, nullptr, &buffer.memory));
 		CHECK_VK(vkBindBufferMemory(device, buffer.buffer, buffer.memory, 0));
 
-		UpdateBuffer(buffer, luxBufferCI.data);
+		if (luxBufferCI.data != nullptr)
+			UpdateBuffer(buffer, luxBufferCI.data);
 	}
 
 	void RHI::UpdateBuffer(Buffer& buffer, void* newData) noexcept

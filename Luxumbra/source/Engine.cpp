@@ -1,5 +1,9 @@
 #include "Engine.h"
 
+#include "imgui\imgui.h"
+#include "imgui\imgui_impl_glfw.h"
+#include "imgui\imgui_impl_vulkan.h"
+
 namespace lux
 {
 
@@ -22,11 +26,21 @@ namespace lux
 		if (!rhi.Initialize(window))
 			return false;
 
+		IMGUI_CHECKVERSION();
+		ImGui::CreateContext();
+		ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+		ImGui_ImplGlfw_InitForVulkan(window.GetGLFWWindow(), true);
+
+		rhi.InitImgui();
+
 		resourceManager.Initialize();
 
 		scene.Initialize(window, resourceManager);
 
 		isInitialized = true;
+
+		rhi.forward.mesh = resourceManager.GetMesh(resource::MeshPrimitive::MESH_SPHERE_PRIMITIVE);
 
 		return true;
 	}
@@ -35,6 +49,8 @@ namespace lux
 	{
 		while (!window.ShouldClose())
 		{
+			DrawImgui();
+
 			rhi.RenderForward(scene.GetCurrentCamera(), scene.GetMeshNodes());
 
 			window.PollEvents();
@@ -44,6 +60,20 @@ namespace lux
 	scene::Scene& Engine::GetScene() noexcept
 	{
 		return scene;
+	}
+
+	void Engine::DrawImgui() noexcept
+	{
+		ImGui_ImplVulkan_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+
+		ImGui::Begin("Luxumbra Engine");
+		
+
+		ImGui::End();
+
+		ImGui::Render();
 	}
 
 } // namespace lux

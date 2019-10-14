@@ -139,6 +139,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\libs\imgui\imgui.cpp" />
+    <ClCompile Include="..\libs\imgui\imgui_demo.cpp" />
+    <ClCompile Include="..\libs\imgui\imgui_draw.cpp" />
+    <ClCompile Include="..\libs\imgui\imgui_impl_glfw.cpp" />
+    <ClCompile Include="..\libs\imgui\imgui_impl_vulkan.cpp" />
+    <ClCompile Include="..\libs\imgui\imgui_widgets.cpp" />
     <ClCompile Include="..\libs\volk\volk.c" />
     <ClCompile Include="source\Engine.cpp" />
     <ClCompile Include="source\main.cpp" />
@@ -158,6 +164,14 @@
     <ClCompile Include="source\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\libs\imgui\imconfig.h" />
+    <ClInclude Include="..\libs\imgui\imgui.h" />
+    <ClInclude Include="..\libs\imgui\imgui_impl_glfw.h" />
+    <ClInclude Include="..\libs\imgui\imgui_impl_vulkan.h" />
+    <ClInclude Include="..\libs\imgui\imgui_internal.h" />
+    <ClInclude Include="..\libs\imgui\imstb_rectpack.h" />
+    <ClInclude Include="..\libs\imgui\imstb_textedit.h" />
+    <ClInclude Include="..\libs\imgui\imstb_truetype.h" />
     <ClInclude Include="..\libs\volk\volk.h" />
     <ClInclude Include="include\Engine.h" />
     <ClInclude Include="include\Logger.h" />

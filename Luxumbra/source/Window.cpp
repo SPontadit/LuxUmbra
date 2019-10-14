@@ -46,6 +46,11 @@ namespace lux
 		return glfwGetWin32Window(window);
 	}
 
+	GLFWwindow* Window::GetGLFWWindow() const noexcept
+	{
+		return window;
+	}
+
 	void Window::PollEvents() const noexcept
 	{
 		glfwPollEvents();

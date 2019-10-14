@@ -8,12 +8,12 @@
 #include "glm\glm.hpp"
 
 #include "LuxVkImpl.h"
-
+#include "resource\Mesh.h"
 
 
 namespace lux::rhi
 {
-	struct RtConstants
+	struct RtViewProjUniform
 	{
 		glm::mat4 projection;
 		glm::mat4 view;
@@ -38,7 +38,11 @@ namespace lux::rhi
 		std::vector<VkDescriptorSet> blitDescriptorSets;
 
 		GraphicsPipeline rtGraphicsPipeline;
-		RtConstants rtConstants;
+		std::vector<VkDescriptorSet> rtDescriptorSets;
+
+		std::vector<Buffer> viewProjUniformBuffers;
+
+		std::shared_ptr<resource::Mesh> mesh;
 
 		std::vector<VkImage> rtColorAttachmentImages;
 		std::vector<VkDeviceMemory> rtColorAttachmentImageMemories;

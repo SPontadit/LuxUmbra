@@ -260,17 +260,21 @@ namespace lux::rhi
 
 	void RHI::InitForwardDescriptorPool() noexcept
 	{
-		VkDescriptorPoolSize blitDescriptorPoolSize = {};
-		blitDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
-		blitDescriptorPoolSize.descriptorCount = swapchainImageCount;
+		VkDescriptorPoolSize blitInputDescriptorPoolSize = {};
+		blitInputDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+		blitInputDescriptorPoolSize.descriptorCount = swapchainImageCount;
 
-		std::array<VkDescriptorPoolSize, 1> descriptorPoolSizes = { blitDescriptorPoolSize };
+		VkDescriptorPoolSize rtUniformDescriptorPoolSize = {};
+		rtUniformDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		rtUniformDescriptorPoolSize.descriptorCount = swapchainImageCount;
+
+		std::array<VkDescriptorPoolSize, 2> descriptorPoolSizes = { blitInputDescriptorPoolSize, rtUniformDescriptorPoolSize };
 
 		VkDescriptorPoolCreateInfo descriptorPoolCI = {};
 		descriptorPoolCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 		descriptorPoolCI.poolSizeCount = TO_UINT32_T(descriptorPoolSizes.size());
 		descriptorPoolCI.pPoolSizes = descriptorPoolSizes.data();
-		descriptorPoolCI.maxSets = swapchainImageCount;
+		descriptorPoolCI.maxSets = swapchainImageCount * TO_UINT32_T(descriptorPoolSizes.size());
 
 		CHECK_VK(vkCreateDescriptorPool(device, &descriptorPoolCI, nullptr, &forward.descriptorPool));
 	}
@@ -303,60 +307,47 @@ namespace lux::rhi
 
 
 		// Render Target Graphics Pipeline
-		VkDescriptorSetLayoutBinding rtUboDescriptorSetLayoutBinding = {};
-		rtUboDescriptorSetLayoutBinding.binding = 0;
-		rtUboDescriptorSetLayoutBinding.descriptorCount = 1;
-		rtUboDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		rtUboDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		VkDescriptorSetLayoutBinding rtViewProjDescriptorSetLayoutBinding = {};
+		rtViewProjDescriptorSetLayoutBinding.binding = 0;
+		rtViewProjDescriptorSetLayoutBinding.descriptorCount = 1;
+		rtViewProjDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		rtViewProjDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-		VkDescriptorSetLayoutBinding rtSamplerDescriptorSetLayoutBinding = {};
-		rtSamplerDescriptorSetLayoutBinding.binding = 1;
-		rtSamplerDescriptorSetLayoutBinding.descriptorCount = 1;
-		rtSamplerDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		rtSamplerDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-		VkPushConstantRange rtPushConstantRange = {};
-		rtPushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-		rtPushConstantRange.size = sizeof(RtConstants);
-		rtPushConstantRange.offset = 0;
+		//VkDescriptorSetLayoutBinding rtSamplerDescriptorSetLayoutBinding = {};
+		//rtSamplerDescriptorSetLayoutBinding.binding = 1;
+		//rtSamplerDescriptorSetLayoutBinding.descriptorCount = 1;
+		//rtSamplerDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		//rtSamplerDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 		GraphicsPipelineCreateInfo rtGraphicsPipelineCI = {};
 		rtGraphicsPipelineCI.renderPass = forward.renderPass;
 		rtGraphicsPipelineCI.subpassIndex = ForwardRenderer::FORWARD_SUBPASS_RENDER_TO_TARGET;
-		rtGraphicsPipelineCI.binaryVertexFilePath = "data/shaders/triangle/triangle.vert.spv";
-		rtGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/triangle/triangle.frag.spv";
-		rtGraphicsPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-		rtGraphicsPipelineCI.emptyVertexInput = true;
+		rtGraphicsPipelineCI.binaryVertexFilePath = "data/shaders/mesh/mesh.vert.spv";
+		rtGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/mesh/mesh.frag.spv";
+		rtGraphicsPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 		rtGraphicsPipelineCI.viewportWidth = TO_FLOAT(swapchainExtent.width);
 		rtGraphicsPipelineCI.viewportHeight = TO_FLOAT(swapchainExtent.height);
 		rtGraphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_BACK_BIT;
 		rtGraphicsPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		rtGraphicsPipelineCI.enableDepthTest = VK_TRUE;
 		rtGraphicsPipelineCI.enableDepthWrite = VK_TRUE;
-		//rtGraphicsPipelineCI.pushConstants = { rtPushConstantRange };
+		rtGraphicsPipelineCI.descriptorSetLayoutBindings = { rtViewProjDescriptorSetLayoutBinding };
 
 		CreateGraphicsPipeline(rtGraphicsPipelineCI, forward.rtGraphicsPipeline);
-
-		float aspectRatio = TO_FLOAT(swapchainExtent.width) / TO_FLOAT(swapchainExtent.height);
-		forward.rtConstants.projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
-		forward.rtConstants.projection[1][1] *= -1.0f;
-
-		glm::vec3 cameraPosition = glm::vec3(0.0f, 0.0f, -5.0f);
-		forward.rtConstants.view = glm::translate(glm::mat4(1.0f), cameraPosition);
 	}
 
 	void RHI::InitForwardDescriptorSets() noexcept
 	{
 		// Allocate Blit Descriptor Sets
-		std::vector<VkDescriptorSetLayout> descriptorSetLayout(swapchainImageCount, forward.blitGraphicsPipeline.descriptorSetLayout);
-		VkDescriptorSetAllocateInfo descriptorSetAI = {};
-		descriptorSetAI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		descriptorSetAI.descriptorPool = forward.descriptorPool;
-		descriptorSetAI.descriptorSetCount = swapchainImageCount;
-		descriptorSetAI.pSetLayouts = descriptorSetLayout.data();
+		std::vector<VkDescriptorSetLayout> blitDescriptorSetLayout(swapchainImageCount, forward.blitGraphicsPipeline.descriptorSetLayout);
+		VkDescriptorSetAllocateInfo blitDescriptorSetAI = {};
+		blitDescriptorSetAI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		blitDescriptorSetAI.descriptorPool = forward.descriptorPool;
+		blitDescriptorSetAI.descriptorSetCount = swapchainImageCount;
+		blitDescriptorSetAI.pSetLayouts = blitDescriptorSetLayout.data();
 
 		forward.blitDescriptorSets.resize(TO_SIZE_T(swapchainImageCount));
-		CHECK_VK(vkAllocateDescriptorSets(device, &descriptorSetAI, forward.blitDescriptorSets.data()));
+		CHECK_VK(vkAllocateDescriptorSets(device, &blitDescriptorSetAI, forward.blitDescriptorSets.data()));
 	
 	
 		// Update Blit Descriptor Sets
@@ -378,13 +369,70 @@ namespace lux::rhi
 		
 			vkUpdateDescriptorSets(device, 1, &blitWriteDescriptorSet, 0, nullptr);
 		}
+
+
+		// Allocate Render Target Descriptor Set
+		std::vector<VkDescriptorSetLayout> rtDescriptorSetLayout(swapchainImageCount, forward.rtGraphicsPipeline.descriptorSetLayout);
+		VkDescriptorSetAllocateInfo rtDescriptorSetAI = {};
+		rtDescriptorSetAI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		rtDescriptorSetAI.descriptorPool = forward.descriptorPool;
+		rtDescriptorSetAI.descriptorSetCount = swapchainImageCount;
+		rtDescriptorSetAI.pSetLayouts = rtDescriptorSetLayout.data();
+
+		forward.rtDescriptorSets.resize(TO_SIZE_T(swapchainImageCount));
+		CHECK_VK(vkAllocateDescriptorSets(device, &rtDescriptorSetAI, forward.rtDescriptorSets.data()));
+
+
+		// Update Render Target Descriptor Sets
+		VkWriteDescriptorSet rtWriteViewProjDescriptorSet = {};
+		rtWriteViewProjDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		rtWriteViewProjDescriptorSet.descriptorCount = 1;
+		rtWriteViewProjDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		rtWriteViewProjDescriptorSet.dstBinding = 0;
+		rtWriteViewProjDescriptorSet.dstArrayElement = 0;
+
+		VkDescriptorBufferInfo rtUniformDescriptorBufferInfo = {};
+		rtUniformDescriptorBufferInfo.offset = 0;
+		rtUniformDescriptorBufferInfo.range = sizeof(RtViewProjUniform);
+	
+		for (size_t i = 0; i < swapchainImageCount; i++)
+		{
+			rtUniformDescriptorBufferInfo.buffer = forward.viewProjUniformBuffers[i].buffer;
+
+			rtWriteViewProjDescriptorSet.pBufferInfo = &rtUniformDescriptorBufferInfo;
+			rtWriteViewProjDescriptorSet.dstSet = forward.rtDescriptorSets[i];
+
+			vkUpdateDescriptorSets(device, 1, &rtWriteViewProjDescriptorSet, 0, nullptr);
+		}
+	}
+
+	void RHI::InitForwardUniformBuffers() noexcept
+	{
+		BufferCreateInfo uniformBufferCI = {};
+		uniformBufferCI.usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+		uniformBufferCI.size = sizeof(RtViewProjUniform);
+		uniformBufferCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		uniformBufferCI.memoryProperty = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+	
+		forward.viewProjUniformBuffers.resize(TO_UINT32_T(swapchainImageCount));
+		for (size_t i = 0; i < swapchainImageCount; i++)
+		{
+			CreateBuffer(uniformBufferCI, forward.viewProjUniformBuffers[i]);
+		}
+	}
+
+	void RHI::UpdateForwardUnitformBuffers(const scene::CameraNode* camera) noexcept
+	{
+		RtViewProjUniform viewProj;
+
+		viewProj.view = camera->GetViewTransform();
+		viewProj.projection = camera->GetPerspectiveProjectionTransform();
+
+		UpdateBuffer(forward.viewProjUniformBuffers[currentFrame], &viewProj);
 	}
 
 	void RHI::RenderForward(const scene::CameraNode* camera, const std::vector<scene::MeshNode*> meshes) noexcept
 	{
-		forward.rtConstants.view = camera->GetViewTransform();
-		forward.rtConstants.projection = camera->GetPerspectiveProjectionTransform();
-
 		// Acquire next image
 		VkFence* fence = &forward.fences[currentFrame];
 		VkCommandBuffer commandBuffer = commandBuffers[currentFrame];
@@ -429,22 +477,26 @@ namespace lux::rhi
 
 		vkCmdBeginRenderPass(commandBuffer, &renderPassBI, VK_SUBPASS_CONTENTS_INLINE);
 
+		UpdateForwardUnitformBuffers(camera);
 
 		// Render Target Subpass
-		vkCmdPushConstants(commandBuffer, forward.rtGraphicsPipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(RtConstants), &forward.rtConstants);
+		//vkCmdPushConstants(commandBuffer, forward.rtGraphicsPipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(RtConstants), &forward.rtConstants);
 
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.rtGraphicsPipeline.pipeline);
+		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.rtGraphicsPipeline.pipelineLayout, 0, 1, &forward.rtDescriptorSets[currentFrame], 0, nullptr);
 
-		//VkDeviceSize offset[] = { 0 };
-		//vkCmdBindVertexBuffers(commandBuffer, 0, 1, &mesh->vertexBuffer.buffer, offset);
-		//vkCmdBindIndexBuffer(commandBuffer, mesh->indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);	
-		//vkCmdDrawIndexed(commandBuffer, mesh->indexCount, 1, 0, 0, 0);
-		vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+		VkDeviceSize offset[] = { 0 };
+		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &forward.mesh->vertexBuffer.buffer, offset);
+		vkCmdBindIndexBuffer(commandBuffer, forward.mesh->indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+		vkCmdDrawIndexed(commandBuffer, forward.mesh->indexCount, 1, 0, 0, 0);
+//		vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+
+		RenderImgui();
 
 		// Blit Subpass
 		vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.blitGraphicsPipeline.pipeline);
-		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.blitGraphicsPipeline.pipelineLayout, 0, 1, &forward.blitDescriptorSets[currentFrame], 0, NULL);
+		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.blitGraphicsPipeline.pipelineLayout, 0, 1, &forward.blitDescriptorSets[currentFrame], 0, nullptr);
 
 		vkCmdDraw(commandBuffer, 4, 1, 0, 0);
 

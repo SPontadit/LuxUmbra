@@ -46,6 +46,12 @@
     <Filter Include="Resource Files\mesh">
       <UniqueIdentifier>{aa24ac1b-caed-44d8-b823-6f8d222147fc}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\RHI\Imgui">
+      <UniqueIdentifier>{599c9b17-9e62-48a8-b8ae-83a120bc84b6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\RHI\Imgui">
+      <UniqueIdentifier>{24f05ee0-530c-4a5d-859d-1084ee377e51}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\main.cpp">
@@ -98,6 +104,24 @@
     </ClCompile>
     <ClCompile Include="source\scene\MeshNode.cpp">
       <Filter>Source Files\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libs\imgui\imgui.cpp">
+      <Filter>Source Files\RHI\Imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libs\imgui\imgui_draw.cpp">
+      <Filter>Source Files\RHI\Imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libs\imgui\imgui_impl_glfw.cpp">
+      <Filter>Source Files\RHI\Imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libs\imgui\imgui_impl_vulkan.cpp">
+      <Filter>Source Files\RHI\Imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libs\imgui\imgui_widgets.cpp">
+      <Filter>Source Files\RHI\Imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libs\imgui\imgui_demo.cpp">
+      <Filter>Source Files\RHI\Imgui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -157,6 +181,30 @@
     </ClInclude>
     <ClInclude Include="include\scene\MeshNode.h">
       <Filter>Header Files\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libs\imgui\imconfig.h">
+      <Filter>Header Files\RHI\Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libs\imgui\imgui.h">
+      <Filter>Header Files\RHI\Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libs\imgui\imgui_impl_glfw.h">
+      <Filter>Header Files\RHI\Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libs\imgui\imgui_impl_vulkan.h">
+      <Filter>Header Files\RHI\Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libs\imgui\imgui_internal.h">
+      <Filter>Header Files\RHI\Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libs\imgui\imstb_rectpack.h">
+      <Filter>Header Files\RHI\Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libs\imgui\imstb_textedit.h">
+      <Filter>Header Files\RHI\Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libs\imgui\imstb_truetype.h">
+      <Filter>Header Files\RHI\Imgui</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
