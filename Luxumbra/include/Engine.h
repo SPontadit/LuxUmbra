@@ -27,6 +27,8 @@ namespace lux
 		bool Initialize(uint32_t windowWidth, uint32_t windowHeight) noexcept;
 		void Run() noexcept;
 
+		scene::Scene& GetScene() noexcept;
+
 	private:
 		bool isInitialized;
 

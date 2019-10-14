@@ -22,13 +22,11 @@ namespace lux
 		if (!rhi.Initialize(window))
 			return false;
 
-		if (!scene.Initialize(window))
-			return false;
-
 		resourceManager.Initialize();
 
-		isInitialized = true;
+		scene.Initialize(window, resourceManager);
 
+		isInitialized = true;
 
 		return true;
 	}
@@ -37,10 +35,15 @@ namespace lux
 	{
 		while (!window.ShouldClose())
 		{
-			rhi.RenderForward();
+			rhi.RenderForward(scene.GetCurrentCamera(), scene.GetMeshNodes());
 
 			window.PollEvents();
 		}
+	}
+
+	scene::Scene& Engine::GetScene() noexcept
+	{
+		return scene;
 	}
 
 } // namespace lux

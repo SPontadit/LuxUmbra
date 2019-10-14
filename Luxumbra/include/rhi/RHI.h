@@ -7,14 +7,18 @@
 
 #include "rhi\LuxVkImpl.h"
 #include "Window.h"
-#include "GraphicsPipeline.h"
-#include "Image.h"
-#include "ForwardRenderer.h"
-#include "Buffer.h"
+#include "rhi\GraphicsPipeline.h"
+#include "rhi\ForwardRenderer.h"
+#include "rhi\Image.h"
+#include "rhi\Buffer.h"
 #include "resource\Mesh.h"
+#include "scene\CameraNode.h"
+#include "scene\MeshNode.h"
 
 namespace lux::rhi
 {
+
+	using namespace lux;
 
 	class RHI
 	{
@@ -29,7 +33,7 @@ namespace lux::rhi
 		const RHI& operator=(RHI&&) = delete;
 
 		bool Initialize(const Window& window) noexcept;
-		void RenderForward() noexcept;
+		void RenderForward(const scene::CameraNode* camera, const std::vector<scene::MeshNode*> meshes) noexcept;
 
 		void CreateBuffer(const BufferCreateInfo& luxBufferCI, Buffer& buffer) noexcept;
 		void UpdateBuffer(Buffer& buffer, void* newData) noexcept;

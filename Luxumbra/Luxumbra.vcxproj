@@ -150,6 +150,7 @@
     <ClCompile Include="source\rhi\RHI.cpp" />
     <ClCompile Include="source\rhi\RHI_Image.cpp" />
     <ClCompile Include="source\scene\CameraNode.cpp" />
+    <ClCompile Include="source\scene\MeshNode.cpp" />
     <ClCompile Include="source\scene\Node.cpp" />
     <ClCompile Include="source\scene\Scene.cpp" />
     <ClCompile Include="source\Utility.cpp" />
@@ -170,6 +171,7 @@
     <ClInclude Include="include\rhi\GraphicsPipeline.h" />
     <ClInclude Include="include\rhi\RHI.h" />
     <ClInclude Include="include\scene\CameraNode.h" />
+    <ClInclude Include="include\scene\MeshNode.h" />
     <ClInclude Include="include\scene\Node.h" />
     <ClInclude Include="include\scene\Scene.h" />
     <ClInclude Include="include\Utility.h" />

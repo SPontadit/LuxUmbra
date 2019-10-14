@@ -380,8 +380,11 @@ namespace lux::rhi
 		}
 	}
 
-	void RHI::RenderForward() noexcept
+	void RHI::RenderForward(const scene::CameraNode* camera, const std::vector<scene::MeshNode*> meshes) noexcept
 	{
+		forward.rtConstants.view = camera->GetViewTransform();
+		forward.rtConstants.projection = camera->GetPerspectiveProjectionTransform();
+
 		// Acquire next image
 		VkFence* fence = &forward.fences[currentFrame];
 		VkCommandBuffer commandBuffer = commandBuffers[currentFrame];
@@ -428,8 +431,8 @@ namespace lux::rhi
 
 
 		// Render Target Subpass
-		//vkCmdPushConstants(commandBuffer, forward.rtGraphicsPipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(RtConstants), &forward.rtConstants);
-		//
+		vkCmdPushConstants(commandBuffer, forward.rtGraphicsPipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(RtConstants), &forward.rtConstants);
+
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.rtGraphicsPipeline.pipeline);
 
 		//VkDeviceSize offset[] = { 0 };

@@ -89,12 +89,15 @@
     </ClCompile>
     <ClCompile Include="source\scene\CameraNode.cpp">
       <Filter>Source Files\Scene</Filter>
-	</ClCompile>
+    </ClCompile>
     <ClCompile Include="source\resource\Mesh.cpp">
       <Filter>Source Files\Resource</Filter>
     </ClCompile>
     <ClCompile Include="source\resource\ResourceManager.cpp">
       <Filter>Source Files\Resource</Filter>
+    </ClCompile>
+    <ClCompile Include="source\scene\MeshNode.cpp">
+      <Filter>Source Files\Scene</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -146,11 +149,14 @@
     <ClInclude Include="include\scene\CameraNode.h">
       <Filter>Header Files\Scene</Filter>
     </ClInclude>
-	<ClInclude Include="include\resource\Mesh.h">
+    <ClInclude Include="include\resource\Mesh.h">
       <Filter>Header Files\Resource</Filter>
     </ClInclude>
     <ClInclude Include="include\resource\ResourceManager.h">
       <Filter>Header Files\Resource</Filter>
+    </ClInclude>
+    <ClInclude Include="include\scene\MeshNode.h">
+      <Filter>Header Files\Scene</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
