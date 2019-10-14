@@ -31,6 +31,6 @@ namespace lux::scene
 	{
 		float aspect = window->GetAspect();
 
-		return glm::perspectiveRH_ZO(fovy, aspect, nearDist, farDist);
+		return glm::perspectiveRH_ZO(glm::radians(fovy), aspect, nearDist, farDist);
 	}
 }
