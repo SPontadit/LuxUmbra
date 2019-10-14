@@ -28,7 +28,7 @@ namespace lux::scene
 
 		void Initialize(const Window& window, resource::ResourceManager& resourceManager) noexcept;
 
-		const CameraNode* GetCurrentCamera() const noexcept;
+		CameraNode* GetCurrentCamera() const noexcept;
 		const std::vector<MeshNode*>& GetMeshNodes() const noexcept;
 
 		Node* AddNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition) noexcept;

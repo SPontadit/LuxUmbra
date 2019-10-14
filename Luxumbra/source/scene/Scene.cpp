@@ -17,7 +17,7 @@ namespace lux::scene
 		meshNodes.reserve(128);
 	}
 
-	const CameraNode* Scene::GetCurrentCamera() const noexcept
+	CameraNode* Scene::GetCurrentCamera() const noexcept
 	{
 		return currentCamera;
 	}
