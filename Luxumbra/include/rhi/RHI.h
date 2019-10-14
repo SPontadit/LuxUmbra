@@ -63,6 +63,11 @@ namespace lux::rhi
 		uint32_t swapchainImageCount;
 		std::vector<VkImage> swapchainImages;
 		std::vector<VkImageView> swapchainImageViews;
+		
+		std::vector<VkSemaphore> presentSemaphores;
+		std::vector<VkSemaphore> acquireSemaphores;
+
+		std::vector<VkFence> fences;
 
 		VkDescriptorPool imguiDescriptorPool;
 
@@ -84,6 +89,12 @@ namespace lux::rhi
 		void InitForwardUniformBuffers() noexcept;
 
 		void UpdateForwardUnitformBuffers(const scene::CameraNode* camera) noexcept;
+
+		void RebuildForwardGraphicsPipeline() noexcept;
+
+		void DestroyForwardRenderer() noexcept;
+		void DestroySwapchainRelatedResources() noexcept;
+		void DestroyForwardGraphicsPipeline() noexcept;
 
 		void RenderImgui() noexcept;
 

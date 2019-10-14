@@ -238,27 +238,6 @@ namespace lux::rhi
 
 			CHECK_VK(vkCreateFramebuffer(device, &framebufferCI, nullptr, &forward.frameBuffers[i]));
 		}
-
-
-		// Fences and semaphores
-		VkSemaphoreCreateInfo rtSemaphoreCI = {};
-		rtSemaphoreCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-		VkFenceCreateInfo rtFenceCI = {};
-		rtFenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-		rtFenceCI.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-		forward.presentSemaphores.resize(TO_SIZE_T(swapchainImageCount));
-		forward.acquireSemaphores.resize(TO_SIZE_T(swapchainImageCount));
-		forward.fences.resize(TO_SIZE_T(swapchainImageCount));
-
-		for (size_t i = 0; i < swapchainImageCount; i++)
-		{
-			CHECK_VK(vkCreateSemaphore(device, &rtSemaphoreCI, nullptr, &forward.presentSemaphores[i]));
-			CHECK_VK(vkCreateSemaphore(device, &rtSemaphoreCI, nullptr, &forward.acquireSemaphores[i]));
-
-			CHECK_VK(vkCreateFence(device, &rtFenceCI, nullptr, &forward.fences[i]));
-		}
 	}
 
 	void RHI::InitForwardDescriptorPool() noexcept
@@ -445,15 +424,15 @@ namespace lux::rhi
 	void RHI::RenderForward(const scene::CameraNode* camera, const std::vector<scene::MeshNode*> meshes) noexcept
 	{
 		// Acquire next image
-		VkFence* fence = &forward.fences[currentFrame];
+		VkFence* fence = &fences[currentFrame];
 		VkCommandBuffer commandBuffer = commandBuffers[currentFrame];
 
 		vkWaitForFences(device, 1, fence, false, UINT64_MAX);
 		vkResetFences(device, 1, fence);
 		vkResetCommandBuffer(commandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
 
-		VkSemaphore* acquireSemaphore = &forward.acquireSemaphores[currentFrame];
-		VkSemaphore* presentSemaphore = &forward.presentSemaphores[currentFrame];
+		VkSemaphore* acquireSemaphore = &acquireSemaphores[currentFrame];
+		VkSemaphore* presentSemaphore = &presentSemaphores[currentFrame];
 
 		uint32_t imageIndex;
 		uint64_t timeout = UINT64_MAX;
@@ -556,5 +535,38 @@ namespace lux::rhi
 		currentFrame = frameCount % swapchainImageCount;
 	}
 
+	void RHI::RebuildForwardGraphicsPipeline() noexcept
+	{
+		DestroyForwardGraphicsPipeline();
+		InitForwardGraphicsPipelines();
+	}
+	
+	void RHI::DestroyForwardGraphicsPipeline() noexcept
+	{
+		DestroyGraphicsPipeline(forward.blitGraphicsPipeline);
+		DestroyGraphicsPipeline(forward.rtGraphicsPipeline);
+	}
+
+	void RHI::DestroyForwardRenderer() noexcept
+	{
+		DestroyForwardGraphicsPipeline();
+
+		vkDestroyDescriptorPool(device, forward.descriptorPool, nullptr);
+
+		for (size_t i = 0; i < swapchainImageCount; i++)
+		{
+			DestroyBuffer(forward.viewProjUniformBuffers[i]);
+			vkDestroyFramebuffer(device, forward.frameBuffers[i], nullptr);
+
+			vkDestroyImage(device, forward.rtColorAttachmentImages[i], nullptr);
+			vkDestroyImageView(device, forward.rtColorAttachmentImageViews[i], nullptr);
+			vkFreeMemory(device, forward.rtColorAttachmentImageMemories[i], nullptr);
+		}
+		vkDestroyImage(device, forward.rtDepthAttachmentImage, nullptr);
+		vkDestroyImageView(device, forward.rtDepthAttachmentImageView, nullptr);
+		vkFreeMemory(device, forward.rtDepthAttachmentMemory, nullptr);
+
+		vkDestroyRenderPass(device, forward.renderPass, nullptr);
+	}
 
 } // namespace lux::rhi

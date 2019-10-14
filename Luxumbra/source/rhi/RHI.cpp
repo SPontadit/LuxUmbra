@@ -25,7 +25,28 @@ namespace lux::rhi
 
 	RHI::~RHI() noexcept
 	{
+		vkDeviceWaitIdle(device);
 
+		vkDestroyDescriptorPool(device, imguiDescriptorPool, nullptr);
+		
+		DestroySwapchainRelatedResources();
+
+		for (size_t i = 0; i < swapchainImageCount; i++)
+		{
+			vkDestroySemaphore(device, presentSemaphores[i], nullptr);
+			vkDestroySemaphore(device, acquireSemaphores[i], nullptr);
+			vkDestroyFence(device, fences[i], nullptr);
+		}
+
+		vkDestroyDevice(device, nullptr);
+
+#ifdef VULKAN_ENABLE_VALIDATION
+		vkDestroyDebugReportCallbackEXT(instance, debugReportCallback, nullptr);
+#endif
+
+		vkDestroySurfaceKHR(instance, surface, nullptr);
+		
+		vkDestroyInstance(instance, nullptr);
 	}
 
 	bool RHI::Initialize(const Window& window) noexcept
@@ -359,6 +380,26 @@ namespace lux::rhi
 
 			CHECK_VK(vkCreateImageView(device, &swapchainImageViewCI, nullptr, &swapchainImageViews[TO_SIZE_T(i)]));
 		}
+	
+		// Fences and semaphores
+		VkSemaphoreCreateInfo rtSemaphoreCI = {};
+		rtSemaphoreCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+		VkFenceCreateInfo rtFenceCI = {};
+		rtFenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		rtFenceCI.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+		presentSemaphores.resize(TO_SIZE_T(swapchainImageCount));
+		acquireSemaphores.resize(TO_SIZE_T(swapchainImageCount));
+		fences.resize(TO_SIZE_T(swapchainImageCount));
+
+		for (size_t i = 0; i < swapchainImageCount; i++)
+		{
+			CHECK_VK(vkCreateSemaphore(device, &rtSemaphoreCI, nullptr, &presentSemaphores[i]));
+			CHECK_VK(vkCreateSemaphore(device, &rtSemaphoreCI, nullptr, &acquireSemaphores[i]));
+
+			CHECK_VK(vkCreateFence(device, &rtFenceCI, nullptr, &fences[i]));
+		}
 	}
 
 	void RHI::InitCommandBuffer() noexcept
@@ -556,6 +597,22 @@ namespace lux::rhi
 		vkCmdPipelineBarrier(commandBuffer, srcStageMask, dstStageMask, 0, 0, nullptr, 0, nullptr, 1, &imageMemoryBarrier);
 
 		EndSingleTimeCommandBuffer(commandBuffer);
+	}
+
+	void RHI::DestroySwapchainRelatedResources() noexcept
+	{
+		DestroyForwardRenderer();
+
+		vkFreeCommandBuffers(device, commandPool, 2, commandBuffers.data());
+
+		vkDestroyCommandPool(device, commandPool, nullptr);
+
+		for (size_t i = 0; i < swapchainImageCount; i++)
+		{
+			vkDestroyImageView(device, swapchainImageViews[i], nullptr);
+		}
+
+		vkDestroySwapchainKHR(device, swapchain, nullptr);
 	}
 
 	uint32_t RHI::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const noexcept

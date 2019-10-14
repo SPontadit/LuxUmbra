@@ -209,9 +209,9 @@ namespace lux::rhi
 
 	void RHI::DestroyGraphicsPipeline(GraphicsPipeline& graphicsPipeline) noexcept
 	{
-		vkDestroyDescriptorSetLayout(device, graphicsPipeline.descriptorSetLayout, nullptr);
-		vkDestroyPipelineLayout(device, graphicsPipeline.pipelineLayout, nullptr);
 		vkDestroyPipeline(device, graphicsPipeline.pipeline, nullptr);
+		vkDestroyPipelineLayout(device, graphicsPipeline.pipelineLayout, nullptr);
+		vkDestroyDescriptorSetLayout(device, graphicsPipeline.descriptorSetLayout, nullptr);
 	}
 
 

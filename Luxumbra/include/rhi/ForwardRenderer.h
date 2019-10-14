@@ -49,17 +49,12 @@ namespace lux::rhi
 		std::vector<Buffer> viewProjUniformBuffers;
 
 		std::vector<VkImage> rtColorAttachmentImages;
-		std::vector<VkDeviceMemory> rtColorAttachmentImageMemories;
 		std::vector<VkImageView> rtColorAttachmentImageViews;
+		std::vector<VkDeviceMemory> rtColorAttachmentImageMemories;
 
 		VkImage rtDepthAttachmentImage;
 		VkDeviceMemory rtDepthAttachmentMemory;
 		VkImageView rtDepthAttachmentImageView;
-
-		std::vector<VkSemaphore> presentSemaphores;
-		std::vector<VkSemaphore> acquireSemaphores;
-
-		std::vector<VkFence> fences;
 
 		enum ForwardAttachmentBindPoints : uint32_t
 		{
