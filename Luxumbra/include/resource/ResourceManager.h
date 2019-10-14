@@ -38,6 +38,8 @@ namespace lux::resource
 		std::shared_ptr<Mesh> GetMesh(MeshPrimitive meshPrimitive) noexcept;
 
 	private:
+		void ClearMeshes() noexcept;
+		
 		void BuildPrimitiveMeshes() noexcept;
 		void GenerateSphere(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, uint16_t horizSegments, uint16_t vertiSegments, float sphereScale = 1.f);
 

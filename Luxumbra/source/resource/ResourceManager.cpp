@@ -20,7 +20,7 @@ namespace lux::resource
 
 	ResourceManager::~ResourceManager() noexcept
 	{
-
+		ClearMeshes();
 	}
 
 	void ResourceManager::Initialize() noexcept
@@ -108,6 +108,7 @@ namespace lux::resource
 
 		GenerateSphere(sphereVertices, sphereIndices, 64, 64);
 		
+		// TODO: use staging buffer
 		rhi::BufferCreateInfo vertexBufferCI = {};
 		vertexBufferCI.usageFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 		vertexBufferCI.size = sizeof(Vertex) * sphereVertices.size();
@@ -195,6 +196,26 @@ namespace lux::resource
 		mesh->indexCount = TO_UINT32_T(indices.size());
 
 		return mesh;
+	}
+
+	void ResourceManager::ClearMeshes() noexcept
+	{
+		meshesConstIterator it = meshes.cbegin();
+		meshesConstIterator itE = meshes.cend();
+
+		for (; it != itE; ++it)
+		{
+			rhi.DestroyBuffer(it->second->vertexBuffer);
+			rhi.DestroyBuffer(it->second->indexBuffer);
+		}
+
+		meshes.clear();
+
+		for (size_t i = 0; i < primitiveMeshes.size(); i++)
+		{
+			rhi.DestroyBuffer(primitiveMeshes[i]->vertexBuffer);
+			rhi.DestroyBuffer(primitiveMeshes[i]->indexBuffer);
+		}
 	}
 
 } // namespace lux::resource
