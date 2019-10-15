@@ -126,23 +126,18 @@ namespace lux
 			node->SetLocalPosition(position);
 		}
 
-		////// Rotation
-		//glm::quat rotation = nodes[i]->GetLocalRotation();
-		//glm::vec3 eulerRotation = glm::degrees(glm::eulerAngles(rotation));
+		// Rotation
+		glm::quat rotation = node->GetLocalRotation();
+		glm::vec3 eulerRotation = glm::degrees(glm::eulerAngles(rotation));
 
-		//ImGui::DragFloat3(rotID.c_str(), glm::value_ptr(eulerRotation));
+		ImGui::DragFloat3(rotID.c_str(), glm::value_ptr(eulerRotation));
 
-		//glm::mat4 rot = glm::identity<glm::mat4>();
-		//rot = glm::rotate(rot, glm::radians(eulerRotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
-		//rot = glm::rotate(rot, glm::radians(eulerRotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
-		//rot = glm::rotate(rot, glm::radians(eulerRotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+		glm::quat newRotation = glm::quat(glm::radians(eulerRotation));
 
-		//glm::quat newRotation = glm::toQuat(rot);
-
-		//if (newRotation != rotation)
-		//{
-		//	nodes[i]->SetLocalRotation(newRotation);
-		//}
+		if (newRotation != rotation)
+		{
+			node->SetLocalRotation(newRotation);
+		}
 
 		ImGui::PopID();
 	}
