@@ -21,4 +21,5 @@ namespace lux::scene
 	{
 		return *mesh.get();
 	}
-}
+
+}// namespace lux::scene
