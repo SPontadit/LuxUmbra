@@ -8,6 +8,21 @@ namespace lux::scene
 
 	}
 
+	Scene::~Scene() noexcept
+	{
+		std::vector<Node*>::iterator it = nodes.begin();
+		std::vector<Node*>::iterator itE = nodes.end();
+
+		for (; it != itE; ++it)
+		{
+			delete *it;
+		}
+
+		nodes.clear();
+		meshNodes.clear();
+		lightNodes.clear();
+	}
+
 	void Scene::Initialize(const Window& window, resource::ResourceManager& resourceManager) noexcept
 	{
 		this->window = &window;
@@ -110,18 +125,18 @@ namespace lux::scene
 		return meshNode;
 	}
 
-	LightNode* Scene::AddLightNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition) noexcept
+	LightNode* Scene::AddLightNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition, LightType type) noexcept
 	{
 		LightNode* lightNode;
 
 		if (isWorldPosition)
 		{
-			lightNode = new LightNode(parent);
+			lightNode = new LightNode(parent, type);
 			lightNode->SetWorldPosition(position);
 			lightNode->SetWorldRotation(rotation);
 		}
 		else
-			lightNode = new LightNode(parent, position, rotation);
+			lightNode = new LightNode(parent, position, rotation, type);
 
 		nodes.push_back(lightNode);
 		lightNodes.push_back(lightNode);

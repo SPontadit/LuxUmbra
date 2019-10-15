@@ -22,7 +22,7 @@ namespace lux::scene
 		Scene(const Scene&) = delete;
 		Scene(Scene&&) = delete;
 
-		~Scene() noexcept = default;
+		~Scene() noexcept;
 
 		const Scene& operator=(const Scene&) = delete;
 		const Scene& operator=(Scene&&) = delete;
@@ -37,7 +37,7 @@ namespace lux::scene
 		CameraNode* AddCameraNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition, float fovy, float nearDist, float farDist, bool makeCurrentCamera) noexcept;
 		MeshNode* AddMeshNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition, const std::string& meshFileName) noexcept;
 		MeshNode* AddMeshNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition, resource::MeshPrimitive meshPrimitive) noexcept;
-		LightNode* AddLightNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition) noexcept;
+		LightNode* AddLightNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition, LightType type) noexcept;
 
 	private:
 		const Window* window;
