@@ -3,7 +3,7 @@
 namespace lux::scene
 {
 	Scene::Scene() noexcept
-		: window(nullptr), resourceManager(nullptr), nodes(0), meshNodes(0), currentCamera(nullptr)
+		: window(nullptr), resourceManager(nullptr), nodes(0), meshNodes(0), lightNodes(0), currentCamera(nullptr)
 	{
 
 	}
@@ -15,6 +15,7 @@ namespace lux::scene
 
 		nodes.reserve(128);
 		meshNodes.reserve(128);
+		lightNodes.reserve(128);
 	}
 
 	CameraNode* Scene::GetCurrentCamera() const noexcept
