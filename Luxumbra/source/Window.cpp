@@ -1,5 +1,9 @@
 #include "Window.h"
 
+#include "imgui\imgui.h"
+#include "imgui\imgui_impl_glfw.h"
+#include "imgui\imgui_impl_vulkan.h"
+
 namespace lux
 {
 	Window::Window() noexcept
@@ -12,6 +16,9 @@ namespace lux
 	{
 		if (isInitialized)
 		{
+			ImGui_ImplGlfw_Shutdown();
+			ImGui::DestroyContext();
+
 			if (window != nullptr)
 				glfwDestroyWindow(window);
 
@@ -35,6 +42,12 @@ namespace lux
 
 		this->width = width;
 		this->height = height;
+
+		IMGUI_CHECKVERSION();
+		ImGui::CreateContext();
+		ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+		ImGui_ImplGlfw_InitForVulkan(window, true);
 
 		isInitialized = true;
 

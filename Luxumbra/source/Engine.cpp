@@ -17,7 +17,7 @@ namespace lux
 
 	Engine::~Engine()
 	{
-
+		rhi.WaitIdle();
 	}
 
 	bool Engine::Initialize(uint32_t windowWidth, uint32_t windowHeight) noexcept
@@ -28,13 +28,6 @@ namespace lux
 		if (!rhi.Initialize(window))
 			return false;
 
-		IMGUI_CHECKVERSION();
-		ImGui::CreateContext();
-		ImGuiIO& io = ImGui::GetIO(); (void)io;
-
-		ImGui_ImplGlfw_InitForVulkan(window.GetGLFWWindow(), true);
-
-		rhi.InitImgui();
 
 		resourceManager.Initialize();
 
@@ -52,7 +45,7 @@ namespace lux
 		{
 			DrawImgui();
 
-			rhi.RenderForward(scene.GetCurrentCamera(), scene.GetMeshNodes());
+			rhi.RenderForward(scene.GetCurrentCamera(), scene.GetMeshNodes(), scene.GetLightNodes());
 
 			window.PollEvents();
 		}

@@ -410,7 +410,7 @@ namespace lux::rhi
 		}
 	}
 
-	void RHI::UpdateForwardUnitformBuffers(const scene::CameraNode* camera) noexcept
+	void RHI::UpdateForwardUniformBuffers(const scene::CameraNode* camera, const std::vector<scene::LightNode*>& lights) noexcept
 	{
 		RtViewProjUniform viewProj;
 
@@ -418,10 +418,12 @@ namespace lux::rhi
 		viewProj.projection = camera->GetPerspectiveProjectionTransform();
 
 		UpdateBuffer(forward.viewProjUniformBuffers[currentFrame], &viewProj);
+
+		// fill ubo
 	}
 
 	// TODO: Ref sur le vecteur de meshes ?
-	void RHI::RenderForward(const scene::CameraNode* camera, const std::vector<scene::MeshNode*> meshes) noexcept
+	void RHI::RenderForward(const scene::CameraNode* camera, const std::vector<scene::MeshNode*> meshes, const std::vector<scene::LightNode*>& lights) noexcept
 	{
 		// Acquire next image
 		VkFence* fence = &fences[currentFrame];
@@ -467,7 +469,7 @@ namespace lux::rhi
 
 		vkCmdBeginRenderPass(commandBuffer, &renderPassBI, VK_SUBPASS_CONTENTS_INLINE);
 
-		UpdateForwardUnitformBuffers(camera);
+		UpdateForwardUniformBuffers(camera, lights);
 
 		// Render Target Subpass
 		//vkCmdPushConstants(commandBuffer, forward.rtGraphicsPipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(RtConstants), &forward.rtConstants);

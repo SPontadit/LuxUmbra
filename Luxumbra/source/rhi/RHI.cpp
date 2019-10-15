@@ -28,7 +28,8 @@ namespace lux::rhi
 		vkDeviceWaitIdle(device);
 
 		vkDestroyDescriptorPool(device, imguiDescriptorPool, nullptr);
-		
+		ImGui_ImplVulkan_Shutdown();
+
 		DestroySwapchainRelatedResources();
 
 		for (size_t i = 0; i < swapchainImageCount; i++)
@@ -72,6 +73,8 @@ namespace lux::rhi
 		InitForwardDescriptorSets();
 
 		// End
+
+		InitImgui();
 
 		isInitialized = true;
 
@@ -597,6 +600,11 @@ namespace lux::rhi
 		vkCmdPipelineBarrier(commandBuffer, srcStageMask, dstStageMask, 0, 0, nullptr, 0, nullptr, 1, &imageMemoryBarrier);
 
 		EndSingleTimeCommandBuffer(commandBuffer);
+	}
+
+	void RHI::WaitIdle() noexcept
+	{
+		vkDeviceWaitIdle(device);
 	}
 
 	void RHI::DestroySwapchainRelatedResources() noexcept

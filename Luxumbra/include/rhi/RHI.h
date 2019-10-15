@@ -14,11 +14,20 @@
 #include "resource\Mesh.h"
 #include "scene\CameraNode.h"
 #include "scene\MeshNode.h"
+#include "scene\LightNode.h"
 
 namespace lux::rhi
 {
 
 	using namespace lux;
+
+
+	struct LightBuffer
+	{
+		glm::vec4 position;
+		alignas(16) glm::vec3 color;
+	};
+
 
 	class RHI
 	{
@@ -33,8 +42,9 @@ namespace lux::rhi
 		const RHI& operator=(RHI&&) = delete;
 
 		bool Initialize(const Window& window) noexcept;
-		void InitImgui() noexcept;
-		void RenderForward(const scene::CameraNode* camera, const std::vector<scene::MeshNode*> meshes) noexcept;
+		void RenderForward(const scene::CameraNode* camera, const std::vector<scene::MeshNode*> meshes, const std::vector<scene::LightNode*>& lights) noexcept;
+
+		void WaitIdle() noexcept;
 
 		void CreateBuffer(const BufferCreateInfo& luxBufferCI, Buffer& buffer) noexcept;
 		void UpdateBuffer(Buffer& buffer, void* newData) noexcept;
@@ -88,7 +98,7 @@ namespace lux::rhi
 		void InitForwardDescriptorSets() noexcept;
 		void InitForwardUniformBuffers() noexcept;
 
-		void UpdateForwardUnitformBuffers(const scene::CameraNode* camera) noexcept;
+		void UpdateForwardUniformBuffers(const scene::CameraNode* camera, const std::vector<scene::LightNode*>& lights) noexcept;
 
 		void RebuildForwardGraphicsPipeline() noexcept;
 
@@ -96,6 +106,7 @@ namespace lux::rhi
 		void DestroySwapchainRelatedResources() noexcept;
 		void DestroyForwardGraphicsPipeline() noexcept;
 
+		void InitImgui() noexcept;
 		void RenderImgui() noexcept;
 
 		uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const noexcept;
