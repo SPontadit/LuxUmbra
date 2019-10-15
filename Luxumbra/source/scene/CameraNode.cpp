@@ -20,17 +20,17 @@ namespace lux::scene
 		glm::vec3 center = eye + glm::rotate(GetWorldRotation(), glm::vec3(0.f, 0.f, -1.f));
 		glm::vec3 up = glm::vec3(0.f, 1.f, 0.f);
 
-		glm::mat4 viewTransform = glm::lookAtRH(eye, center, up);
-
-		viewTransform[1][1] *= -1.f;
-
-		return viewTransform;
+		return glm::lookAtRH(eye, center, up);;
 	}
 
 	glm::mat4 CameraNode::GetPerspectiveProjectionTransform() const noexcept
 	{
 		float aspect = window->GetAspect();
 
-		return glm::perspectiveRH_ZO(glm::radians(fovy), aspect, nearDist, farDist);
+		glm::mat4 perspectiveTransform = glm::perspective(glm::radians(fovy), aspect, nearDist, farDist);
+
+		perspectiveTransform[1][1] *= -1.f;
+
+		return perspectiveTransform;
 	}
 }
