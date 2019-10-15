@@ -70,6 +70,8 @@ namespace lux::rhi
 
 		InitForwardUniformBuffers();
 
+		BuildLightUniformBuffers(2);
+
 		InitForwardDescriptorSets();
 
 		// End
@@ -513,12 +515,12 @@ namespace lux::rhi
 		lightBufferCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		lightBufferCI.memoryProperty = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-		for (size_t i = 0; i < lightCount; i++)
+		lightUniformBuffers.resize(TO_SIZE_T(swapchainImageCount));
+		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
 			CreateBuffer(lightBufferCI, lightUniformBuffers[i]);
 		}
 	}
-
 
 	VkCommandBuffer RHI::BeginSingleTimeCommandBuffer() const noexcept
 	{

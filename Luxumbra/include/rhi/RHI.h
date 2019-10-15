@@ -18,16 +18,21 @@
 
 namespace lux::rhi
 {
+#define LIGHT_MAX_COUNT 64
 
 	using namespace lux;
 
 
 	struct LightBuffer
 	{
-		glm::vec4 position;
-		alignas(16) glm::vec3 color;
+		glm::vec4 position[LIGHT_MAX_COUNT];
+		alignas(16) glm::vec3 color[LIGHT_MAX_COUNT];
 	};
 
+	struct LightCountPushConstant
+	{
+		uint32_t lightCount;
+	};
 
 	class RHI
 	{
@@ -42,7 +47,6 @@ namespace lux::rhi
 		const RHI& operator=(RHI&&) = delete;
 
 		bool Initialize(const Window& window) noexcept;
-		void BuildLightUniformBuffers(size_t lightCount) noexcept;
 		void RenderForward(const scene::CameraNode* camera, const std::vector<scene::MeshNode*> meshes, const std::vector<scene::LightNode*>& lights) noexcept;
 
 		void WaitIdle() noexcept;
@@ -87,6 +91,7 @@ namespace lux::rhi
 
 		std::vector<VkDescriptorSet> lightDescriptorSets;
 		std::vector<Buffer> lightUniformBuffers;
+		LightCountPushConstant lightCountPushConstant;
 
 		uint32_t frameCount;
 		uint32_t currentFrame;
@@ -101,6 +106,7 @@ namespace lux::rhi
 		void InitForwardDescriptorPool() noexcept;
 		void InitForwardDescriptorSets() noexcept;
 		void InitForwardUniformBuffers() noexcept;
+		void BuildLightUniformBuffers(size_t lightCount) noexcept;
 
 		void UpdateForwardUniformBuffers(const scene::CameraNode* camera, const std::vector<scene::LightNode*>& lights) noexcept;
 

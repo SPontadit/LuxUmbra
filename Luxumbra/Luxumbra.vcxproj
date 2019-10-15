@@ -195,6 +195,8 @@
     <ClInclude Include="include\Window.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="data\shaders\basicLight\basicLight.frag" />
+    <None Include="data\shaders\basicLight\basicLight.vert" />
     <None Include="data\shaders\blit\blit.frag" />
     <None Include="data\shaders\blit\blit.vert" />
     <None Include="data\shaders\mesh\mesh.frag" />

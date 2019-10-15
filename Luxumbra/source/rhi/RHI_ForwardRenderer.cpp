@@ -246,11 +246,15 @@ namespace lux::rhi
 		blitInputDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
 		blitInputDescriptorPoolSize.descriptorCount = swapchainImageCount;
 
-		VkDescriptorPoolSize rtUniformDescriptorPoolSize = {};
-		rtUniformDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		rtUniformDescriptorPoolSize.descriptorCount = swapchainImageCount;
+		VkDescriptorPoolSize rtViewProjUniformDescriptorPoolSize = {};
+		rtViewProjUniformDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		rtViewProjUniformDescriptorPoolSize.descriptorCount = swapchainImageCount;
 
-		std::array<VkDescriptorPoolSize, 2> descriptorPoolSizes = { blitInputDescriptorPoolSize, rtUniformDescriptorPoolSize };
+		VkDescriptorPoolSize lightsUniformDescriptorPoolSize = {};
+		lightsUniformDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		lightsUniformDescriptorPoolSize.descriptorCount = swapchainImageCount;
+
+		std::array<VkDescriptorPoolSize, 3> descriptorPoolSizes = { blitInputDescriptorPoolSize, rtViewProjUniformDescriptorPoolSize, lightsUniformDescriptorPoolSize };
 
 		VkDescriptorPoolCreateInfo descriptorPoolCI = {};
 		descriptorPoolCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -295,6 +299,12 @@ namespace lux::rhi
 		rtViewProjDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		rtViewProjDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
+		VkDescriptorSetLayoutBinding lightDescriptorSetLayoutBinding = {};
+		lightDescriptorSetLayoutBinding.binding = 1;
+		lightDescriptorSetLayoutBinding.descriptorCount = 1;
+		lightDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		lightDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
 		//VkDescriptorSetLayoutBinding rtSamplerDescriptorSetLayoutBinding = {};
 		//rtSamplerDescriptorSetLayoutBinding.binding = 1;
 		//rtSamplerDescriptorSetLayoutBinding.descriptorCount = 1;
@@ -306,12 +316,16 @@ namespace lux::rhi
 		rtModelPushConstantRange.size = sizeof(RtModelConstant);
 		rtModelPushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
+		VkPushConstantRange lightCountPushConstantRange = {};
+		lightCountPushConstantRange.offset = sizeof(RtModelConstant);
+		lightCountPushConstantRange.size = sizeof(LightCountPushConstant);
+		lightCountPushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 		GraphicsPipelineCreateInfo rtGraphicsPipelineCI = {};
 		rtGraphicsPipelineCI.renderPass = forward.renderPass;
 		rtGraphicsPipelineCI.subpassIndex = ForwardRenderer::FORWARD_SUBPASS_RENDER_TO_TARGET;
-		rtGraphicsPipelineCI.binaryVertexFilePath = "data/shaders/mesh/mesh.vert.spv";
-		rtGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/mesh/mesh.frag.spv";
+		rtGraphicsPipelineCI.binaryVertexFilePath = "data/shaders/basicLight/basicLight.vert.spv";
+		rtGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/basicLight/basicLight.frag.spv";
 		rtGraphicsPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 		rtGraphicsPipelineCI.viewportWidth = TO_FLOAT(swapchainExtent.width);
 		rtGraphicsPipelineCI.viewportHeight = TO_FLOAT(swapchainExtent.height);
@@ -319,8 +333,8 @@ namespace lux::rhi
 		rtGraphicsPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		rtGraphicsPipelineCI.enableDepthTest = VK_TRUE;
 		rtGraphicsPipelineCI.enableDepthWrite = VK_TRUE;
-		rtGraphicsPipelineCI.descriptorSetLayoutBindings = { rtViewProjDescriptorSetLayoutBinding };
-		rtGraphicsPipelineCI.pushConstants = { rtModelPushConstantRange };
+		rtGraphicsPipelineCI.descriptorSetLayoutBindings = { rtViewProjDescriptorSetLayoutBinding, lightDescriptorSetLayoutBinding };
+		rtGraphicsPipelineCI.pushConstants = { rtModelPushConstantRange, lightCountPushConstantRange };
 
 		CreateGraphicsPipeline(rtGraphicsPipelineCI, forward.rtGraphicsPipeline);
 	}
@@ -380,18 +394,36 @@ namespace lux::rhi
 		rtWriteViewProjDescriptorSet.dstBinding = 0;
 		rtWriteViewProjDescriptorSet.dstArrayElement = 0;
 
-		VkDescriptorBufferInfo rtUniformDescriptorBufferInfo = {};
-		rtUniformDescriptorBufferInfo.offset = 0;
-		rtUniformDescriptorBufferInfo.range = sizeof(RtViewProjUniform);
+		VkDescriptorBufferInfo rtViewProjDescriptorBufferInfo = {};
+		rtViewProjDescriptorBufferInfo.offset = 0;
+		rtViewProjDescriptorBufferInfo.range = sizeof(RtViewProjUniform);
+
+		VkWriteDescriptorSet writeLightDescriptorSet = {};
+		writeLightDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeLightDescriptorSet.descriptorCount = 1;
+		writeLightDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		writeLightDescriptorSet.dstBinding = 1;
+		writeLightDescriptorSet.dstArrayElement = 0;
+
+		VkDescriptorBufferInfo lightDescriptorBufferInfo = {};
+		lightDescriptorBufferInfo.offset = 0;
+		lightDescriptorBufferInfo.range = sizeof(LightBuffer);
 	
 		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
-			rtUniformDescriptorBufferInfo.buffer = forward.viewProjUniformBuffers[i].buffer;
+			rtViewProjDescriptorBufferInfo.buffer = forward.viewProjUniformBuffers[i].buffer;
 
-			rtWriteViewProjDescriptorSet.pBufferInfo = &rtUniformDescriptorBufferInfo;
+			rtWriteViewProjDescriptorSet.pBufferInfo = &rtViewProjDescriptorBufferInfo;
 			rtWriteViewProjDescriptorSet.dstSet = forward.rtDescriptorSets[i];
 
-			vkUpdateDescriptorSets(device, 1, &rtWriteViewProjDescriptorSet, 0, nullptr);
+
+			lightDescriptorBufferInfo.buffer = lightUniformBuffers[i].buffer;
+			
+			writeLightDescriptorSet.pBufferInfo = &lightDescriptorBufferInfo;
+			writeLightDescriptorSet.dstSet = forward.rtDescriptorSets[i];
+			
+			std::array<VkWriteDescriptorSet, 2> writeDescriptorSets = { rtWriteViewProjDescriptorSet, writeLightDescriptorSet };
+			vkUpdateDescriptorSets(device, TO_UINT32_T(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
 		}
 	}
 
@@ -412,6 +444,14 @@ namespace lux::rhi
 
 	void RHI::UpdateForwardUniformBuffers(const scene::CameraNode* camera, const std::vector<scene::LightNode*>& lights) noexcept
 	{
+		size_t lightCount = std::min(lights.size(), TO_SIZE_T(LIGHT_MAX_COUNT));
+		
+		if (lightCount != lightCountPushConstant.lightCount)
+		{
+			lightCountPushConstant.lightCount = TO_UINT32_T(lightCount);
+		}
+
+
 		RtViewProjUniform viewProj;
 
 		viewProj.view = camera->GetViewTransform();
@@ -420,18 +460,17 @@ namespace lux::rhi
 		UpdateBuffer(forward.viewProjUniformBuffers[currentFrame], &viewProj);
 
 		// fill ubo
-		size_t lightCount = lights.size();
 
 		LightBuffer lightData = {};
 		scene::LightNode* currentNode;
 		for (size_t i = 0; i < lightCount; i++)
 		{
 			currentNode = lights[i];
-			lightData.position = glm::vec4(currentNode->GetWorldPosition(), TO_UINT32_T(currentNode->GetType()));
-			lightData.color = currentNode->GetColor();
-
-			UpdateBuffer(lightUniformBuffers[i], &lightData);
+			lightData.position[i] = glm::vec4(currentNode->GetWorldPosition(), TO_UINT32_T(currentNode->GetType()));
+			lightData.color[i] = currentNode->GetColor();
 		}
+
+		UpdateBuffer(lightUniformBuffers[currentFrame], &lightData);
 	}
 
 	// TODO: Ref sur le vecteur de meshes ?
@@ -484,10 +523,10 @@ namespace lux::rhi
 		UpdateForwardUniformBuffers(camera, lights);
 
 		// Render Target Subpass
-		//vkCmdPushConstants(commandBuffer, forward.rtGraphicsPipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(RtConstants), &forward.rtConstants);
-
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.rtGraphicsPipeline.pipeline);
 		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.rtGraphicsPipeline.pipelineLayout, 0, 1, &forward.rtDescriptorSets[currentFrame], 0, nullptr);
+
+		vkCmdPushConstants(commandBuffer, forward.rtGraphicsPipeline.pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(RtModelConstant), sizeof(LightCountPushConstant), &lightCountPushConstant);
 
 		VkDeviceSize offset[] = { 0 };
 

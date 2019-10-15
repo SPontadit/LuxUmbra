@@ -52,6 +52,9 @@
     <Filter Include="Header Files\RHI\Imgui">
       <UniqueIdentifier>{24f05ee0-530c-4a5d-859d-1084ee377e51}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resource Files\basicLight">
+      <UniqueIdentifier>{0d155caf-aa61-4f5d-b8e4-268a2d41f3a1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\main.cpp">
@@ -234,6 +237,12 @@
     </None>
     <None Include="data\shaders\mesh\mesh.vert">
       <Filter>Resource Files\mesh</Filter>
+    </None>
+    <None Include="data\shaders\basicLight\basicLight.frag">
+      <Filter>Resource Files\basicLight</Filter>
+    </None>
+    <None Include="data\shaders\basicLight\basicLight.vert">
+      <Filter>Resource Files\basicLight</Filter>
     </None>
   </ItemGroup>
 </Project>
