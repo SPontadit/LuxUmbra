@@ -11,6 +11,12 @@ libs/tinyobjloader/tests/
 libs/tinyobjloader/pybind11/docs/
 libs/tinyobjloader/pybind11/tests/
 
+#SPIR-V Generated
+*.spv
+
+#ImGui ini
+imgui.ini
+
 # User-specific files
 *.rsuser
 *.suo
