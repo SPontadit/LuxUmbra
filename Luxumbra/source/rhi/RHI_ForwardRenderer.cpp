@@ -407,7 +407,7 @@ namespace lux::rhi
 
 		VkDescriptorBufferInfo lightDescriptorBufferInfo = {};
 		lightDescriptorBufferInfo.offset = 0;
-		lightDescriptorBufferInfo.range = sizeof(LightBuffer);
+		lightDescriptorBufferInfo.range = sizeof(LightBuffer) * LIGHT_MAX_COUNT;
 	
 		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
@@ -459,18 +459,19 @@ namespace lux::rhi
 
 		UpdateBuffer(forward.viewProjUniformBuffers[currentFrame], &viewProj);
 
-		// fill ubo
 
-		LightBuffer lightData = {};
+		// Lights
+
+		std::vector<LightBuffer> lightDatas(lightCount);
 		scene::LightNode* currentNode;
 		for (size_t i = 0; i < lightCount; i++)
 		{
 			currentNode = lights[i];
-			lightData.position[i] = glm::vec4(currentNode->GetWorldPosition(), TO_UINT32_T(currentNode->GetType()));
-			lightData.color[i] = currentNode->GetColor();
+			lightDatas[i].position = glm::vec4(currentNode->GetWorldPosition(), TO_UINT32_T(currentNode->GetType()));
+			lightDatas[i].color = currentNode->GetColor();
 		}
 
-		UpdateBuffer(lightUniformBuffers[currentFrame], &lightData);
+		UpdateBuffer(lightUniformBuffers[currentFrame], lightDatas.data());
 	}
 
 	// TODO: Ref sur le vecteur de meshes ?

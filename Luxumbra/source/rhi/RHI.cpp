@@ -511,7 +511,7 @@ namespace lux::rhi
 	{
 		BufferCreateInfo lightBufferCI = {};
 		lightBufferCI.usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-		lightBufferCI.size = sizeof(LightBuffer);
+		lightBufferCI.size = sizeof(LightBuffer) * LIGHT_MAX_COUNT;
 		lightBufferCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		lightBufferCI.memoryProperty = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
@@ -635,6 +635,7 @@ namespace lux::rhi
 		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
 			vkDestroyImageView(device, swapchainImageViews[i], nullptr);
+			DestroyBuffer(lightUniformBuffers[i]);
 		}
 
 		vkDestroySwapchainKHR(device, swapchain, nullptr);

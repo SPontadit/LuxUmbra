@@ -7,11 +7,16 @@ layout(location = 0) in vec3 inFragNormal;
 
 layout(location = 0) out vec4 outColor;
 
-layout(binding = 1)uniform Lights
+struct Light
 {
-	vec4 parameter[LIGHT_MAX_COUNT];
-	vec3 color[LIGHT_MAX_COUNT];
-} lights;
+	vec4 parameter;
+	vec3 color;
+};
+
+layout(binding = 1)uniform LightBuffer
+{
+	Light lights[LIGHT_MAX_COUNT];
+} lightBuffer;
 
 layout(push_constant) uniform PushConsts
 {
@@ -24,7 +29,7 @@ void main()
 
 	for(int i = 0; i < pushConsts.lightCount; ++i)
 	{
-		color.xyz += lights.parameter[i].xyz;
+		color.xyz += lightBuffer.lights[i].color;
 	}
 
 	outColor = color;

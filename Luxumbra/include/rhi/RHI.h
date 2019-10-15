@@ -25,8 +25,8 @@ namespace lux::rhi
 
 	struct LightBuffer
 	{
-		glm::vec4 position[LIGHT_MAX_COUNT];
-		alignas(16) glm::vec3 color[LIGHT_MAX_COUNT];
+		alignas(16) glm::vec4 position;
+		alignas(16) glm::vec3 color;
 	};
 
 	struct LightCountPushConstant

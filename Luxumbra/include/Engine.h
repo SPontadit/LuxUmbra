@@ -32,10 +32,9 @@ namespace lux
 	private:
 		void DrawImgui() noexcept;
 		void DisplayCameraNode(scene::CameraNode* node) noexcept;
-		void DisplayMeshNode(scene::MeshNode* node) noexcept;
-		void DisplayNode(scene::Node* node, const std::string& name) noexcept;
-
-		uint32_t imguiID;
+		void DisplayMeshNodes(const std::vector<scene::MeshNode*>& meshes) noexcept;
+		void DisplayLightNodes(const std::vector<scene::LightNode*>& lights) noexcept;
+		void DisplayNode(scene::Node* node) noexcept;
 
 		bool isInitialized;
 

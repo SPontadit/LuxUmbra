@@ -10,7 +10,7 @@ namespace lux
 {
 
 	Engine::Engine() noexcept
-		: isInitialized(false), window(), rhi(), scene(), resourceManager(rhi), imguiID(0)
+		: isInitialized(false), window(), rhi(), scene(), resourceManager(rhi)
 	{
 
 	}
@@ -69,55 +69,88 @@ namespace lux
 		DisplayCameraNode(camera);
 		ImGui::NewLine();
 
-		const std::vector<scene::MeshNode*> nodes = scene.GetMeshNodes();
-		for (size_t i = 0; i < nodes.size(); i++)
-		{
-			DisplayMeshNode(nodes[i]);
-		}
+		DisplayMeshNodes(scene.GetMeshNodes());
+		ImGui::NewLine();
+		DisplayLightNodes(scene.GetLightNodes());
 
 		ImGui::End();
 
 		ImGui::Render();
-
-		imguiID = 0;
 	}
 
 	void Engine::DisplayCameraNode(scene::CameraNode* node) noexcept
 	{
-		ImGui::PushID(imguiID);
-		++imguiID;
+		if (ImGui::TreeNodeEx("Camera", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			DisplayNode(node);
 
-		DisplayNode(node, "Camera");
-
-		// TODO: Expose Camera relevant stuff
-
-		ImGui::PopID();
+			// TODO: Expose Camera relevant stuff
+			
+			ImGui::TreePop();
+		}
 	}
 
-	void Engine::DisplayMeshNode(scene::MeshNode* node) noexcept
+	void Engine::DisplayMeshNodes(const std::vector<scene::MeshNode*>& meshes) noexcept
 	{
-		ImGui::PushID(imguiID);
-		++imguiID;
+		size_t meshCount = meshes.size();
+		scene::MeshNode* currentMesh;
 
-		DisplayNode(node, "Mesh");
-
-		ImGui::PopID();
+		if (ImGui::TreeNodeEx("Meshes", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			for (size_t i = 0; i < meshCount; i++)
+			{
+				if (ImGui::TreeNodeEx(("Mesh " + std::to_string(i)).c_str()))
+				//if (ImGui::TreeNode((void*)(intptr_t)i, "Mesh %d", i))
+				{
+					currentMesh = meshes[i];
+					DisplayNode(currentMesh);
+				
+					ImGui::TreePop();
+				}
+			}
+			
+			ImGui::TreePop();
+		}
 	}
 
-	void Engine::DisplayNode(scene::Node* node, const std::string& name) noexcept
+	void Engine::DisplayLightNodes(const std::vector<scene::LightNode*>& lights) noexcept
 	{
-		ImGui::PushID(imguiID);
-		++imguiID;
+		size_t lightCount = lights.size();
+		scene::LightNode* currentLight;
 
-		std::string posID = "Pos";
-		std::string rotID = "Rot";
+		if (ImGui::TreeNodeEx("Lights", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			for (size_t i = 0; i < lightCount; i++)
+			{
+				currentLight = lights[i];
 
-		ImGui::Text(name.c_str());
+				if (ImGui::TreeNode(("Light " + std::to_string(i)).c_str()))
+					//if (ImGui::TreeNode((void*)(intptr_t)i, "Light %d", i))
+				{
+					DisplayNode(currentLight);
 
+					glm::vec3 color = currentLight->GetColor();
+					ImGui::ColorEdit3("Color", glm::value_ptr(color));
+					
+					if (color != currentLight->GetColor())
+					{
+						currentLight->SetColor(color);
+					}
+					
+					ImGui::TreePop();
+				}
+			}
+		
+			ImGui::TreePop();
+		}
+	}
+
+	void Engine::DisplayNode(scene::Node* node) noexcept
+	{
 		//Position
 		glm::vec3 position = node->GetLocalPosition();
 
-		ImGui::DragFloat3(posID.c_str(), glm::value_ptr(position));
+		ImGui::DragFloat3("Pos", glm::value_ptr(position));
 
 		if (position != node->GetLocalPosition())
 		{
@@ -128,7 +161,7 @@ namespace lux
 		glm::quat rotation = node->GetLocalRotation();
 		glm::vec3 eulerRotation = glm::degrees(glm::eulerAngles(rotation));
 
-		ImGui::DragFloat3(rotID.c_str(), glm::value_ptr(eulerRotation));
+		ImGui::DragFloat3("Rot", glm::value_ptr(eulerRotation));
 
 		glm::quat newRotation = glm::quat(glm::radians(eulerRotation));
 
@@ -136,8 +169,6 @@ namespace lux
 		{
 			node->SetLocalRotation(newRotation);
 		}
-
-		ImGui::PopID();
 	}
 
 

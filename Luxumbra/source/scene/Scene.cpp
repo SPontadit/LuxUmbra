@@ -125,18 +125,18 @@ namespace lux::scene
 		return meshNode;
 	}
 
-	LightNode* Scene::AddLightNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition, LightType type) noexcept
+	LightNode* Scene::AddLightNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition, LightType type, glm::vec3 color) noexcept
 	{
 		LightNode* lightNode;
 
 		if (isWorldPosition)
 		{
-			lightNode = new LightNode(parent, type);
+			lightNode = new LightNode(parent, type, color);
 			lightNode->SetWorldPosition(position);
 			lightNode->SetWorldRotation(rotation);
 		}
 		else
-			lightNode = new LightNode(parent, position, rotation, type);
+			lightNode = new LightNode(parent, position, rotation, type, color);
 
 		nodes.push_back(lightNode);
 		lightNodes.push_back(lightNode);
