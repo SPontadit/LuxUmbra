@@ -505,6 +505,21 @@ namespace lux::rhi
 		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffers[currentFrame]);
 	}
 
+	void RHI::BuildLightUniformBuffers(size_t lightCount) noexcept
+	{
+		BufferCreateInfo lightBufferCI = {};
+		lightBufferCI.usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+		lightBufferCI.size = sizeof(LightBuffer);
+		lightBufferCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		lightBufferCI.memoryProperty = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+
+		for (size_t i = 0; i < lightCount; i++)
+		{
+			CreateBuffer(lightBufferCI, lightUniformBuffers[i]);
+		}
+	}
+
+
 	VkCommandBuffer RHI::BeginSingleTimeCommandBuffer() const noexcept
 	{
 		VkCommandBufferAllocateInfo commandBufferAI = {};

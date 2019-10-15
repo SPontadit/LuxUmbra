@@ -42,6 +42,7 @@ namespace lux::rhi
 		const RHI& operator=(RHI&&) = delete;
 
 		bool Initialize(const Window& window) noexcept;
+		void BuildLightUniformBuffers(size_t lightCount) noexcept;
 		void RenderForward(const scene::CameraNode* camera, const std::vector<scene::MeshNode*> meshes, const std::vector<scene::LightNode*>& lights) noexcept;
 
 		void WaitIdle() noexcept;
@@ -83,6 +84,9 @@ namespace lux::rhi
 
 		VkCommandPool commandPool;
 		std::vector<VkCommandBuffer> commandBuffers;
+
+		std::vector<VkDescriptorSet> lightDescriptorSets;
+		std::vector<Buffer> lightUniformBuffers;
 
 		uint32_t frameCount;
 		uint32_t currentFrame;

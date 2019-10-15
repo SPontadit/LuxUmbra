@@ -18,6 +18,16 @@ namespace lux::scene
 
 	}
 
+	void LightNode::SetType(LightType newType) noexcept
+	{
+		type = newType;
+	}
+
+	LightType LightNode::GetType() const noexcept
+	{
+		return type;
+	}
+
 	void LightNode::SetColor(glm::vec3 newColor) noexcept
 	{
 		color = newColor;

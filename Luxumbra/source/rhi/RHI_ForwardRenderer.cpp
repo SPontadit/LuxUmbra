@@ -420,6 +420,18 @@ namespace lux::rhi
 		UpdateBuffer(forward.viewProjUniformBuffers[currentFrame], &viewProj);
 
 		// fill ubo
+		size_t lightCount = lights.size();
+
+		LightBuffer lightData = {};
+		scene::LightNode* currentNode;
+		for (size_t i = 0; i < lightCount; i++)
+		{
+			currentNode = lights[i];
+			lightData.position = glm::vec4(currentNode->GetWorldPosition(), TO_UINT32_T(currentNode->GetType()));
+			lightData.color = currentNode->GetColor();
+
+			UpdateBuffer(lightUniformBuffers[i], &lightData);
+		}
 	}
 
 	// TODO: Ref sur le vecteur de meshes ?

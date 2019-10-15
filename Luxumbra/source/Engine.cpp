@@ -41,6 +41,8 @@ namespace lux
 
 	void Engine::Run() noexcept
 	{
+		rhi.BuildLightUniformBuffers(scene.GetLightNodes().size());
+
 		while (!window.ShouldClose())
 		{
 			DrawImgui();
