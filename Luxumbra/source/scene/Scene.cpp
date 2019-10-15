@@ -27,6 +27,11 @@ namespace lux::scene
 		return meshNodes;
 	}
 
+	const std::vector<LightNode*>& Scene::GetLightNodes() const noexcept
+	{
+		return lightNodes;
+	}
+
 	Node* Scene::AddNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition) noexcept
 	{
 		Node* node;
@@ -102,6 +107,25 @@ namespace lux::scene
 		meshNodes.push_back(meshNode);
 
 		return meshNode;
+	}
+
+	LightNode* Scene::AddLightNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition) noexcept
+	{
+		LightNode* lightNode;
+
+		if (isWorldPosition)
+		{
+			lightNode = new LightNode(parent);
+			lightNode->SetWorldPosition(position);
+			lightNode->SetWorldRotation(rotation);
+		}
+		else
+			lightNode = new LightNode(parent, position, rotation);
+
+		nodes.push_back(lightNode);
+		lightNodes.push_back(lightNode);
+
+		return lightNode;
 	}
 
 } // namespace lux::scene

@@ -10,6 +10,7 @@
 #include "scene\Node.h"
 #include "scene\CameraNode.h"
 #include "scene\MeshNode.h"
+#include "scene\LightNode.h"
 
 namespace lux::scene
 {
@@ -30,11 +31,13 @@ namespace lux::scene
 
 		CameraNode* GetCurrentCamera() const noexcept;
 		const std::vector<MeshNode*>& GetMeshNodes() const noexcept;
+		const std::vector<LightNode*>& GetLightNodes() const noexcept;
 
 		Node* AddNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition) noexcept;
 		CameraNode* AddCameraNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition, float fovy, float nearDist, float farDist, bool makeCurrentCamera) noexcept;
 		MeshNode* AddMeshNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition, const std::string& meshFileName) noexcept;
 		MeshNode* AddMeshNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition, resource::MeshPrimitive meshPrimitive) noexcept;
+		LightNode* AddLightNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition) noexcept;
 
 	private:
 		const Window* window;
@@ -42,6 +45,7 @@ namespace lux::scene
 
 		std::vector<Node*> nodes;
 		std::vector<MeshNode*> meshNodes;
+		std::vector<LightNode*> lightNodes;
 		CameraNode* currentCamera;
 	};
 

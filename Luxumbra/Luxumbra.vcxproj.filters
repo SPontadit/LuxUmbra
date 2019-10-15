@@ -123,6 +123,9 @@
     <ClCompile Include="..\libs\imgui\imgui_demo.cpp">
       <Filter>Source Files\RHI\Imgui</Filter>
     </ClCompile>
+    <ClCompile Include="source\scene\LightNode.cpp">
+      <Filter>Source Files\Scene</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\rhi\RHI.h">
@@ -205,6 +208,9 @@
     </ClInclude>
     <ClInclude Include="..\libs\imgui\imstb_truetype.h">
       <Filter>Header Files\RHI\Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="include\scene\LightNode.h">
+      <Filter>Header Files\Scene</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
