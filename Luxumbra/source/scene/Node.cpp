@@ -33,8 +33,7 @@ namespace lux::scene
 
 	glm::mat4 Node::GetLocalTransform() const noexcept
 	{
-		
-		return glm::translate(glm::toMat4(rotation), position);
+		return glm::translate(glm::identity<glm::mat4>(), position) * glm::toMat4(rotation);
 	}
 
 	glm::vec3 Node::GetWorldPosition() const noexcept
