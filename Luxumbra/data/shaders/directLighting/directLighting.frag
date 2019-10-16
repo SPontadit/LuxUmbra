@@ -5,6 +5,7 @@
 
 layout(location = 0) in vec3 inFragNormal;
 layout(location = 1) in vec3 inFragView;
+layout(location = 2) in vec3 inFragWorldPosition;
 
 layout(location = 0) out vec4 outColor;
 
@@ -58,37 +59,38 @@ void main()
 {
 	vec3 directColor  = vec3(0.0);
 
-//	for(int i = 0; i < pushConsts.lightCount; ++i)
-//	{
-//		color.xyz += lightBuffer.lights[i].color;
-//	}
-	vec3 lightDir = normalize(-lightBuffer.lights[0].parameter.xyz);
-	vec3 viewDir = normalize(inFragView);
-	vec3 h = normalize(viewDir + lightDir);
-	vec3 normal = normalize(inFragNormal);
+	for(int i = 0; i < pushConsts.lightCount; ++i)
+	{
+		vec3 lightDir = normalize(-lightBuffer.lights[i].parameter.xyz);
+		vec3 viewDir = normalize(inFragView);
+		vec3 h = normalize(viewDir + lightDir);
+		vec3 normal = normalize(inFragNormal);
 	
-	float NdotH = max(dot(normal, h), 0.001);
-	float NdotV = max(dot(normal, viewDir), 0.001);
-	float NdotL = max(dot(normal, lightDir), 0.001);
-	float LdotH = max(dot(lightDir, h), 0.001);
-	float VdotH = max(dot(viewDir, h), 0.001);
+		float NdotH = max(dot(normal, h), 0.001);
+		float NdotV = max(dot(normal, viewDir), 0.001);
+		float NdotL = max(dot(normal, lightDir), 0.001);
+		float LdotH = max(dot(lightDir, h), 0.001);
+		float VdotH = max(dot(viewDir, h), 0.001);
 
-	float roughness = material.perceptualRoughness * material.perceptualRoughness;
-	vec3 diffuseColor = RemapDiffuseColor(material.baseColor, material.metallic);
-	vec3 F0 = GetF0(material.reflectance, material.metallic, material.baseColor);
+		vec3 baseColor = pow(material.baseColor, vec3(2.2));
+		float roughness = material.perceptualRoughness * material.perceptualRoughness;
+		vec3 diffuseColor = RemapDiffuseColor(baseColor, material.metallic);
+		vec3 F0 = GetF0(material.reflectance, material.metallic, baseColor);
 
 
-	float D = D_GGX(NdotH, roughness);
-	vec3 F = F_Schlick(LdotH, F0);
-	float V = V_SmithGGXCorrelated(NdotV, NdotL, roughness);
+		float D = D_GGX(NdotH, roughness);
+		vec3 F = F_Schlick(LdotH, F0);
+		float V = V_SmithGGXCorrelated(NdotV, NdotL, roughness);
 
-	vec3 specular = (D * V) * F;
+		vec3 specular = (D * V) * F;
+		vec3 Kdiff = vec3(1.0) - (F0 + (vec3(1.0) - F0) * pow(1.0 - NdotL, 5.0));
 
-	vec3 Kdiff = vec3(1.0) - (F0 + (vec3(1.0) - F0) * pow(1.0 - NdotL, 5.0));
-
-	directColor = (diffuseColor * Kdiff + specular) * NdotL;
+		directColor += (diffuseColor * Kdiff / PI + specular) * lightBuffer.lights[i].color * NdotL;
+	}
 
 	outColor = vec4(directColor, 1.0);
+
+	outColor = pow(outColor, vec4(1.0/2.2));
 }
 
 float D_GGX(float NdotH, float roughness)

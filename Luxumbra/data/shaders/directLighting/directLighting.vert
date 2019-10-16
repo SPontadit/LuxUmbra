@@ -7,6 +7,7 @@ layout(location = 2) in vec3 inNormal;
 
 layout(location = 0) out vec3 outNormal;
 layout(location = 1) out vec3 outView;
+layout(location = 2) out vec3 outWorldPosition;
 
 
 layout(binding = 0) uniform ViewProj
@@ -24,6 +25,7 @@ void main()
 {
     gl_Position = vp.proj * vp.view * m.model * vec4(inPosition, 1.0);
 	vec3 fragPos = (m.model * vec4(inPosition, 1.0)).xyz;
+	outWorldPosition = fragPos;
 
 	mat3 normalMatrix = transpose(inverse(mat3(m.model)));
 	outNormal = normalMatrix * inNormal;
