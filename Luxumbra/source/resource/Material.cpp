@@ -3,8 +3,8 @@
 namespace lux::resource
 {
 
-	Material::Material(MaterialParameters parameter) noexcept
-		: parameter(parameter)
+	Material::Material(const std::string& name, MaterialParameters parameter) noexcept
+		: name(name), parameter(parameter)
 	{
 
 	}

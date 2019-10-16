@@ -10,7 +10,8 @@ namespace lux::rhi
 {
 
 	GraphicsPipeline::GraphicsPipeline() noexcept
-		: pipeline(VK_NULL_HANDLE), pipelineLayout(VK_NULL_HANDLE), descriptorSetLayout(VK_NULL_HANDLE)
+		: pipeline(VK_NULL_HANDLE), pipelineLayout(VK_NULL_HANDLE), 
+		viewDescriptorSetLayout(VK_NULL_HANDLE), materialDescriptorSetLayout(VK_NULL_HANDLE), modelDescriptorSetLayout(VK_NULL_HANDLE)
 	{
 	
 	}
@@ -147,18 +148,39 @@ namespace lux::rhi
 		depthStencilStateCI.depthBoundsTestEnable = VK_FALSE;
 
 
-		VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI = {};
-		descriptorSetLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		descriptorSetLayoutCI.bindingCount = TO_UINT32_T(luxGraphicsPipelineCI.descriptorSetLayoutBindings.size());
-		descriptorSetLayoutCI.pBindings = luxGraphicsPipelineCI.descriptorSetLayoutBindings.data();
+		// Descriptor Set Layouts
+		VkDescriptorSetLayoutCreateInfo viewDescriptorSetLayoutCI = {};
+		viewDescriptorSetLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		viewDescriptorSetLayoutCI.bindingCount = TO_UINT32_T(luxGraphicsPipelineCI.viewDescriptorSetLayoutBindings.size());
+		viewDescriptorSetLayoutCI.pBindings = luxGraphicsPipelineCI.viewDescriptorSetLayoutBindings.data();
 
-		CHECK_VK(vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCI, nullptr, &graphicsPipeline.descriptorSetLayout));
+		CHECK_VK(vkCreateDescriptorSetLayout(device, &viewDescriptorSetLayoutCI, nullptr, &graphicsPipeline.viewDescriptorSetLayout));
 
+		VkDescriptorSetLayoutCreateInfo materialDescriptorSetLayoutCI = {};
+		materialDescriptorSetLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		materialDescriptorSetLayoutCI.bindingCount = TO_UINT32_T(luxGraphicsPipelineCI.materialDescriptorSetLayoutBindings.size());
+		materialDescriptorSetLayoutCI.pBindings = luxGraphicsPipelineCI.materialDescriptorSetLayoutBindings.data();
+
+		CHECK_VK(vkCreateDescriptorSetLayout(device, &materialDescriptorSetLayoutCI, nullptr, &graphicsPipeline.materialDescriptorSetLayout));
+
+		VkDescriptorSetLayoutCreateInfo modelDescriptorSetLayoutCI = {};
+		modelDescriptorSetLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		modelDescriptorSetLayoutCI.bindingCount = TO_UINT32_T(luxGraphicsPipelineCI.modelDescriptorSetLayoutBindings.size());
+		modelDescriptorSetLayoutCI.pBindings = luxGraphicsPipelineCI.modelDescriptorSetLayoutBindings.data();
+
+		CHECK_VK(vkCreateDescriptorSetLayout(device, &modelDescriptorSetLayoutCI, nullptr, &graphicsPipeline.modelDescriptorSetLayout));
+
+		std::array<VkDescriptorSetLayout, ForwardRenderer::FORWARD_DESCRIPTOR_SET_LAYOUT_COUNT> descriptorSetLayouts =
+		{
+			graphicsPipeline.viewDescriptorSetLayout,
+			graphicsPipeline.materialDescriptorSetLayout,
+			graphicsPipeline.modelDescriptorSetLayout
+		};
 
 		VkPipelineLayoutCreateInfo pipelineLayoutCI = {};
 		pipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutCI.setLayoutCount = 1;
-		pipelineLayoutCI.pSetLayouts = &graphicsPipeline.descriptorSetLayout;
+		pipelineLayoutCI.setLayoutCount = TO_UINT32_T(descriptorSetLayouts.size());
+		pipelineLayoutCI.pSetLayouts = descriptorSetLayouts.data();
 		pipelineLayoutCI.pushConstantRangeCount = TO_UINT32_T(luxGraphicsPipelineCI.pushConstants.size());
 		pipelineLayoutCI.pPushConstantRanges = luxGraphicsPipelineCI.pushConstants.data();
 
@@ -205,7 +227,9 @@ namespace lux::rhi
 	{
 		vkDestroyPipeline(device, graphicsPipeline.pipeline, nullptr);
 		vkDestroyPipelineLayout(device, graphicsPipeline.pipelineLayout, nullptr);
-		vkDestroyDescriptorSetLayout(device, graphicsPipeline.descriptorSetLayout, nullptr);
+		vkDestroyDescriptorSetLayout(device, graphicsPipeline.viewDescriptorSetLayout, nullptr);
+		vkDestroyDescriptorSetLayout(device, graphicsPipeline.materialDescriptorSetLayout, nullptr);
+		vkDestroyDescriptorSetLayout(device, graphicsPipeline.modelDescriptorSetLayout, nullptr);
 	}
 
 

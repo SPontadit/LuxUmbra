@@ -24,7 +24,9 @@ namespace lux::rhi
 		VkFrontFace rasterizerFrontFace;
 		bool enableDepthTest;
 		bool enableDepthWrite;
-		std::vector<VkDescriptorSetLayoutBinding> descriptorSetLayoutBindings;
+		std::vector<VkDescriptorSetLayoutBinding> viewDescriptorSetLayoutBindings;
+		std::vector<VkDescriptorSetLayoutBinding> materialDescriptorSetLayoutBindings;
+		std::vector<VkDescriptorSetLayoutBinding> modelDescriptorSetLayoutBindings;
 		std::vector<VkPushConstantRange> pushConstants;
 		std::vector<VkDynamicState> dynamicStates;
 	};
@@ -43,7 +45,9 @@ namespace lux::rhi
 
 		VkPipeline pipeline;
 		VkPipelineLayout pipelineLayout;
-		VkDescriptorSetLayout descriptorSetLayout;
+		VkDescriptorSetLayout viewDescriptorSetLayout;
+		VkDescriptorSetLayout materialDescriptorSetLayout;
+		VkDescriptorSetLayout modelDescriptorSetLayout;
 	};
 
 } // namespace lux::rhi

@@ -1,14 +1,15 @@
 #include "rhi\RHI.h"
 
 #include <array>
+#include <map>
 
 #include "glm\gtc\matrix_transform.hpp"
 
 
 namespace lux::rhi
 {
-	using MeshNodeIterator = std::vector<scene::MeshNode*>::iterator;
-	using MeshNodeConstIterator = std::vector<scene::MeshNode*>::const_iterator;
+	using sortedMeshNodesIterator = std::map<std::string, std::vector<scene::MeshNode*>>::iterator;
+	using sortedMeshNodesConstIterator = std::map<std::string, std::vector<scene::MeshNode*>>::const_iterator;
 	
 	ForwardRenderer::ForwardRenderer() noexcept
 		: renderPass(VK_NULL_HANDLE), frameBuffers(0), blitGraphicsPipeline(),
@@ -254,12 +255,7 @@ namespace lux::rhi
 		lightsUniformDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		lightsUniformDescriptorPoolSize.descriptorCount = swapchainImageCount;
 
-		// TODO: HACK - Use many descriptor set layout
-		VkDescriptorPoolSize materialDescriptorPoolSize = {};
-		materialDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		materialDescriptorPoolSize.descriptorCount = swapchainImageCount;
-
-		std::array<VkDescriptorPoolSize, 4> descriptorPoolSizes = { blitInputDescriptorPoolSize, rtViewProjUniformDescriptorPoolSize, lightsUniformDescriptorPoolSize, materialDescriptorPoolSize };
+		std::array<VkDescriptorPoolSize, 3> descriptorPoolSizes = { blitInputDescriptorPoolSize, rtViewProjUniformDescriptorPoolSize, lightsUniformDescriptorPoolSize };
 
 		VkDescriptorPoolCreateInfo descriptorPoolCI = {};
 		descriptorPoolCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -292,7 +288,7 @@ namespace lux::rhi
 		blitGraphicsPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_CLOCKWISE;
 		blitGraphicsPipelineCI.enableDepthTest = VK_TRUE;
 		blitGraphicsPipelineCI.enableDepthWrite = VK_TRUE;
-		blitGraphicsPipelineCI.descriptorSetLayoutBindings = { blitDescriptorSetLayoutBinding };
+		blitGraphicsPipelineCI.viewDescriptorSetLayoutBindings = { blitDescriptorSetLayoutBinding };
 
 		CreateGraphicsPipeline(blitGraphicsPipelineCI, forward.blitGraphicsPipeline);
 
@@ -311,7 +307,7 @@ namespace lux::rhi
 		lightDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 		VkDescriptorSetLayoutBinding materialDescriptorSetLayoutBinding = {};
-		materialDescriptorSetLayoutBinding.binding = 2;
+		materialDescriptorSetLayoutBinding.binding = 0;
 		materialDescriptorSetLayoutBinding.descriptorCount = 1;
 		materialDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		materialDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -344,7 +340,8 @@ namespace lux::rhi
 		rtGraphicsPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		rtGraphicsPipelineCI.enableDepthTest = VK_TRUE;
 		rtGraphicsPipelineCI.enableDepthWrite = VK_TRUE;
-		rtGraphicsPipelineCI.descriptorSetLayoutBindings = { rtViewProjDescriptorSetLayoutBinding, lightDescriptorSetLayoutBinding, materialDescriptorSetLayoutBinding };
+		rtGraphicsPipelineCI.viewDescriptorSetLayoutBindings = { rtViewProjDescriptorSetLayoutBinding, lightDescriptorSetLayoutBinding };
+		rtGraphicsPipelineCI.materialDescriptorSetLayoutBindings = { materialDescriptorSetLayoutBinding };
 		rtGraphicsPipelineCI.pushConstants = { rtModelPushConstantRange, lightCountPushConstantRange };
 
 		CreateGraphicsPipeline(rtGraphicsPipelineCI, forward.rtGraphicsPipeline);
@@ -353,7 +350,7 @@ namespace lux::rhi
 	void RHI::InitForwardDescriptorSets() noexcept
 	{
 		// Allocate Blit Descriptor Sets
-		std::vector<VkDescriptorSetLayout> blitDescriptorSetLayout(swapchainImageCount, forward.blitGraphicsPipeline.descriptorSetLayout);
+		std::vector<VkDescriptorSetLayout> blitDescriptorSetLayout(swapchainImageCount, forward.blitGraphicsPipeline.viewDescriptorSetLayout);
 		VkDescriptorSetAllocateInfo blitDescriptorSetAI = {};
 		blitDescriptorSetAI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 		blitDescriptorSetAI.descriptorPool = forward.descriptorPool;
@@ -375,7 +372,7 @@ namespace lux::rhi
 		blitWriteDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
 		blitWriteDescriptorSet.dstBinding = 0;
 		blitWriteDescriptorSet.pImageInfo = &blitDescriptorImageInfo;
-
+		
 		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
 			blitDescriptorImageInfo.imageView = forward.rtColorAttachmentImageViews[i];
@@ -386,15 +383,26 @@ namespace lux::rhi
 
 
 		// Allocate Render Target Descriptor Set
-		std::vector<VkDescriptorSetLayout> rtDescriptorSetLayout(swapchainImageCount, forward.rtGraphicsPipeline.descriptorSetLayout);
-		VkDescriptorSetAllocateInfo rtDescriptorSetAI = {};
-		rtDescriptorSetAI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		rtDescriptorSetAI.descriptorPool = forward.descriptorPool;
-		rtDescriptorSetAI.descriptorSetCount = swapchainImageCount;
-		rtDescriptorSetAI.pSetLayouts = rtDescriptorSetLayout.data();
+		std::vector<VkDescriptorSetLayout> rtViewDescriptorSetLayout(swapchainImageCount, forward.rtGraphicsPipeline.viewDescriptorSetLayout);
+		VkDescriptorSetAllocateInfo rtViewDescriptorSetAI = {};
+		rtViewDescriptorSetAI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		rtViewDescriptorSetAI.descriptorPool = forward.descriptorPool;
+		rtViewDescriptorSetAI.descriptorSetCount = swapchainImageCount;
+		rtViewDescriptorSetAI.pSetLayouts = rtViewDescriptorSetLayout.data();
 
-		forward.rtDescriptorSets.resize(TO_SIZE_T(swapchainImageCount));
-		CHECK_VK(vkAllocateDescriptorSets(device, &rtDescriptorSetAI, forward.rtDescriptorSets.data()));
+		forward.rtViewDescriptorSets.resize(TO_SIZE_T(swapchainImageCount));
+		CHECK_VK(vkAllocateDescriptorSets(device, &rtViewDescriptorSetAI, forward.rtViewDescriptorSets.data()));
+
+
+		std::vector<VkDescriptorSetLayout> rtModelDescriptorSetLayout(swapchainImageCount, forward.rtGraphicsPipeline.modelDescriptorSetLayout);
+		VkDescriptorSetAllocateInfo rtModelDescriptorSetAI = {};
+		rtModelDescriptorSetAI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		rtModelDescriptorSetAI.descriptorPool = forward.descriptorPool;
+		rtModelDescriptorSetAI.descriptorSetCount = swapchainImageCount;
+		rtModelDescriptorSetAI.pSetLayouts = rtModelDescriptorSetLayout.data();
+
+		forward.rtModelDescriptorSets.resize(TO_SIZE_T(swapchainImageCount));
+		CHECK_VK(vkAllocateDescriptorSets(device, &rtModelDescriptorSetAI, forward.rtModelDescriptorSets.data()));
 
 
 		// Update Render Target Descriptor Sets
@@ -429,7 +437,7 @@ namespace lux::rhi
 		writeMaterialDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		writeMaterialDescriptorSet.descriptorCount = 1;
 		writeMaterialDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		writeMaterialDescriptorSet.dstBinding = 2;
+		writeMaterialDescriptorSet.dstBinding = 0;
 		writeMaterialDescriptorSet.dstArrayElement = 0;
 
 		VkDescriptorBufferInfo materialDescriptorBufferInfo = {};
@@ -442,21 +450,16 @@ namespace lux::rhi
 			rtViewProjDescriptorBufferInfo.buffer = forward.viewProjUniformBuffers[i].buffer;
 
 			rtWriteViewProjDescriptorSet.pBufferInfo = &rtViewProjDescriptorBufferInfo;
-			rtWriteViewProjDescriptorSet.dstSet = forward.rtDescriptorSets[i];
+			rtWriteViewProjDescriptorSet.dstSet = forward.rtViewDescriptorSets[i];
 
 
 			lightDescriptorBufferInfo.buffer = lightUniformBuffers[i].buffer;
 			
 			writeLightDescriptorSet.pBufferInfo = &lightDescriptorBufferInfo;
-			writeLightDescriptorSet.dstSet = forward.rtDescriptorSets[i];
-			
+			writeLightDescriptorSet.dstSet = forward.rtViewDescriptorSets[i];
 
-			materialDescriptorBufferInfo.buffer = forward.materialUniformBuffers[i].buffer;
 
-			writeMaterialDescriptorSet.pBufferInfo = &materialDescriptorBufferInfo;
-			writeMaterialDescriptorSet.dstSet = forward.rtDescriptorSets[i];
-
-			std::array<VkWriteDescriptorSet, 3> writeDescriptorSets = { rtWriteViewProjDescriptorSet, writeLightDescriptorSet, writeMaterialDescriptorSet };
+			std::array<VkWriteDescriptorSet, 2> writeDescriptorSets = { rtWriteViewProjDescriptorSet, writeLightDescriptorSet };
 			vkUpdateDescriptorSets(device, TO_UINT32_T(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
 		}
 	}
@@ -485,7 +488,7 @@ namespace lux::rhi
 		}
 	}
 
-	void RHI::UpdateForwardUniformBuffers(const scene::CameraNode* camera, resource::MaterialParameters& material, const std::vector<scene::LightNode*>& lights) noexcept
+	void RHI::UpdateForwardUniformBuffers(const scene::CameraNode* camera, const std::vector<resource::Material*>& materials, const std::vector<scene::LightNode*>& lights) noexcept
 	{
 		size_t lightCount = std::min(lights.size(), TO_SIZE_T(LIGHT_MAX_COUNT));
 		
@@ -502,7 +505,8 @@ namespace lux::rhi
 
 		UpdateBuffer(forward.viewProjUniformBuffers[currentFrame], &viewProj);
 
-		UpdateBuffer(forward.materialUniformBuffers[currentFrame], &material);
+		for (size_t i = 0; i < materials.size(); i++)
+			UpdateBuffer(materials[i]->buffer[currentFrame], &materials[i]->parameter);
 
 		// Lights
 
@@ -565,29 +569,73 @@ namespace lux::rhi
 
 		vkCmdBeginRenderPass(commandBuffer, &renderPassBI, VK_SUBPASS_CONTENTS_INLINE);
 
-		UpdateForwardUniformBuffers(camera, meshes[0]->GetMaterial().parameter ,lights);
+		// Sort mesh node by material
+		std::map<std::string, std::vector<scene::MeshNode*>> sortedMeshNodes;
+		std::vector<resource::Material*> materials;
+		{
+			std::vector<scene::MeshNode*>::const_iterator it = meshes.cbegin();
+			std::vector<scene::MeshNode*>::const_iterator itE = meshes.cend();
+
+			for (; it != itE; ++it)
+			{
+				std::string key = (*it)->GetMaterial().name;
+				
+				std::map<std::string, std::vector<scene::MeshNode*>>::iterator firstMaterial = sortedMeshNodes.find(key);
+				if(firstMaterial == sortedMeshNodes.end())
+					materials.push_back(&(*it)->GetMaterial());
+
+				sortedMeshNodes[(*it)->GetMaterial().name].push_back(*it);
+			}
+		}
+
+		UpdateForwardUniformBuffers(camera, materials, lights);
 
 		// Render Target Subpass
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.rtGraphicsPipeline.pipeline);
-		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.rtGraphicsPipeline.pipelineLayout, 0, 1, &forward.rtDescriptorSets[currentFrame], 0, nullptr);
+		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.rtGraphicsPipeline.pipelineLayout, ForwardRenderer::FORWARD_VIEW_DESCRIPTOR_SET_LAYOUT, 1, &forward.rtViewDescriptorSets[currentFrame], 0, nullptr);
 
 		vkCmdPushConstants(commandBuffer, forward.rtGraphicsPipeline.pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(RtModelConstant), sizeof(LightCountPushConstant), &lightCountPushConstant);
 
 		VkDeviceSize offset[] = { 0 };
 
-		MeshNodeConstIterator it = meshes.cbegin();
-		MeshNodeConstIterator itE = meshes.cend();
+
+		sortedMeshNodesConstIterator it = sortedMeshNodes.cbegin();
+		sortedMeshNodesConstIterator itE = sortedMeshNodes.cend();
+		
 		for (; it != itE; ++it)
 		{
-			forward.modelConstant.model = (*it)->GetWorldTransform();
-			vkCmdPushConstants(commandBuffer, forward.rtGraphicsPipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(RtModelConstant), &forward.modelConstant);
+			std::vector<scene::MeshNode*> meshNodes = it->second;
+			const resource::Material& material = meshNodes[0]->GetMaterial();
 
-			const resource::Mesh& currentMesh = (*it)->GetMesh();
-			vkCmdBindVertexBuffers(commandBuffer, 0, 1, &currentMesh.vertexBuffer.buffer, offset);
-			vkCmdBindIndexBuffer(commandBuffer, currentMesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-			vkCmdDrawIndexed(commandBuffer, currentMesh.indexCount, 1, 0, 0, 0);
+			vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.rtGraphicsPipeline.pipelineLayout, ForwardRenderer::FORWARD_MATERIAL_DESCRIPTOR_SET_LAYOUT, 1, &material.descriptorSet[currentFrame], 0, nullptr);
+
+
+			std::vector<scene::MeshNode*>::const_iterator itMesh = meshNodes.cbegin();
+			std::vector<scene::MeshNode*>::const_iterator itMeshEnd = meshNodes.cend();
+		
+			for (; itMesh != itMeshEnd; ++itMesh)
+			{
+				forward.modelConstant.model = (*itMesh)->GetWorldTransform();
+				vkCmdPushConstants(commandBuffer, forward.rtGraphicsPipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(RtModelConstant), &forward.modelConstant);
+
+				const resource::Mesh& currentMesh = (*itMesh)->GetMesh();
+				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &currentMesh.vertexBuffer.buffer, offset);
+				vkCmdBindIndexBuffer(commandBuffer, currentMesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+				vkCmdDrawIndexed(commandBuffer, currentMesh.indexCount, 1, 0, 0, 0);
+			}
 		}
-//		vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+
+		
+		//for (; it != itE; ++it)
+		//{
+		//	forward.modelConstant.model = (*it)->GetWorldTransform();
+		//	vkCmdPushConstants(commandBuffer, forward.rtGraphicsPipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(RtModelConstant), &forward.modelConstant);
+
+		//	const resource::Mesh& currentMesh = (*it)->GetMesh();
+		//	vkCmdBindVertexBuffers(commandBuffer, 0, 1, &currentMesh.vertexBuffer.buffer, offset);
+		//	vkCmdBindIndexBuffer(commandBuffer, currentMesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+		//	vkCmdDrawIndexed(commandBuffer, currentMesh.indexCount, 1, 0, 0, 0);
+		//}
 
 		RenderImgui();
 

@@ -29,7 +29,7 @@ namespace lux::resource
 	class Material
 	{
 	public:
-		Material(MaterialParameters parameter) noexcept;
+		Material(const std::string& name, MaterialParameters parameter) noexcept;
 		Material(const Material&) = delete;
 		Material(Material&&) = delete;
 
@@ -39,6 +39,7 @@ namespace lux::resource
 		Material& operator=(Material&&) = delete;
 	
 
+		std::string name;
 		MaterialParameters parameter;
 		
 		std::vector<rhi::Buffer> buffer;

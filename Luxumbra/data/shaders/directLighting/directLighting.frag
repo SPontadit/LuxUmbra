@@ -25,7 +25,7 @@ layout(push_constant) uniform PushConsts
 	layout(offset = 64) int lightCount;
 } pushConsts;
 
-layout(binding = 2) uniform Material
+layout(set = 1, binding = 0) uniform Material
 {
 	vec3 baseColor;
 	float metallic;
@@ -58,7 +58,7 @@ vec3 F_Schlick(float NdotH, vec3 f0);
 void main() 
 {
 	vec3 directColor  = vec3(0.0);
-
+	
 	for(int i = 0; i < pushConsts.lightCount; ++i)
 	{
 		vec3 lightDir = normalize(-lightBuffer.lights[i].parameter.xyz);

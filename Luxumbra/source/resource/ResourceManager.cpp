@@ -170,13 +170,13 @@ namespace lux::resource
 		primitiveMeshes[TO_SIZE_T(MeshPrimitive::MESH_SPHERE_PRIMITIVE)] = sphereMesh;
 	}
 
-	std::shared_ptr<Material> ResourceManager::CreateMaterial(const std::string& filename, MaterialParameters parameters) noexcept
+	std::shared_ptr<Material> ResourceManager::CreateMaterial(const std::string& name, MaterialParameters parameters) noexcept
 	{
-		std::shared_ptr<Material> material = std::make_shared<Material>(parameters);
+		std::shared_ptr<Material> material = std::make_shared<Material>(name, parameters);
 
 		rhi.CreateMaterial(*material);
 
-		materials[filename] = material;
+		materials[name] = material;
 
 		return material;
 	}

@@ -43,7 +43,8 @@ namespace lux::rhi
 		std::vector<VkDescriptorSet> blitDescriptorSets;
 
 		GraphicsPipeline rtGraphicsPipeline;
-		std::vector<VkDescriptorSet> rtDescriptorSets;
+		std::vector<VkDescriptorSet> rtViewDescriptorSets;
+		std::vector<VkDescriptorSet> rtModelDescriptorSets;
 
 		RtModelConstant modelConstant;
 		std::vector<Buffer> viewProjUniformBuffers;
@@ -72,10 +73,12 @@ namespace lux::rhi
 			FORWARD_SUBPASS_COUNT
 		};
 
-		enum ForwardDescriptorLayouts : uint32_t
+		enum ForwardDescriptorSetLayouts : uint32_t
 		{
-			FORWARD_GENERAL_DESCRIPTOR_LAYOUT = 0,
-			FORWARD_MATERIAL_DESCRIPTOR_LAYOUT,
+			FORWARD_VIEW_DESCRIPTOR_SET_LAYOUT = 0,
+			FORWARD_MATERIAL_DESCRIPTOR_SET_LAYOUT,
+			FORWARD_MODEL_DESCRIPTOR_SET_LAYOUT,
+			FORWARD_DESCRIPTOR_SET_LAYOUT_COUNT
 		};
 	};
 
