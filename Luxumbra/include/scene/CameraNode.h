@@ -31,6 +31,6 @@ namespace lux::scene
 		float fovy, nearDist, farDist;
 	};
 
-}
+} // namespace lux::scene
 
 #endif // CAMERA_NODE_H_INCLUDED
