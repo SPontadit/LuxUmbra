@@ -28,6 +28,7 @@ namespace lux
 		void Run() noexcept;
 
 		scene::Scene& GetScene() noexcept;
+		resource::ResourceManager& GetResourceManager() noexcept;
 
 	private:
 		void DrawImgui() noexcept;

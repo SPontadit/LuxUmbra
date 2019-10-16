@@ -25,6 +25,12 @@ namespace lux::resource
 		float reflectance;
 	};
 
+	struct GLSLMaterial
+	{
+		glm::vec4 color;
+		glm::vec4 parameter;
+	};
+
 	class Material
 	{
 	public:

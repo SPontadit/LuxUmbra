@@ -113,7 +113,7 @@ namespace lux::rhi
 		void InitForwardUniformBuffers() noexcept;
 		void BuildLightUniformBuffers(size_t lightCount) noexcept;
 
-		void UpdateForwardUniformBuffers(const scene::CameraNode* camera, const std::vector<scene::LightNode*>& lights) noexcept;
+		void UpdateForwardUniformBuffers(const scene::CameraNode* camera, resource::MaterialParameters& material, const std::vector<scene::LightNode*>& lights) noexcept;
 
 		void RebuildForwardGraphicsPipeline() noexcept;
 

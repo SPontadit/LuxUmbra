@@ -335,8 +335,8 @@ namespace lux::rhi
 		GraphicsPipelineCreateInfo rtGraphicsPipelineCI = {};
 		rtGraphicsPipelineCI.renderPass = forward.renderPass;
 		rtGraphicsPipelineCI.subpassIndex = ForwardRenderer::FORWARD_SUBPASS_RENDER_TO_TARGET;
-		rtGraphicsPipelineCI.binaryVertexFilePath = "data/shaders/basicLight/basicLight.vert.spv";
-		rtGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/basicLight/basicLight.frag.spv";
+		rtGraphicsPipelineCI.binaryVertexFilePath = "data/shaders/directLighting/directLighting.vert.spv";
+		rtGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/directLighting/directLighting.frag.spv";
 		rtGraphicsPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 		rtGraphicsPipelineCI.viewportWidth = TO_FLOAT(swapchainExtent.width);
 		rtGraphicsPipelineCI.viewportHeight = TO_FLOAT(swapchainExtent.height);
@@ -424,6 +424,19 @@ namespace lux::rhi
 		lightDescriptorBufferInfo.range = sizeof(LightBuffer) * LIGHT_MAX_COUNT;
 
 
+		//Material UBO
+		VkWriteDescriptorSet writeMaterialDescriptorSet = {};
+		writeMaterialDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeMaterialDescriptorSet.descriptorCount = 1;
+		writeMaterialDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		writeMaterialDescriptorSet.dstBinding = 2;
+		writeMaterialDescriptorSet.dstArrayElement = 0;
+
+		VkDescriptorBufferInfo materialDescriptorBufferInfo = {};
+		materialDescriptorBufferInfo.offset = 0;
+		materialDescriptorBufferInfo.range = sizeof(resource::GLSLMaterial);
+
+
 		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
 			rtViewProjDescriptorBufferInfo.buffer = forward.viewProjUniformBuffers[i].buffer;
@@ -438,27 +451,41 @@ namespace lux::rhi
 			writeLightDescriptorSet.dstSet = forward.rtDescriptorSets[i];
 			
 
-			std::array<VkWriteDescriptorSet, 2> writeDescriptorSets = { rtWriteViewProjDescriptorSet, writeLightDescriptorSet };
+			materialDescriptorBufferInfo.buffer = forward.materialUniformBuffers[i].buffer;
+
+			writeMaterialDescriptorSet.pBufferInfo = &materialDescriptorBufferInfo;
+			writeMaterialDescriptorSet.dstSet = forward.rtDescriptorSets[i];
+
+			std::array<VkWriteDescriptorSet, 3> writeDescriptorSets = { rtWriteViewProjDescriptorSet, writeLightDescriptorSet, writeMaterialDescriptorSet };
 			vkUpdateDescriptorSets(device, TO_UINT32_T(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
 		}
 	}
 
 	void RHI::InitForwardUniformBuffers() noexcept
 	{
-		BufferCreateInfo uniformBufferCI = {};
-		uniformBufferCI.usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-		uniformBufferCI.size = sizeof(RtViewProjUniform);
-		uniformBufferCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-		uniformBufferCI.memoryProperty = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-	
+		BufferCreateInfo viewProjUniformBufferCI = {};
+		viewProjUniformBufferCI.usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+		viewProjUniformBufferCI.size = sizeof(RtViewProjUniform);
+		viewProjUniformBufferCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		viewProjUniformBufferCI.memoryProperty = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+
+		BufferCreateInfo materialUniformBufferCI = {};
+		materialUniformBufferCI.usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+		materialUniformBufferCI.size = sizeof(RtViewProjUniform);
+		materialUniformBufferCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		materialUniformBufferCI.memoryProperty = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+
+
 		forward.viewProjUniformBuffers.resize(TO_UINT32_T(swapchainImageCount));
+		forward.materialUniformBuffers.resize(TO_UINT32_T(swapchainImageCount));
 		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
-			CreateBuffer(uniformBufferCI, forward.viewProjUniformBuffers[i]);
+			CreateBuffer(viewProjUniformBufferCI, forward.viewProjUniformBuffers[i]);
+			CreateBuffer(materialUniformBufferCI, forward.materialUniformBuffers[i]);
 		}
 	}
 
-	void RHI::UpdateForwardUniformBuffers(const scene::CameraNode* camera, const std::vector<scene::LightNode*>& lights) noexcept
+	void RHI::UpdateForwardUniformBuffers(const scene::CameraNode* camera, resource::MaterialParameters& material, const std::vector<scene::LightNode*>& lights) noexcept
 	{
 		size_t lightCount = std::min(lights.size(), TO_SIZE_T(LIGHT_MAX_COUNT));
 		
@@ -475,6 +502,10 @@ namespace lux::rhi
 
 		UpdateBuffer(forward.viewProjUniformBuffers[currentFrame], &viewProj);
 
+		resource::GLSLMaterial mat;
+		mat.color = glm::vec4(material.baseColor, material.metallic);
+		mat.parameter = glm::vec4(material.perceptualRoughness, material.reflectance, 0.f, 0.f);
+		UpdateBuffer(forward.materialUniformBuffers[currentFrame], &mat);
 
 		// Lights
 
@@ -537,7 +568,7 @@ namespace lux::rhi
 
 		vkCmdBeginRenderPass(commandBuffer, &renderPassBI, VK_SUBPASS_CONTENTS_INLINE);
 
-		UpdateForwardUniformBuffers(camera, lights);
+		UpdateForwardUniformBuffers(camera, meshes[0]->GetMaterial().parameter ,lights);
 
 		// Render Target Subpass
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.rtGraphicsPipeline.pipeline);
@@ -626,6 +657,7 @@ namespace lux::rhi
 		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
 			DestroyBuffer(forward.viewProjUniformBuffers[i]);
+			DestroyBuffer(forward.materialUniformBuffers[i]);
 			vkDestroyFramebuffer(device, forward.frameBuffers[i], nullptr);
 
 			vkDestroyImage(device, forward.rtColorAttachmentImages[i], nullptr);

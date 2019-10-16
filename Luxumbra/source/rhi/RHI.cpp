@@ -407,19 +407,20 @@ namespace lux::rhi
 		}
 
 
-		VkDescriptorPoolSize materialsUniformDescriptorPoolSize = {};
-		materialsUniformDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		materialsUniformDescriptorPoolSize.descriptorCount = swapchainImageCount;
+		//TODO: Create Material Descriptor Pool
+		//VkDescriptorPoolSize materialsUniformDescriptorPoolSize = {};
+		//materialsUniformDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		//materialsUniformDescriptorPoolSize.descriptorCount = swapchainImageCount;
 
-		std::array<VkDescriptorPoolSize, 1> descriptorPoolSizes = { materialsUniformDescriptorPoolSize };
+		//std::array<VkDescriptorPoolSize, 1> descriptorPoolSizes = { materialsUniformDescriptorPoolSize };
 
-		VkDescriptorPoolCreateInfo descriptorPoolCI = {};
-		descriptorPoolCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		descriptorPoolCI.poolSizeCount = TO_UINT32_T(descriptorPoolSizes.size());
-		descriptorPoolCI.pPoolSizes = descriptorPoolSizes.data();
-		descriptorPoolCI.maxSets = swapchainImageCount * MATERIAL_MAX_SET;
+		//VkDescriptorPoolCreateInfo descriptorPoolCI = {};
+		//descriptorPoolCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		//descriptorPoolCI.poolSizeCount = TO_UINT32_T(descriptorPoolSizes.size());
+		//descriptorPoolCI.pPoolSizes = descriptorPoolSizes.data();
+		//descriptorPoolCI.maxSets = swapchainImageCount * MATERIAL_MAX_SET;
 
-		CHECK_VK(vkCreateDescriptorPool(device, &descriptorPoolCI, nullptr, &materialDescriptorPool));
+		//CHECK_VK(vkCreateDescriptorPool(device, &descriptorPoolCI, nullptr, &materialDescriptorPool));
 	}
 
 	void RHI::InitCommandBuffer() noexcept
@@ -539,6 +540,8 @@ namespace lux::rhi
 
 	void RHI::CreateMaterial(resource::Material& material) noexcept
 	{
+		// TODO: HACK DONT CREATE MATERIAL
+		return;
 		material.buffer.resize(TO_SIZE_T(swapchainImageCount));
 		material.descriptorSet.resize(TO_SIZE_T(swapchainImageCount));
 
@@ -587,6 +590,8 @@ namespace lux::rhi
 
 	void RHI::DestroyMaterial(resource::Material& material) noexcept
 	{
+		//TODO: HACK DONT DESTROY MATERIAL
+		return;
 		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
 			DestroyBuffer(material.buffer[i]);
@@ -699,7 +704,8 @@ namespace lux::rhi
 	{
 		DestroyForwardRenderer();
 
-		vkDestroyDescriptorPool(device, materialDescriptorPool, nullptr);
+		// TODO: Destroy Material Descriptor Pool
+		//vkDestroyDescriptorPool(device, materialDescriptorPool, nullptr);
 
 		vkFreeCommandBuffers(device, commandPool, 2, commandBuffers.data());
 

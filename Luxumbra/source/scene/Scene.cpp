@@ -87,18 +87,20 @@ namespace lux::scene
 		return cameraNode;
 	}
 
-	MeshNode* Scene::AddMeshNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition, const std::string& meshFileName) noexcept
+	MeshNode* Scene::AddMeshNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition, const std::string& meshFileName, const std::string& materialName) noexcept
 	{
 		MeshNode* meshNode;
 
+		std::shared_ptr<resource::Material> material = resourceManager->GetMaterial(materialName);
+
 		if (isWorldPosition)
 		{
-			meshNode = new MeshNode(parent, resourceManager->GetMesh(meshFileName));
+			meshNode = new MeshNode(parent, resourceManager->GetMesh(meshFileName), material);
 			meshNode->SetWorldPosition(position);
 			meshNode->SetWorldRotation(rotation);
 		}
 		else
-			meshNode = new MeshNode(parent, position, rotation, resourceManager->GetMesh(meshFileName));
+			meshNode = new MeshNode(parent, position, rotation, resourceManager->GetMesh(meshFileName), material);
 
 		nodes.push_back(meshNode);
 		meshNodes.push_back(meshNode);
@@ -106,18 +108,19 @@ namespace lux::scene
 		return meshNode;
 	}
 
-	MeshNode* Scene::AddMeshNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition, resource::MeshPrimitive meshPrimitive) noexcept
+	MeshNode* Scene::AddMeshNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition, resource::MeshPrimitive meshPrimitive, const std::string& materialName) noexcept
 	{
 		MeshNode* meshNode;
+		std::shared_ptr<resource::Material> material = resourceManager->GetMaterial(materialName);
 
 		if (isWorldPosition)
 		{
-			meshNode = new MeshNode(parent, resourceManager->GetMesh(meshPrimitive));
+			meshNode = new MeshNode(parent, resourceManager->GetMesh(meshPrimitive), material);
 			meshNode->SetWorldPosition(position);
 			meshNode->SetWorldRotation(rotation);
 		}
 		else
-			meshNode = new MeshNode(parent, position, rotation, resourceManager->GetMesh(meshPrimitive));
+			meshNode = new MeshNode(parent, position, rotation, resourceManager->GetMesh(meshPrimitive), material);
 
 		nodes.push_back(meshNode);
 		meshNodes.push_back(meshNode);

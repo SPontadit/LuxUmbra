@@ -47,6 +47,7 @@ namespace lux::rhi
 
 		RtModelConstant modelConstant;
 		std::vector<Buffer> viewProjUniformBuffers;
+		std::vector<Buffer> materialUniformBuffers;
 
 		std::vector<VkImage> rtColorAttachmentImages;
 		std::vector<VkImageView> rtColorAttachmentImageViews;

@@ -56,6 +56,11 @@ namespace lux
 		return scene;
 	}
 
+	resource::ResourceManager& Engine::GetResourceManager() noexcept
+	{
+		return resourceManager;
+	}
+
 	void Engine::DrawImgui() noexcept
 	{
 		ImGui_ImplVulkan_NewFrame();
@@ -72,6 +77,19 @@ namespace lux
 		DisplayMeshNodes(scene.GetMeshNodes());
 		ImGui::NewLine();
 		DisplayLightNodes(scene.GetLightNodes());
+		ImGui::NewLine();
+
+		resource::MaterialParameters& material = scene.GetMeshNodes()[0]->GetMaterial().parameter;
+
+		ImGui::ColorEdit3("Base Color", glm::value_ptr(material.baseColor));
+		ImGui::Checkbox("Metallic", &material.metallic);
+		
+		if (material.metallic == false)
+		{
+			ImGui::SliderFloat("Reflectance", &material.reflectance, 0.0f, 1.0f, "%.3f");
+		}
+
+		ImGui::SliderFloat("Roughness", &material.perceptualRoughness, 0.0f, 1.0f, "%.3f");
 
 		ImGui::End();
 
@@ -99,12 +117,11 @@ namespace lux
 		{
 			for (size_t i = 0; i < meshCount; i++)
 			{
-				if (ImGui::TreeNodeEx(("Mesh " + std::to_string(i)).c_str()))
-				//if (ImGui::TreeNode((void*)(intptr_t)i, "Mesh %d", i))
+				if (ImGui::TreeNode(("Mesh " + std::to_string(i)).c_str()))
 				{
 					currentMesh = meshes[i];
 					DisplayNode(currentMesh);
-				
+
 					ImGui::TreePop();
 				}
 			}
@@ -125,7 +142,6 @@ namespace lux
 				currentLight = lights[i];
 
 				if (ImGui::TreeNode(("Light " + std::to_string(i)).c_str()))
-					//if (ImGui::TreeNode((void*)(intptr_t)i, "Light %d", i))
 				{
 					DisplayNode(currentLight);
 

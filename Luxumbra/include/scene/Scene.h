@@ -35,8 +35,8 @@ namespace lux::scene
 
 		Node* AddNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition) noexcept;
 		CameraNode* AddCameraNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition, float fovy, float nearDist, float farDist, bool makeCurrentCamera) noexcept;
-		MeshNode* AddMeshNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition, const std::string& meshFileName) noexcept;
-		MeshNode* AddMeshNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition, resource::MeshPrimitive meshPrimitive) noexcept;
+		MeshNode* AddMeshNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition, const std::string& meshFileName, const std::string& materialName) noexcept;
+		MeshNode* AddMeshNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition, resource::MeshPrimitive meshPrimitive, const std::string& materialName) noexcept;
 		LightNode* AddLightNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition, LightType type, glm::vec3 color) noexcept;
 
 	private:
