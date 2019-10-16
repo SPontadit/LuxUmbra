@@ -70,6 +70,12 @@ namespace lux::rhi
 			FORWARD_SUBPASS_COPY,
 			FORWARD_SUBPASS_COUNT
 		};
+
+		enum ForwardDescriptorLayouts : uint32_t
+		{
+			FORWARD_GENERAL_DESCRIPTOR_LAYOUT = 0,
+			FORWARD_MATERIAL_DESCRIPTOR_LAYOUT,
+		};
 	};
 
 } // namespace lux::rhi

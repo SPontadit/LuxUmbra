@@ -12,6 +12,7 @@
 #include "rhi\Image.h"
 #include "rhi\Buffer.h"
 #include "resource\Mesh.h"
+#include "resource\Material.h"
 #include "scene\CameraNode.h"
 #include "scene\MeshNode.h"
 #include "scene\LightNode.h"
@@ -19,6 +20,7 @@
 namespace lux::rhi
 {
 #define LIGHT_MAX_COUNT 64
+#define MATERIAL_MAX_SET 64
 
 	using namespace lux;
 
@@ -50,6 +52,9 @@ namespace lux::rhi
 		void RenderForward(const scene::CameraNode* camera, const std::vector<scene::MeshNode*> meshes, const std::vector<scene::LightNode*>& lights) noexcept;
 
 		void WaitIdle() noexcept;
+
+		void CreateMaterial(resource::Material& material) noexcept;
+		void DestroyMaterial(resource::Material& material) noexcept;
 
 		void CreateBuffer(const BufferCreateInfo& luxBufferCI, Buffer& buffer) noexcept;
 		void UpdateBuffer(Buffer& buffer, void* newData) noexcept;
@@ -85,17 +90,17 @@ namespace lux::rhi
 		std::vector<VkFence> fences;
 
 		VkDescriptorPool imguiDescriptorPool;
+		VkDescriptorPool materialDescriptorPool;
+
 
 		VkCommandPool commandPool;
 		std::vector<VkCommandBuffer> commandBuffers;
 
-		std::vector<VkDescriptorSet> lightDescriptorSets;
 		std::vector<Buffer> lightUniformBuffers;
 		LightCountPushConstant lightCountPushConstant;
 
 		uint32_t frameCount;
 		uint32_t currentFrame;
-
 
 		void InitInstanceAndDevice(const Window& window) noexcept;
 		void InitSwapchain() noexcept;

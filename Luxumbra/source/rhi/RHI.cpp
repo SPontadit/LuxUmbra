@@ -405,6 +405,21 @@ namespace lux::rhi
 
 			CHECK_VK(vkCreateFence(device, &rtFenceCI, nullptr, &fences[i]));
 		}
+
+
+		VkDescriptorPoolSize materialsUniformDescriptorPoolSize = {};
+		materialsUniformDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		materialsUniformDescriptorPoolSize.descriptorCount = swapchainImageCount;
+
+		std::array<VkDescriptorPoolSize, 1> descriptorPoolSizes = { materialsUniformDescriptorPoolSize };
+
+		VkDescriptorPoolCreateInfo descriptorPoolCI = {};
+		descriptorPoolCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		descriptorPoolCI.poolSizeCount = TO_UINT32_T(descriptorPoolSizes.size());
+		descriptorPoolCI.pPoolSizes = descriptorPoolSizes.data();
+		descriptorPoolCI.maxSets = swapchainImageCount * MATERIAL_MAX_SET;
+
+		CHECK_VK(vkCreateDescriptorPool(device, &descriptorPoolCI, nullptr, &materialDescriptorPool));
 	}
 
 	void RHI::InitCommandBuffer() noexcept
@@ -522,6 +537,62 @@ namespace lux::rhi
 		}
 	}
 
+	void RHI::CreateMaterial(resource::Material& material) noexcept
+	{
+		material.buffer.resize(TO_SIZE_T(swapchainImageCount));
+		material.descriptorSet.resize(TO_SIZE_T(swapchainImageCount));
+
+
+		std::vector<VkDescriptorSetLayout> rtDescriptorSetLayout(swapchainImageCount, forward.rtGraphicsPipeline.descriptorSetLayout);
+		VkDescriptorSetAllocateInfo rtDescriptorSetAI = {};
+		rtDescriptorSetAI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		rtDescriptorSetAI.descriptorPool = forward.descriptorPool;
+		rtDescriptorSetAI.descriptorSetCount = swapchainImageCount;
+		rtDescriptorSetAI.pSetLayouts = rtDescriptorSetLayout.data();
+
+		CHECK_VK(vkAllocateDescriptorSets(device, &rtDescriptorSetAI, material.descriptorSet.data()));
+
+
+		VkWriteDescriptorSet writeMaterialDescriptorSet = {};
+		writeMaterialDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeMaterialDescriptorSet.descriptorCount = 1;
+		writeMaterialDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		writeMaterialDescriptorSet.dstBinding = 2;
+		writeMaterialDescriptorSet.dstArrayElement = 0;
+
+		VkDescriptorBufferInfo materialDescriptorBufferInfo = {};
+		materialDescriptorBufferInfo.offset = 0;
+		materialDescriptorBufferInfo.range = sizeof(resource::MaterialParameters);
+
+
+		BufferCreateInfo materialBufferCI = {};
+		materialBufferCI.usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+		materialBufferCI.size = sizeof(resource::MaterialParameters);
+		materialBufferCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		materialBufferCI.memoryProperty = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+
+		for (size_t i = 0; i < swapchainImageCount; i++)
+		{
+			CreateBuffer(materialBufferCI, material.buffer[i]);
+
+			materialDescriptorBufferInfo.buffer = material.buffer[i].buffer;
+			writeMaterialDescriptorSet.pBufferInfo = &materialDescriptorBufferInfo;
+			writeMaterialDescriptorSet.dstSet = material.descriptorSet[i];
+
+			std::array<VkWriteDescriptorSet, 1> writeDescriptorSets = { writeMaterialDescriptorSet };
+
+			vkUpdateDescriptorSets(device, TO_UINT32_T(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
+		}
+	}
+
+	void RHI::DestroyMaterial(resource::Material& material) noexcept
+	{
+		for (size_t i = 0; i < swapchainImageCount; i++)
+		{
+			DestroyBuffer(material.buffer[i]);
+		}
+	}
+
 	VkCommandBuffer RHI::BeginSingleTimeCommandBuffer() const noexcept
 	{
 		VkCommandBufferAllocateInfo commandBufferAI = {};
@@ -627,6 +698,8 @@ namespace lux::rhi
 	void RHI::DestroySwapchainRelatedResources() noexcept
 	{
 		DestroyForwardRenderer();
+
+		vkDestroyDescriptorPool(device, materialDescriptorPool, nullptr);
 
 		vkFreeCommandBuffers(device, commandPool, 2, commandBuffers.data());
 

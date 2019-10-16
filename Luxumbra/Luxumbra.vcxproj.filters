@@ -55,6 +55,9 @@
     <Filter Include="Resource Files\basicLight">
       <UniqueIdentifier>{0d155caf-aa61-4f5d-b8e4-268a2d41f3a1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resource Files\directLighting">
+      <UniqueIdentifier>{c873f7b5-fba2-4586-b1bc-0c54e0dbe7e0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\main.cpp">
@@ -128,6 +131,9 @@
     </ClCompile>
     <ClCompile Include="source\scene\LightNode.cpp">
       <Filter>Source Files\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="source\resource\Material.cpp">
+      <Filter>Source Files\Resource</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -215,6 +221,9 @@
     <ClInclude Include="include\scene\LightNode.h">
       <Filter>Header Files\Scene</Filter>
     </ClInclude>
+    <ClInclude Include="include\resource\Material.h">
+      <Filter>Header Files\Resource</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="include\Logger.inl">
@@ -243,6 +252,12 @@
     </None>
     <None Include="data\shaders\basicLight\basicLight.vert">
       <Filter>Resource Files\basicLight</Filter>
+    </None>
+    <None Include="data\shaders\directLighting\directLighting.frag">
+      <Filter>Resource Files\directLighting</Filter>
+    </None>
+    <None Include="data\shaders\directLighting\directLighting.vert">
+      <Filter>Resource Files\directLighting</Filter>
     </None>
   </ItemGroup>
 </Project>

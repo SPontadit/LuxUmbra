@@ -147,12 +147,6 @@ namespace lux::rhi
 		depthStencilStateCI.depthBoundsTestEnable = VK_FALSE;
 
 
-		VkDescriptorSetLayoutBinding blitDescriptorSetLayoutBinding = {};
-		blitDescriptorSetLayoutBinding.binding = 0;
-		blitDescriptorSetLayoutBinding.descriptorCount = 1;
-		blitDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
-		blitDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
 		VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI = {};
 		descriptorSetLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 		descriptorSetLayoutCI.bindingCount = TO_UINT32_T(luxGraphicsPipelineCI.descriptorSetLayoutBindings.size());

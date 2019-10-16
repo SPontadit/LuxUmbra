@@ -13,6 +13,10 @@ namespace lux::resource
 	using meshesIterator = std::unordered_map<std::string, std::shared_ptr<Mesh>>::iterator;
 	using meshesConstIterator = std::unordered_map<std::string, std::shared_ptr<Mesh>>::const_iterator;
 
+	using materialsIterator = std::unordered_map<std::string, std::shared_ptr<Material>>::iterator;
+	using materialsConstIterator = std::unordered_map<std::string, std::shared_ptr<Material>>::const_iterator;
+
+
 	ResourceManager::ResourceManager(rhi::RHI&  rhi) noexcept
 		: rhi(rhi)
 	{
@@ -26,6 +30,18 @@ namespace lux::resource
 	void ResourceManager::Initialize() noexcept
 	{
 		BuildPrimitiveMeshes();
+	}
+
+	std::shared_ptr<Material> ResourceManager::GetMaterial(const std::string& materialName) noexcept
+	{
+		materialsConstIterator material = materials.find(materialName);
+
+		if (material == materials.cend())
+		{
+			return nullptr;
+		}
+
+		return std::shared_ptr<Material>(material->second);
 	}
 
 	std::shared_ptr<Mesh> ResourceManager::GetMesh(const std::string& filename) noexcept
@@ -133,9 +149,20 @@ namespace lux::resource
 		primitiveMeshes[TO_SIZE_T(MeshPrimitive::MESH_SPHERE_PRIMITIVE)] = sphereMesh;
 	}
 
+	std::shared_ptr<Material> ResourceManager::CreateMaterial(const std::string& filename, MaterialParameters parameters) noexcept
+	{
+		std::shared_ptr<Material> material = std::make_shared<Material>(parameters);
+
+		rhi.CreateMaterial(*material);
+
+		materials[filename] = material;
+
+		return material;
+	}
+
 	std::shared_ptr<Mesh> ResourceManager::LoadMesh(const std::string& filename) noexcept
 	{
-		std::shared_ptr<Mesh> mesh = std::make_shared <Mesh>();
+		std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>();
 		Assimp::Importer importer;
 		const aiScene* scene = importer.ReadFile(filename, aiProcessPreset_TargetRealtime_Fast);
 
@@ -195,6 +222,8 @@ namespace lux::resource
 
 		mesh->indexCount = TO_UINT32_T(indices.size());
 
+		meshes[filename] = mesh;
+
 		return mesh;
 	}
 
@@ -216,6 +245,19 @@ namespace lux::resource
 			rhi.DestroyBuffer(primitiveMeshes[i]->vertexBuffer);
 			rhi.DestroyBuffer(primitiveMeshes[i]->indexBuffer);
 		}
+	}
+
+	void ResourceManager::ClearMaterials() noexcept
+	{
+		materialsConstIterator it = materials.cbegin();
+		materialsConstIterator itE = materials.cend();
+
+		for (; it != itE; ++it)
+		{
+			rhi.DestroyMaterial((*it->second));
+		}
+
+		materials.clear();
 	}
 
 } // namespace lux::resource

@@ -254,7 +254,12 @@ namespace lux::rhi
 		lightsUniformDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		lightsUniformDescriptorPoolSize.descriptorCount = swapchainImageCount;
 
-		std::array<VkDescriptorPoolSize, 3> descriptorPoolSizes = { blitInputDescriptorPoolSize, rtViewProjUniformDescriptorPoolSize, lightsUniformDescriptorPoolSize };
+		// TODO: HACK - Use many descriptor set layout
+		VkDescriptorPoolSize materialDescriptorPoolSize = {};
+		materialDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		materialDescriptorPoolSize.descriptorCount = swapchainImageCount;
+
+		std::array<VkDescriptorPoolSize, 4> descriptorPoolSizes = { blitInputDescriptorPoolSize, rtViewProjUniformDescriptorPoolSize, lightsUniformDescriptorPoolSize, materialDescriptorPoolSize };
 
 		VkDescriptorPoolCreateInfo descriptorPoolCI = {};
 		descriptorPoolCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -305,6 +310,12 @@ namespace lux::rhi
 		lightDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		lightDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
+		VkDescriptorSetLayoutBinding materialDescriptorSetLayoutBinding = {};
+		materialDescriptorSetLayoutBinding.binding = 2;
+		materialDescriptorSetLayoutBinding.descriptorCount = 1;
+		materialDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		materialDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
 		//VkDescriptorSetLayoutBinding rtSamplerDescriptorSetLayoutBinding = {};
 		//rtSamplerDescriptorSetLayoutBinding.binding = 1;
 		//rtSamplerDescriptorSetLayoutBinding.descriptorCount = 1;
@@ -333,7 +344,7 @@ namespace lux::rhi
 		rtGraphicsPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		rtGraphicsPipelineCI.enableDepthTest = VK_TRUE;
 		rtGraphicsPipelineCI.enableDepthWrite = VK_TRUE;
-		rtGraphicsPipelineCI.descriptorSetLayoutBindings = { rtViewProjDescriptorSetLayoutBinding, lightDescriptorSetLayoutBinding };
+		rtGraphicsPipelineCI.descriptorSetLayoutBindings = { rtViewProjDescriptorSetLayoutBinding, lightDescriptorSetLayoutBinding, materialDescriptorSetLayoutBinding };
 		rtGraphicsPipelineCI.pushConstants = { rtModelPushConstantRange, lightCountPushConstantRange };
 
 		CreateGraphicsPipeline(rtGraphicsPipelineCI, forward.rtGraphicsPipeline);
@@ -387,6 +398,8 @@ namespace lux::rhi
 
 
 		// Update Render Target Descriptor Sets
+
+		// ViewProj UBO
 		VkWriteDescriptorSet rtWriteViewProjDescriptorSet = {};
 		rtWriteViewProjDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		rtWriteViewProjDescriptorSet.descriptorCount = 1;
@@ -398,6 +411,7 @@ namespace lux::rhi
 		rtViewProjDescriptorBufferInfo.offset = 0;
 		rtViewProjDescriptorBufferInfo.range = sizeof(RtViewProjUniform);
 
+		// Light UBO
 		VkWriteDescriptorSet writeLightDescriptorSet = {};
 		writeLightDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		writeLightDescriptorSet.descriptorCount = 1;
@@ -408,7 +422,8 @@ namespace lux::rhi
 		VkDescriptorBufferInfo lightDescriptorBufferInfo = {};
 		lightDescriptorBufferInfo.offset = 0;
 		lightDescriptorBufferInfo.range = sizeof(LightBuffer) * LIGHT_MAX_COUNT;
-	
+
+
 		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
 			rtViewProjDescriptorBufferInfo.buffer = forward.viewProjUniformBuffers[i].buffer;
@@ -422,6 +437,7 @@ namespace lux::rhi
 			writeLightDescriptorSet.pBufferInfo = &lightDescriptorBufferInfo;
 			writeLightDescriptorSet.dstSet = forward.rtDescriptorSets[i];
 			
+
 			std::array<VkWriteDescriptorSet, 2> writeDescriptorSets = { rtWriteViewProjDescriptorSet, writeLightDescriptorSet };
 			vkUpdateDescriptorSets(device, TO_UINT32_T(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
 		}

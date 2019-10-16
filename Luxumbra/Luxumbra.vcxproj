@@ -148,6 +148,7 @@
     <ClCompile Include="..\libs\volk\volk.c" />
     <ClCompile Include="source\Engine.cpp" />
     <ClCompile Include="source\main.cpp" />
+    <ClCompile Include="source\resource\Material.cpp" />
     <ClCompile Include="source\resource\Mesh.cpp" />
     <ClCompile Include="source\resource\ResourceManager.cpp" />
     <ClCompile Include="source\rhi\RHI_Buffer.cpp" />
@@ -177,6 +178,7 @@
     <ClInclude Include="include\Engine.h" />
     <ClInclude Include="include\Logger.h" />
     <ClInclude Include="include\Luxumbra.h" />
+    <ClInclude Include="include\resource\Material.h" />
     <ClInclude Include="include\resource\Mesh.h" />
     <ClInclude Include="include\resource\ResourceManager.h" />
     <ClInclude Include="include\rhi\Buffer.h" />
@@ -199,6 +201,8 @@
     <None Include="data\shaders\basicLight\basicLight.vert" />
     <None Include="data\shaders\blit\blit.frag" />
     <None Include="data\shaders\blit\blit.vert" />
+    <None Include="data\shaders\directLighting\directLighting.frag" />
+    <None Include="data\shaders\directLighting\directLighting.vert" />
     <None Include="data\shaders\mesh\mesh.frag" />
     <None Include="data\shaders\mesh\mesh.vert" />
     <None Include="data\shaders\texture\triangle.frag" />
