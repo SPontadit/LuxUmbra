@@ -12,8 +12,10 @@ namespace lux::rhi
 		VkFormat format;
 		uint32_t width;
 		uint32_t height;
-		VkImageUsageFlagBits usage;
+		VkImageUsageFlags usage;
 		VkImageAspectFlagBits subresourceRangeAspectMask;
+		void* imageData;
+		uint64_t imageSize;
 	};
 
 

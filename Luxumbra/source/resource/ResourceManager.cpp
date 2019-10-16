@@ -3,6 +3,10 @@
 #include "assimp\Importer.hpp"
 #include "assimp\scene.h"
 #include "assimp\postprocess.h"
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb\stb_image.h"
+
 #include "glm\gtc\type_ptr.hpp"
 
 
@@ -16,6 +20,9 @@ namespace lux::resource
 	using materialsIterator = std::unordered_map<std::string, std::shared_ptr<Material>>::iterator;
 	using materialsConstIterator = std::unordered_map<std::string, std::shared_ptr<Material>>::const_iterator;
 
+	using texturesIterator = std::unordered_map<std::string, std::shared_ptr<Texture>>::iterator;
+	using texturesConstIterator = std::unordered_map<std::string, std::shared_ptr<Texture>>::const_iterator;
+
 
 	ResourceManager::ResourceManager(rhi::RHI&  rhi) noexcept
 		: rhi(rhi)
@@ -25,6 +32,8 @@ namespace lux::resource
 	ResourceManager::~ResourceManager() noexcept
 	{
 		ClearMeshes();
+		ClearMaterials();
+		ClearTextures();
 	}
 
 	void ResourceManager::Initialize() noexcept
@@ -54,6 +63,18 @@ namespace lux::resource
 		}
 
 		return std::shared_ptr<Mesh>(mesh->second);
+	}
+
+	std::shared_ptr<Texture> ResourceManager::GetTexture(const std::string& filename) noexcept
+	{
+		texturesConstIterator texture = textures.find(filename);
+
+		if (texture == textures.cend())
+		{
+			return LoadTexture(filename);
+		}
+
+		return std::shared_ptr<Texture>(texture->second);
 	}
 
 	std::shared_ptr<Mesh> ResourceManager::GetMesh(MeshPrimitive meshPrimitive) noexcept
@@ -227,6 +248,34 @@ namespace lux::resource
 		return mesh;
 	}
 
+	std::shared_ptr<Texture> ResourceManager::LoadTexture(const std::string& filename) noexcept
+	{
+		std::shared_ptr<Texture> texture = std::make_shared<Texture>();
+
+		int textureWidth, textureHeight, textureChannels;
+
+		stbi_uc* textureData = stbi_load(filename.c_str(), &textureWidth, &textureHeight, &textureChannels, STBI_rgb_alpha);
+	
+		uint64_t imageSize = textureWidth * textureHeight * textureChannels;
+
+		rhi::ImageCreateInfo imageCI = {};
+		imageCI.format = VK_FORMAT_R8G8B8A8_UINT;
+		imageCI.width = TO_UINT32_T(textureWidth);
+		imageCI.height = TO_UINT32_T(textureHeight);
+		imageCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		imageCI.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		imageCI.imageData = textureData;
+		imageCI.imageSize = imageSize;
+
+		rhi.CreateImage(imageCI, texture->image);
+
+		stbi_image_free(textureData);
+	
+		textures[filename] = texture;
+
+		return texture;
+	}
+
 	void ResourceManager::ClearMeshes() noexcept
 	{
 		meshesConstIterator it = meshes.cbegin();
@@ -258,6 +307,19 @@ namespace lux::resource
 		}
 
 		materials.clear();
+	}
+
+	void ResourceManager::ClearTextures() noexcept
+	{
+		texturesConstIterator it = textures.cbegin();
+		texturesConstIterator itE = textures.cend();
+
+		for (; it != itE; ++it)
+		{
+			rhi.DestroyImage(it->second->image);
+		}
+
+		textures.clear();
 	}
 
 } // namespace lux::resource

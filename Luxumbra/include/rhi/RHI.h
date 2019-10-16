@@ -59,6 +59,11 @@ namespace lux::rhi
 		void CreateBuffer(const BufferCreateInfo& luxBufferCI, Buffer& buffer) noexcept;
 		void UpdateBuffer(Buffer& buffer, void* newData) noexcept;
 		void DestroyBuffer(Buffer& buffer) noexcept;
+		
+		void CreateImage(const ImageCreateInfo& luxImageCI, Image& image) noexcept;
+		void FillImage(const ImageCreateInfo& luxImageCI, Image& image) noexcept;
+		void DestroyImage(Image& image) noexcept;
+
 
 		static const uint32_t SWAPCHAIN_MIN_IMAGE_COUNT = 2;
 		ForwardRenderer forward;
@@ -135,9 +140,6 @@ namespace lux::rhi
 		void CreateGraphicsPipeline(const GraphicsPipelineCreateInfo& luxGraphicsPipelineCI, GraphicsPipeline& graphicsPipeline) noexcept;
 		void CreateShaderModule(const std::string& binaryFilePath, VkShaderModule* shaderModule) const noexcept;
 		void DestroyGraphicsPipeline(GraphicsPipeline& graphicsPipeline) noexcept;
-
-		void CreateImage(const ImageCreateInfo& luxImageCI, Image& image) noexcept;
-		void DestroyImage(Image& image) noexcept;
 
 #ifdef VULKAN_ENABLE_VALIDATION
 		VkDebugReportCallbackEXT debugReportCallback;

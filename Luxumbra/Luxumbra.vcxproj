@@ -151,6 +151,7 @@
     <ClCompile Include="source\resource\Material.cpp" />
     <ClCompile Include="source\resource\Mesh.cpp" />
     <ClCompile Include="source\resource\ResourceManager.cpp" />
+    <ClCompile Include="source\resource\Texture.cpp" />
     <ClCompile Include="source\rhi\RHI_Buffer.cpp" />
     <ClCompile Include="source\rhi\RHI_ForwardRenderer.cpp" />
     <ClCompile Include="source\rhi\RHI_GraphicsPipeline.cpp" />
@@ -181,6 +182,7 @@
     <ClInclude Include="include\resource\Material.h" />
     <ClInclude Include="include\resource\Mesh.h" />
     <ClInclude Include="include\resource\ResourceManager.h" />
+    <ClInclude Include="include\resource\Texture.h" />
     <ClInclude Include="include\rhi\Buffer.h" />
     <ClInclude Include="include\rhi\ForwardRenderer.h" />
     <ClInclude Include="include\rhi\Image.h" />

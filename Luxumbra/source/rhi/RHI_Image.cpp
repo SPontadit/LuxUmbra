@@ -43,6 +43,8 @@ namespace lux::rhi
 		CHECK_VK(vkAllocateMemory(device, &memoryAllocateInfo, nullptr, &image.memory));
 		CHECK_VK(vkBindImageMemory(device, image.image, image.memory, 0));
 	
+		if (luxImageCI.imageData != nullptr)
+			FillImage(luxImageCI, image);
 		
 		VkImageViewCreateInfo imageViewCI = {};
 		imageViewCI.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -56,6 +58,42 @@ namespace lux::rhi
 		imageViewCI.subresourceRange.baseArrayLayer = 0;
 	
 		CHECK_VK(vkCreateImageView(device, &imageViewCI, nullptr, &image.imageView));
+	}
+
+	void RHI::FillImage(const ImageCreateInfo& luxImageCI, Image& image) noexcept
+	{
+		BufferCreateInfo stagingBufferCI = {};
+		stagingBufferCI.usageFlags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+		stagingBufferCI.size = luxImageCI.imageSize;
+		stagingBufferCI.data = luxImageCI.imageData;
+		stagingBufferCI.memoryProperty = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+		stagingBufferCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+		Buffer stagingBuffer;
+		CreateBuffer(stagingBufferCI, stagingBuffer);
+
+		CommandTransitionImageLayout(image.image, VK_FORMAT_R8G8B8A8_UINT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+		VkBufferImageCopy bufferImageCopy = {};
+		bufferImageCopy.bufferOffset = 0;
+		bufferImageCopy.bufferImageHeight = 0;
+		bufferImageCopy.bufferRowLength = 0;
+		bufferImageCopy.imageSubresource.aspectMask = luxImageCI.subresourceRangeAspectMask;
+		bufferImageCopy.imageSubresource.baseArrayLayer = 0;
+		bufferImageCopy.imageSubresource.layerCount = 1;
+		bufferImageCopy.imageSubresource.mipLevel = 0;
+		bufferImageCopy.imageOffset = { 0, 0, 0 };
+		bufferImageCopy.imageExtent.width = luxImageCI.width;
+		bufferImageCopy.imageExtent.height = luxImageCI.height;
+		bufferImageCopy.imageExtent.depth = 1;
+
+		VkCommandBuffer commandBuffer = BeginSingleTimeCommandBuffer();
+
+		vkCmdCopyBufferToImage(commandBuffer, stagingBuffer.buffer, image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &bufferImageCopy);
+	
+		EndSingleTimeCommandBuffer(commandBuffer);
+
+		CommandTransitionImageLayout(image.image, VK_FORMAT_R8G8B8A8_UINT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	}
 
 	void RHI::DestroyImage(Image& image) noexcept

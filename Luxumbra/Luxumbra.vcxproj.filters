@@ -135,6 +135,9 @@
     <ClCompile Include="source\resource\Material.cpp">
       <Filter>Source Files\Resource</Filter>
     </ClCompile>
+    <ClCompile Include="source\resource\Texture.cpp">
+      <Filter>Source Files\Resource</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\rhi\RHI.h">
@@ -222,6 +225,9 @@
       <Filter>Header Files\Scene</Filter>
     </ClInclude>
     <ClInclude Include="include\resource\Material.h">
+      <Filter>Header Files\Resource</Filter>
+    </ClInclude>
+    <ClInclude Include="include\resource\Texture.h">
       <Filter>Header Files\Resource</Filter>
     </ClInclude>
   </ItemGroup>
