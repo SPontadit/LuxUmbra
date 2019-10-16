@@ -24,23 +24,23 @@ layout(push_constant) uniform PushConsts
 	layout(offset = 64) int lightCount;
 } pushConsts;
 
-//layout(binding = 2) uniform Material
-//{
-//	vec3 baseColor;
-//	int metallic;
-//	float perceptualRoughness;
-//	float reflectance;
-//} material;
-#define BASE_COLOR material.color.xyz
-#define METALLIC material.color.w
-#define PERCEPTUAL_ROUGHNESS material.parameter.x
-#define REFLECTANCE material.parameter.y
 layout(binding = 2) uniform Material
 {
-	vec4 color;
-	vec4 parameter;
+	vec3 baseColor;
+	float metallic;
+	float perceptualRoughness;
+	float reflectance;
 } material;
 
+//#define BASE_COLOR material.color.xyz
+//#define METALLIC material.color.w
+//#define PERCEPTUAL_ROUGHNESS material.parameter.x
+//#define REFLECTANCE material.parameter.y
+//layout(binding = 2) uniform Material
+//{
+//	vec4 color;
+//	vec4 parameter;
+//} material;
 
 
 
@@ -52,6 +52,7 @@ vec3 GetF0(float reflectance, float metallic, vec3 baseColor);
 float D_GGX(float VdotH, float roughness);
 float V_SmithGGXCorrelated(float NdotV, float NdotL, float roughness);
 vec3 F_Schlick(float NdotH, vec3 f0);
+
 
 void main() 
 {
@@ -65,16 +66,16 @@ void main()
 	vec3 viewDir = normalize(inFragView);
 	vec3 h = normalize(viewDir + lightDir);
 	vec3 normal = normalize(inFragNormal);
-
+	
 	float NdotH = max(dot(normal, h), 0.001);
 	float NdotV = max(dot(normal, viewDir), 0.001);
 	float NdotL = max(dot(normal, lightDir), 0.001);
 	float LdotH = max(dot(lightDir, h), 0.001);
 	float VdotH = max(dot(viewDir, h), 0.001);
 
-	float roughness = PERCEPTUAL_ROUGHNESS * PERCEPTUAL_ROUGHNESS;
-	vec3 diffuseColor = RemapDiffuseColor(BASE_COLOR, METALLIC);
-	vec3 F0 = GetF0(REFLECTANCE, METALLIC, BASE_COLOR);
+	float roughness = material.perceptualRoughness * material.perceptualRoughness;
+	vec3 diffuseColor = RemapDiffuseColor(material.baseColor, material.metallic);
+	vec3 F0 = GetF0(material.reflectance, material.metallic, material.baseColor);
 
 
 	float D = D_GGX(NdotH, roughness);
@@ -89,44 +90,6 @@ void main()
 
 	outColor = vec4(directColor, 1.0);
 }
-
-//void main() 
-//{
-//	vec3 directColor  = vec3(0.0);
-//
-////	for(int i = 0; i < pushConsts.lightCount; ++i)
-////	{
-////		color.xyz += lightBuffer.lights[i].color;
-////	}
-//	vec3 lightDir = normalize(lightBuffer.lights[0].parameter.xyz);
-//	vec3 viewDir = normalize(inFragView);
-//	vec3 h = normalize(viewDir + lightDir);
-//	vec3 normal = normalize(inFragNormal);
-//
-//	float NdotH = max(dot(normal, h), 0.001);
-//	float NdotV = max(dot(normal, viewDir), 0.001);
-//	float NdotL = max(dot(normal, lightDir), 0.001);
-//	float LdotH = max(dot(lightDir, h), 0.001);
-//
-//	float roughness = material.perceptualRoughness * material.perceptualRoughness;
-////	vec3 color = RemapDiffuseColor(material.baseColor, material.metallic);
-//	vec3 color = material.baseColor;
-//	vec3 F0 = GetF0(material.reflectance, material.metallic, material.baseColor);
-//
-//
-//	float D = D_GGX(NdotH, roughness);
-//	vec3 F = F_Schlick(LdotH, F0);
-//	float V = V_SmithGGXCorrelated(NdotV, NdotL, roughness);
-//
-//	vec3 specular = (D * V) * F;
-//
-//	vec3 Kdiff = vec3(1.0) - (F0 + (vec3(1.0) - F0) * pow(1.0 - NdotL, 5.0));
-//
-//	vec3 diffuse = color * (1.0 / PI);
-//	directColor = (diffuse * Kdiff + specular) * NdotL;
-//
-//	outColor = vec4(directColor, 1.0);
-//}
 
 float D_GGX(float NdotH, float roughness)
 {

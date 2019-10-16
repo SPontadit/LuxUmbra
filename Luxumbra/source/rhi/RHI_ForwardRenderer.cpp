@@ -434,7 +434,7 @@ namespace lux::rhi
 
 		VkDescriptorBufferInfo materialDescriptorBufferInfo = {};
 		materialDescriptorBufferInfo.offset = 0;
-		materialDescriptorBufferInfo.range = sizeof(resource::GLSLMaterial);
+		materialDescriptorBufferInfo.range = sizeof(resource::MaterialParameters);
 
 
 		for (size_t i = 0; i < swapchainImageCount; i++)
@@ -471,7 +471,7 @@ namespace lux::rhi
 
 		BufferCreateInfo materialUniformBufferCI = {};
 		materialUniformBufferCI.usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-		materialUniformBufferCI.size = sizeof(RtViewProjUniform);
+		materialUniformBufferCI.size = sizeof(resource::MaterialParameters);
 		materialUniformBufferCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		materialUniformBufferCI.memoryProperty = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
@@ -502,10 +502,7 @@ namespace lux::rhi
 
 		UpdateBuffer(forward.viewProjUniformBuffers[currentFrame], &viewProj);
 
-		resource::GLSLMaterial mat;
-		mat.color = glm::vec4(material.baseColor, material.metallic);
-		mat.parameter = glm::vec4(material.perceptualRoughness, material.reflectance, 0.f, 0.f);
-		UpdateBuffer(forward.materialUniformBuffers[currentFrame], &mat);
+		UpdateBuffer(forward.materialUniformBuffers[currentFrame], &material);
 
 		// Lights
 

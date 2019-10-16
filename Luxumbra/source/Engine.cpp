@@ -82,8 +82,10 @@ namespace lux
 		resource::MaterialParameters& material = scene.GetMeshNodes()[0]->GetMaterial().parameter;
 
 		ImGui::ColorEdit3("Base Color", glm::value_ptr(material.baseColor));
-		ImGui::Checkbox("Metallic", &material.metallic);
-		
+		bool metallic = (bool)material.metallic;
+		ImGui::Checkbox("Metallic", &metallic);
+		material.metallic = metallic;
+
 		if (material.metallic == false)
 		{
 			ImGui::SliderFloat("Reflectance", &material.reflectance, 0.0f, 1.0f, "%.3f");

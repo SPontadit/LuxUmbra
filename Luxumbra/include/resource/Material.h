@@ -20,16 +20,11 @@ namespace lux::resource
 		// Texture metalness
 		// Texture normal
 		glm::vec3 baseColor;
-		bool metallic;
+		float metallic;
 		float perceptualRoughness;
 		float reflectance;
 	};
 
-	struct GLSLMaterial
-	{
-		glm::vec4 color;
-		glm::vec4 parameter;
-	};
 
 	class Material
 	{
