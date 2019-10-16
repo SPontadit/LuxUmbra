@@ -1,5 +1,5 @@
-#ifndef TEXTURE_H_INCLUDED
-#define TEXTURE_H_INCLUDED
+#ifndef IMAGE_H_INCLUDED
+#define IMAGE_H_INCLUDED
 
 #include "Luxumbra.h"
 
@@ -35,4 +35,4 @@ namespace lux::rhi
 
 } // namespace lux::rhi
 
-#endif // TEXTURE_H_INCLUDED
+#endif // IMAGE_H_INCLUDED
