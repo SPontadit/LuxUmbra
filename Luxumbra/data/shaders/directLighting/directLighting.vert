@@ -5,9 +5,9 @@ layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec2 inTexcoord;
 layout(location = 2) in vec3 inNormal;
 
-layout(location = 0) out vec3 outNormal;
-layout(location = 1) out vec3 outView;
-layout(location = 2) out vec3 outWorldPosition;
+layout(location = 0) out vec3 outPositionWS;
+layout(location = 1) out vec3 outNormalWS;
+layout(location = 2) out vec3 outView;
 
 
 layout(binding = 0) uniform ViewProj
@@ -23,11 +23,12 @@ layout(push_constant) uniform Model
 
 void main() 
 {
-    gl_Position = vp.proj * vp.view * m.model * vec4(inPosition, 1.0);
 	vec3 fragPos = (m.model * vec4(inPosition, 1.0)).xyz;
-	outWorldPosition = fragPos;
+	outPositionWS = fragPos;
+
+    gl_Position = vp.proj * vp.view * vec4(fragPos, 1.0);
 
 	mat3 normalMatrix = transpose(inverse(mat3(m.model)));
-	outNormal = normalMatrix * inNormal;
+	outNormalWS = normalize(normalMatrix * inNormal);
 	outView = -vec3(vp.view[3]) - fragPos;
 }

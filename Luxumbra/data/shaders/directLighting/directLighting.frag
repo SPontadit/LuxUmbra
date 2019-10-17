@@ -3,9 +3,9 @@
 
 #define LIGHT_MAX_COUNT 64
 
-layout(location = 0) in vec3 inFragNormal;
-layout(location = 1) in vec3 inFragView;
-layout(location = 2) in vec3 inFragWorldPosition;
+layout(location = 0) in vec3 inPositionWS;
+layout(location = 1) in vec3 inNormalWS;
+layout(location = 2) in vec3 inFragView;
 
 layout(location = 0) out vec4 outColor;
 
@@ -64,7 +64,7 @@ void main()
 		vec3 lightDir = normalize(-lightBuffer.lights[i].parameter.xyz);
 		vec3 viewDir = normalize(inFragView);
 		vec3 h = normalize(viewDir + lightDir);
-		vec3 normal = normalize(inFragNormal);
+		vec3 normal = normalize(inNormalWS);
 	
 		float NdotH = max(dot(normal, h), 0.001);
 		float NdotV = max(dot(normal, viewDir), 0.001);

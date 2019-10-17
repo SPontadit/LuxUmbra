@@ -333,7 +333,7 @@ namespace lux::rhi
 		rtGraphicsPipelineCI.subpassIndex = ForwardRenderer::FORWARD_SUBPASS_RENDER_TO_TARGET;
 		rtGraphicsPipelineCI.binaryVertexFilePath = "data/shaders/directLighting/directLighting.vert.spv";
 		rtGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/directLighting/directLighting.frag.spv";
-		rtGraphicsPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+		rtGraphicsPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		rtGraphicsPipelineCI.viewportWidth = TO_FLOAT(swapchainExtent.width);
 		rtGraphicsPipelineCI.viewportHeight = TO_FLOAT(swapchainExtent.height);
 		rtGraphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_BACK_BIT;

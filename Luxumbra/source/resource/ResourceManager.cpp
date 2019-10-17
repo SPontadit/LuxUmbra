@@ -185,7 +185,7 @@ namespace lux::resource
 	{
 		std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>();
 		Assimp::Importer importer;
-		const aiScene* scene = importer.ReadFile(filename, aiProcessPreset_TargetRealtime_Fast);
+		const aiScene* scene = importer.ReadFile(filename, aiProcess_Triangulate | aiProcess_ConvertToLeftHanded | aiProcess_GlobalScale | aiProcess_PreTransformVertices);
 
 		if (scene == nullptr || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || scene->mRootNode == nullptr)
 		{
@@ -206,7 +206,8 @@ namespace lux::resource
 				vertex.normal = glm::make_vec3(&scene->mMeshes[i]->mNormals[j].x);
 				vertex.textureCoordinate = glm::make_vec2(&scene->mMeshes[i]->mTextureCoords[0][j].x);
 			
-				vertex.position.y *= -1.0f;
+				//vertex.position.y *= -1.0f;
+				//vertex.normal.y *= -1.0f;
 
 				vertices.push_back(vertex);
 			}
