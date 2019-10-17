@@ -162,7 +162,7 @@
     <ClCompile Include="source\scene\MeshNode.cpp" />
     <ClCompile Include="source\scene\Node.cpp" />
     <ClCompile Include="source\scene\Scene.cpp" />
-    <ClCompile Include="source\Utility.cpp" />
+    <ClCompile Include="source\utility\Utility.cpp" />
     <ClCompile Include="source\Vertex.cpp" />
     <ClCompile Include="source\Window.cpp" />
   </ItemGroup>
@@ -194,7 +194,7 @@
     <ClInclude Include="include\scene\MeshNode.h" />
     <ClInclude Include="include\scene\Node.h" />
     <ClInclude Include="include\scene\Scene.h" />
-    <ClInclude Include="include\Utility.h" />
+    <ClInclude Include="include\utility\Utility.h" />
     <ClInclude Include="include\Vertex.h" />
     <ClInclude Include="include\Window.h" />
   </ItemGroup>

@@ -58,6 +58,12 @@
     <Filter Include="Resource Files\directLighting">
       <UniqueIdentifier>{c873f7b5-fba2-4586-b1bc-0c54e0dbe7e0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Utility">
+      <UniqueIdentifier>{680412d1-db32-42b6-ba25-d45a3d0d76b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Utility">
+      <UniqueIdentifier>{31951603-222e-4465-8c24-096086b8ef99}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\main.cpp">
@@ -74,9 +80,6 @@
     </ClCompile>
     <ClCompile Include="..\libs\volk\volk.c">
       <Filter>Source Files\RHI\Volk</Filter>
-    </ClCompile>
-    <ClCompile Include="source\Utility.cpp">
-      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\Vertex.cpp">
       <Filter>Source Files</Filter>
@@ -138,6 +141,9 @@
     <ClCompile Include="source\resource\Texture.cpp">
       <Filter>Source Files\Resource</Filter>
     </ClCompile>
+    <ClCompile Include="source\utility\Utility.cpp">
+      <Filter>Source Files\Utility</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\rhi\RHI.h">
@@ -159,9 +165,6 @@
       <Filter>Header Files\RHI</Filter>
     </ClInclude>
     <ClInclude Include="include\Luxumbra.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\Utility.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\rhi\GraphicsPipeline.h">
@@ -229,6 +232,9 @@
     </ClInclude>
     <ClInclude Include="include\resource\Texture.h">
       <Filter>Header Files\Resource</Filter>
+    </ClInclude>
+    <ClInclude Include="include\utility\Utility.h">
+      <Filter>Header Files\Utility</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
