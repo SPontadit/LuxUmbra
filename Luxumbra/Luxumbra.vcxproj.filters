@@ -64,6 +64,9 @@
     <Filter Include="Source Files\Utility">
       <UniqueIdentifier>{31951603-222e-4465-8c24-096086b8ef99}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resource Files\cameraSpaceLight">
+      <UniqueIdentifier>{9657d792-7a0d-490b-a3e1-6ca30b796184}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\main.cpp">
@@ -270,6 +273,12 @@
     </None>
     <None Include="data\shaders\directLighting\directLighting.vert">
       <Filter>Resource Files\directLighting</Filter>
+    </None>
+    <None Include="data\shaders\cameraSpaceLight\cameraSpaceLight.frag">
+      <Filter>Resource Files\cameraSpaceLight</Filter>
+    </None>
+    <None Include="data\shaders\cameraSpaceLight\cameraSpaceLight.vert">
+      <Filter>Resource Files\cameraSpaceLight</Filter>
     </None>
   </ItemGroup>
 </Project>

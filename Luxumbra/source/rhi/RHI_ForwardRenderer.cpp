@@ -339,8 +339,8 @@ namespace lux::rhi
 		GraphicsPipelineCreateInfo rtGraphicsPipelineCI = {};
 		rtGraphicsPipelineCI.renderPass = forward.renderPass;
 		rtGraphicsPipelineCI.subpassIndex = ForwardRenderer::FORWARD_SUBPASS_RENDER_TO_TARGET;
-		rtGraphicsPipelineCI.binaryVertexFilePath = "data/shaders/directLighting/directLighting.vert.spv";
-		rtGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/directLighting/directLighting.frag.spv";
+		rtGraphicsPipelineCI.binaryVertexFilePath = "data/shaders/cameraSpaceLight/cameraSpaceLight.vert.spv";
+		rtGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/cameraSpaceLight/cameraSpaceLight.frag.spv";
 		rtGraphicsPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		rtGraphicsPipelineCI.viewportWidth = TO_FLOAT(swapchainExtent.width);
 		rtGraphicsPipelineCI.viewportHeight = TO_FLOAT(swapchainExtent.height);
