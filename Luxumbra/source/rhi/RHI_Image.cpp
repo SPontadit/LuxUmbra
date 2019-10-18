@@ -47,7 +47,7 @@ namespace lux::rhi
 			FillImage(luxImageCI, image);
 		
 		VkImageViewCreateInfo imageViewCI = {};
-		imageViewCI.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+		imageViewCI.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		imageViewCI.image = image.image;
 		imageViewCI.format = luxImageCI.format;
 		imageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
@@ -90,10 +90,12 @@ namespace lux::rhi
 		VkCommandBuffer commandBuffer = BeginSingleTimeCommandBuffer();
 
 		vkCmdCopyBufferToImage(commandBuffer, stagingBuffer.buffer, image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &bufferImageCopy);
-	
+
 		EndSingleTimeCommandBuffer(commandBuffer);
 
 		CommandTransitionImageLayout(image.image, VK_FORMAT_R8G8B8A8_UINT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	
+		DestroyBuffer(stagingBuffer);
 	}
 
 	void RHI::DestroyImage(Image& image) noexcept

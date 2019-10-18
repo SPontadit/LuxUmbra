@@ -114,6 +114,7 @@ namespace lux::rhi
 		void InitForwardRenderPass() noexcept;
 		void InitForwardFramebuffers() noexcept;
 		void InitForwardGraphicsPipelines() noexcept;
+		void InitForwardSampler() noexcept;
 		void InitForwardDescriptorPool() noexcept;
 		void InitForwardDescriptorSets() noexcept;
 		void InitForwardUniformBuffers() noexcept;

@@ -4,8 +4,9 @@
 #define LIGHT_MAX_COUNT 64
 
 layout(location = 0) in vec3 inPositionWS;
-layout(location = 1) in vec3 inNormalWS;
-layout(location = 2) in vec3 inFragView;
+layout(location = 1) in vec2 inTextureCoordinateLS;
+layout(location = 2) in vec3 inNormalWS;
+layout(location = 3) in vec3 inFragView;
 
 layout(location = 0) out vec4 outColor;
 
@@ -33,6 +34,8 @@ layout(set = 1, binding = 0) uniform Material
 	float reflectance;
 } material;
 
+layout(set = 1, binding = 1) uniform sampler2D albedo;
+
 //#define BASE_COLOR material.color.xyz
 //#define METALLIC material.color.w
 //#define PERCEPTUAL_ROUGHNESS material.parameter.x
@@ -58,7 +61,7 @@ vec3 F_Schlick(float NdotH, vec3 f0);
 void main() 
 {
 	vec3 directColor  = vec3(0.0);
-	
+
 	for(int i = 0; i < pushConsts.lightCount; ++i)
 	{
 		vec3 lightDir = normalize(-lightBuffer.lights[i].parameter.xyz);
@@ -72,7 +75,7 @@ void main()
 		float LdotH = max(dot(lightDir, h), 0.001);
 		float VdotH = max(dot(viewDir, h), 0.001);
 
-		vec3 baseColor = pow(material.baseColor, vec3(2.2));
+		vec3 baseColor = pow(texture(albedo, inTextureCoordinateLS).rgb, vec3(2.2));
 		float roughness = material.perceptualRoughness * material.perceptualRoughness;
 		vec3 diffuseColor = RemapDiffuseColor(baseColor, material.metallic);
 		vec3 F0 = GetF0(material.reflectance, material.metallic, baseColor);

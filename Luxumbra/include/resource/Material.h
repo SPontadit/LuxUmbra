@@ -8,17 +8,23 @@
 #include "glm\glm.hpp"
 
 #include "rhi\Buffer.h"
+#include "resource\Texture.h"
 
 namespace lux::resource
 {
 	using namespace lux;
 
+	struct MaterialCreateInfo
+	{
+		std::shared_ptr<Texture> albedo;
+		glm::vec3 baseColor;
+		float metallic;
+		float perceptualRoughness;
+		float reflectance;
+	};
+
 	struct MaterialParameters
 	{
-		// TODO: Add texture albedo, metallic, normal
-		// Texture albedo
-		// Texture metalness
-		// Texture normal
 		glm::vec3 baseColor;
 		float metallic;
 		float perceptualRoughness;
@@ -29,7 +35,7 @@ namespace lux::resource
 	class Material
 	{
 	public:
-		Material(const std::string& name, MaterialParameters parameter) noexcept;
+		Material(const std::string& name, MaterialCreateInfo materialCI) noexcept;
 		Material(const Material&) = delete;
 		Material(Material&&) = delete;
 
@@ -39,8 +45,13 @@ namespace lux::resource
 		Material& operator=(Material&&) = delete;
 	
 
+		// TODO: Add texture albedo, metallic, normal
+		// Texture metalness
+		// Texture normal
 		std::string name;
 		MaterialParameters parameter;
+		std::shared_ptr<Texture> albedo;
+
 		
 		std::vector<rhi::Buffer> buffer;
 		std::vector<VkDescriptorSet> descriptorSet;

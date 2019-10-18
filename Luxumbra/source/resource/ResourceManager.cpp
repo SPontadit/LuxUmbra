@@ -170,9 +170,9 @@ namespace lux::resource
 		primitiveMeshes[TO_SIZE_T(MeshPrimitive::MESH_SPHERE_PRIMITIVE)] = sphereMesh;
 	}
 
-	std::shared_ptr<Material> ResourceManager::CreateMaterial(const std::string& name, MaterialParameters parameters) noexcept
+	std::shared_ptr<Material> ResourceManager::CreateMaterial(const std::string& name, MaterialCreateInfo materialCI) noexcept
 	{
-		std::shared_ptr<Material> material = std::make_shared<Material>(name, parameters);
+		std::shared_ptr<Material> material = std::make_shared<Material>(name, materialCI);
 
 		rhi.CreateMaterial(*material);
 
@@ -257,10 +257,10 @@ namespace lux::resource
 
 		stbi_uc* textureData = stbi_load(filename.c_str(), &textureWidth, &textureHeight, &textureChannels, STBI_rgb_alpha);
 	
-		uint64_t imageSize = textureWidth * textureHeight * textureChannels;
+		uint64_t imageSize = textureWidth * textureHeight * 4;
 
 		rhi::ImageCreateInfo imageCI = {};
-		imageCI.format = VK_FORMAT_R8G8B8A8_UINT;
+		imageCI.format = VK_FORMAT_R8G8B8A8_UNORM;
 		imageCI.width = TO_UINT32_T(textureWidth);
 		imageCI.height = TO_UINT32_T(textureHeight);
 		imageCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;

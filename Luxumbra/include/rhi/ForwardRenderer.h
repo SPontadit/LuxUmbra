@@ -48,7 +48,6 @@ namespace lux::rhi
 
 		RtModelConstant modelConstant;
 		std::vector<Buffer> viewProjUniformBuffers;
-		std::vector<Buffer> materialUniformBuffers;
 
 		std::vector<VkImage> rtColorAttachmentImages;
 		std::vector<VkImageView> rtColorAttachmentImageViews;
@@ -57,6 +56,8 @@ namespace lux::rhi
 		VkImage rtDepthAttachmentImage;
 		VkDeviceMemory rtDepthAttachmentMemory;
 		VkImageView rtDepthAttachmentImageView;
+
+		VkSampler sampler;
 
 		enum ForwardAttachmentBindPoints : uint32_t
 		{

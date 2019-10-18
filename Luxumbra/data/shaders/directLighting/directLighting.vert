@@ -2,12 +2,13 @@
 #extension GL_ARB_separate_shader_objects : enable
 
 layout(location = 0) in vec3 inPosition;
-layout(location = 1) in vec2 inTexcoord;
+layout(location = 1) in vec2 inTextureCoordinate;
 layout(location = 2) in vec3 inNormal;
 
 layout(location = 0) out vec3 outPositionWS;
-layout(location = 1) out vec3 outNormalWS;
-layout(location = 2) out vec3 outView;
+layout(location = 1) out vec2 outTextureCoordinateLS;
+layout(location = 2) out vec3 outNormalWS;
+layout(location = 3) out vec3 outView;
 
 
 layout(binding = 0) uniform ViewProj
@@ -31,4 +32,5 @@ void main()
 	mat3 normalMatrix = transpose(inverse(mat3(m.model)));
 	outNormalWS = normalize(normalMatrix * inNormal);
 	outView = -vec3(vp.view[3]) - fragPos;
+	outTextureCoordinateLS = inTextureCoordinate;
 }

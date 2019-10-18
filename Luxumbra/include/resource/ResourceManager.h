@@ -36,7 +36,7 @@ namespace lux::resource
 
 		void Initialize() noexcept;
 	
-		std::shared_ptr<Material> CreateMaterial(const std::string& name, MaterialParameters parameters) noexcept;
+		std::shared_ptr<Material> CreateMaterial(const std::string& name, MaterialCreateInfo materialCI) noexcept;
 
 		std::shared_ptr<Material> GetMaterial(const std::string& name) noexcept;
 		std::shared_ptr<Mesh> GetMesh(const std::string& filename) noexcept;

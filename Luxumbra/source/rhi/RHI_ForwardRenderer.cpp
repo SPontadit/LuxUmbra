@@ -294,6 +294,8 @@ namespace lux::rhi
 
 
 		// Render Target Graphics Pipeline
+		
+		// View Layout
 		VkDescriptorSetLayoutBinding rtViewProjDescriptorSetLayoutBinding = {};
 		rtViewProjDescriptorSetLayoutBinding.binding = 0;
 		rtViewProjDescriptorSetLayoutBinding.descriptorCount = 1;
@@ -306,18 +308,22 @@ namespace lux::rhi
 		lightDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		lightDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-		VkDescriptorSetLayoutBinding materialDescriptorSetLayoutBinding = {};
-		materialDescriptorSetLayoutBinding.binding = 0;
-		materialDescriptorSetLayoutBinding.descriptorCount = 1;
-		materialDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		materialDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-		//VkDescriptorSetLayoutBinding rtSamplerDescriptorSetLayoutBinding = {};
-		//rtSamplerDescriptorSetLayoutBinding.binding = 1;
-		//rtSamplerDescriptorSetLayoutBinding.descriptorCount = 1;
-		//rtSamplerDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		//rtSamplerDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		// Material Layout
+		VkDescriptorSetLayoutBinding materialParametersDescriptorSetLayoutBinding = {};
+		materialParametersDescriptorSetLayoutBinding.binding = 0;
+		materialParametersDescriptorSetLayoutBinding.descriptorCount = 1;
+		materialParametersDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		materialParametersDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
+		VkDescriptorSetLayoutBinding materialAlbedoDescriptorSetLayoutBinding = {};
+		materialAlbedoDescriptorSetLayoutBinding.binding = 1;
+		materialAlbedoDescriptorSetLayoutBinding.descriptorCount = 1;
+		materialAlbedoDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		materialAlbedoDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+
+		// Push Constant
 		VkPushConstantRange rtModelPushConstantRange = {};
 		rtModelPushConstantRange.offset = 0;
 		rtModelPushConstantRange.size = sizeof(RtModelConstant);
@@ -328,6 +334,8 @@ namespace lux::rhi
 		lightCountPushConstantRange.size = sizeof(LightCountPushConstant);
 		lightCountPushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
+
+		// Graphics Pipeline
 		GraphicsPipelineCreateInfo rtGraphicsPipelineCI = {};
 		rtGraphicsPipelineCI.renderPass = forward.renderPass;
 		rtGraphicsPipelineCI.subpassIndex = ForwardRenderer::FORWARD_SUBPASS_RENDER_TO_TARGET;
@@ -341,10 +349,33 @@ namespace lux::rhi
 		rtGraphicsPipelineCI.enableDepthTest = VK_TRUE;
 		rtGraphicsPipelineCI.enableDepthWrite = VK_TRUE;
 		rtGraphicsPipelineCI.viewDescriptorSetLayoutBindings = { rtViewProjDescriptorSetLayoutBinding, lightDescriptorSetLayoutBinding };
-		rtGraphicsPipelineCI.materialDescriptorSetLayoutBindings = { materialDescriptorSetLayoutBinding };
+		rtGraphicsPipelineCI.materialDescriptorSetLayoutBindings = { materialParametersDescriptorSetLayoutBinding, materialAlbedoDescriptorSetLayoutBinding };
 		rtGraphicsPipelineCI.pushConstants = { rtModelPushConstantRange, lightCountPushConstantRange };
 
 		CreateGraphicsPipeline(rtGraphicsPipelineCI, forward.rtGraphicsPipeline);
+	}
+
+	void RHI::InitForwardSampler() noexcept
+	{
+		VkSamplerCreateInfo samplerCI = {};
+		samplerCI.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+		samplerCI.magFilter = VK_FILTER_LINEAR;
+		samplerCI.minFilter = VK_FILTER_LINEAR;
+		samplerCI.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerCI.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerCI.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerCI.anisotropyEnable = VK_FALSE;
+		samplerCI.maxAnisotropy = 16;
+		samplerCI.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+		samplerCI.unnormalizedCoordinates = VK_FALSE;
+		samplerCI.compareEnable = VK_FALSE;
+		samplerCI.compareOp = VK_COMPARE_OP_ALWAYS;
+		samplerCI.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+		samplerCI.mipLodBias = 0.0f;
+		samplerCI.minLod = 0.0f;
+		samplerCI.maxLod = 0.0f;
+
+		CHECK_VK(vkCreateSampler(device, &samplerCI, nullptr, &forward.sampler));
 	}
 
 	void RHI::InitForwardDescriptorSets() noexcept
@@ -432,19 +463,6 @@ namespace lux::rhi
 		lightDescriptorBufferInfo.range = sizeof(LightBuffer) * LIGHT_MAX_COUNT;
 
 
-		//Material UBO
-		VkWriteDescriptorSet writeMaterialDescriptorSet = {};
-		writeMaterialDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writeMaterialDescriptorSet.descriptorCount = 1;
-		writeMaterialDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		writeMaterialDescriptorSet.dstBinding = 0;
-		writeMaterialDescriptorSet.dstArrayElement = 0;
-
-		VkDescriptorBufferInfo materialDescriptorBufferInfo = {};
-		materialDescriptorBufferInfo.offset = 0;
-		materialDescriptorBufferInfo.range = sizeof(resource::MaterialParameters);
-
-
 		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
 			rtViewProjDescriptorBufferInfo.buffer = forward.viewProjUniformBuffers[i].buffer;
@@ -472,19 +490,10 @@ namespace lux::rhi
 		viewProjUniformBufferCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		viewProjUniformBufferCI.memoryProperty = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-		BufferCreateInfo materialUniformBufferCI = {};
-		materialUniformBufferCI.usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-		materialUniformBufferCI.size = sizeof(resource::MaterialParameters);
-		materialUniformBufferCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-		materialUniformBufferCI.memoryProperty = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-
-
 		forward.viewProjUniformBuffers.resize(TO_UINT32_T(swapchainImageCount));
-		forward.materialUniformBuffers.resize(TO_UINT32_T(swapchainImageCount));
 		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
 			CreateBuffer(viewProjUniformBufferCI, forward.viewProjUniformBuffers[i]);
-			CreateBuffer(materialUniformBufferCI, forward.materialUniformBuffers[i]);
 		}
 	}
 
@@ -505,8 +514,12 @@ namespace lux::rhi
 
 		UpdateBuffer(forward.viewProjUniformBuffers[currentFrame], &viewProj);
 
+
+
 		for (size_t i = 0; i < materials.size(); i++)
+		{
 			UpdateBuffer(materials[i]->buffer[currentFrame], &materials[i]->parameter);
+		}
 
 		// Lights
 
@@ -703,13 +716,13 @@ namespace lux::rhi
 		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
 			DestroyBuffer(forward.viewProjUniformBuffers[i]);
-			DestroyBuffer(forward.materialUniformBuffers[i]);
 			vkDestroyFramebuffer(device, forward.frameBuffers[i], nullptr);
 
 			vkDestroyImage(device, forward.rtColorAttachmentImages[i], nullptr);
 			vkDestroyImageView(device, forward.rtColorAttachmentImageViews[i], nullptr);
 			vkFreeMemory(device, forward.rtColorAttachmentImageMemories[i], nullptr);
 		}
+		vkDestroySampler(device, forward.sampler, nullptr);
 		vkDestroyImage(device, forward.rtDepthAttachmentImage, nullptr);
 		vkDestroyImageView(device, forward.rtDepthAttachmentImageView, nullptr);
 		vkFreeMemory(device, forward.rtDepthAttachmentMemory, nullptr);

@@ -64,6 +64,8 @@ namespace lux::rhi
 
 		InitForwardFramebuffers();
 
+		InitForwardSampler();
+
 		InitForwardDescriptorPool();
 		
 		InitForwardGraphicsPipelines();
@@ -411,7 +413,11 @@ namespace lux::rhi
 		materialsUniformDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		materialsUniformDescriptorPoolSize.descriptorCount = swapchainImageCount * MATERIAL_MAX_SET;
 
-		std::array<VkDescriptorPoolSize, 1> descriptorPoolSizes = { materialsUniformDescriptorPoolSize };
+		VkDescriptorPoolSize materialsSamplerDescriptorPoolSize = {};
+		materialsSamplerDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		materialsSamplerDescriptorPoolSize.descriptorCount = swapchainImageCount * MATERIAL_MAX_SET;
+
+		std::array<VkDescriptorPoolSize, 2> descriptorPoolSizes = { materialsUniformDescriptorPoolSize, materialsSamplerDescriptorPoolSize };
 
 		VkDescriptorPoolCreateInfo descriptorPoolCI = {};
 		descriptorPoolCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -552,17 +558,17 @@ namespace lux::rhi
 
 		CHECK_VK(vkAllocateDescriptorSets(device, &materialDescriptorSetAI, material.descriptorSet.data()));
 
+		// Parameters
+		VkWriteDescriptorSet writeMaterialParametersDescriptorSet = {};
+		writeMaterialParametersDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeMaterialParametersDescriptorSet.descriptorCount = 1;
+		writeMaterialParametersDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		writeMaterialParametersDescriptorSet.dstBinding = 0;
+		writeMaterialParametersDescriptorSet.dstArrayElement = 0;
 
-		VkWriteDescriptorSet writeMaterialDescriptorSet = {};
-		writeMaterialDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writeMaterialDescriptorSet.descriptorCount = 1;
-		writeMaterialDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		writeMaterialDescriptorSet.dstBinding = 0;
-		writeMaterialDescriptorSet.dstArrayElement = 0;
-
-		VkDescriptorBufferInfo materialDescriptorBufferInfo = {};
-		materialDescriptorBufferInfo.offset = 0;
-		materialDescriptorBufferInfo.range = sizeof(resource::MaterialParameters);
+		VkDescriptorBufferInfo materialParametersDescriptorBufferInfo = {};
+		materialParametersDescriptorBufferInfo.offset = 0;
+		materialParametersDescriptorBufferInfo.range = sizeof(resource::MaterialParameters);
 
 
 		BufferCreateInfo materialBufferCI = {};
@@ -571,15 +577,33 @@ namespace lux::rhi
 		materialBufferCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		materialBufferCI.memoryProperty = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
+
+		// Albedo
+		VkDescriptorImageInfo materialAlbedoDescriptorImageInfo = {};
+		materialAlbedoDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		materialAlbedoDescriptorImageInfo.sampler = forward.sampler;
+		materialAlbedoDescriptorImageInfo.imageView = material.albedo->image.imageView;
+
+		VkWriteDescriptorSet writeMaterialAlbedoDescriptorSet = {};
+		writeMaterialAlbedoDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeMaterialAlbedoDescriptorSet.descriptorCount = 1;
+		writeMaterialAlbedoDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		writeMaterialAlbedoDescriptorSet.dstBinding = 1;
+		writeMaterialAlbedoDescriptorSet.dstArrayElement = 0;
+		writeMaterialAlbedoDescriptorSet.pImageInfo = &materialAlbedoDescriptorImageInfo;
+
+
 		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
 			CreateBuffer(materialBufferCI, material.buffer[i]);
 
-			materialDescriptorBufferInfo.buffer = material.buffer[i].buffer;
-			writeMaterialDescriptorSet.pBufferInfo = &materialDescriptorBufferInfo;
-			writeMaterialDescriptorSet.dstSet = material.descriptorSet[i];
+			materialParametersDescriptorBufferInfo.buffer = material.buffer[i].buffer;
+			writeMaterialParametersDescriptorSet.pBufferInfo = &materialParametersDescriptorBufferInfo;
+			writeMaterialParametersDescriptorSet.dstSet = material.descriptorSet[i];
 
-			std::array<VkWriteDescriptorSet, 1> writeDescriptorSets = { writeMaterialDescriptorSet };
+			writeMaterialAlbedoDescriptorSet.dstSet = material.descriptorSet[i];
+
+			std::array<VkWriteDescriptorSet, 2> writeDescriptorSets = { writeMaterialParametersDescriptorSet, writeMaterialAlbedoDescriptorSet };
 
 			vkUpdateDescriptorSets(device, TO_UINT32_T(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
 		}

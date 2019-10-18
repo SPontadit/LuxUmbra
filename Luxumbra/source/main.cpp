@@ -9,22 +9,25 @@ int main(int ac, char* av[])
 	lux::scene::Scene& scene = luxUmbra.GetScene();
 	lux::resource::ResourceManager& resourceManager = luxUmbra.GetResourceManager();
 
-	lux::resource::MaterialParameters defaultMaterialParameters;
-	defaultMaterialParameters.baseColor = glm::vec3(1.0f);
-	defaultMaterialParameters.metallic = false;
-	defaultMaterialParameters.perceptualRoughness = 0.5f;
-	defaultMaterialParameters.reflectance = 0.5f;
+	std::shared_ptr<lux::resource::Texture> texture = resourceManager.GetTexture("data/textures/Diffuse_Floor.jpg");
 
-	resourceManager.CreateMaterial("White", defaultMaterialParameters);
+	lux::resource::MaterialCreateInfo defaultMaterialCI;
+	defaultMaterialCI.baseColor = glm::vec3(1.0f);
+	defaultMaterialCI.metallic = false;
+	defaultMaterialCI.perceptualRoughness = 0.5f;
+	defaultMaterialCI.reflectance = 0.5f;
+	defaultMaterialCI.albedo = texture;
 
-	defaultMaterialParameters.baseColor = glm::vec3(1.0f, 0.0f, 0.0f);
-	resourceManager.CreateMaterial("Red", defaultMaterialParameters);
+	resourceManager.CreateMaterial("White", defaultMaterialCI);
 
-	defaultMaterialParameters.baseColor = glm::vec3(0.0f, 1.0f, 0.0f);
-	resourceManager.CreateMaterial("Green", defaultMaterialParameters);
+	defaultMaterialCI.baseColor = glm::vec3(1.0f, 0.0f, 0.0f);
+	resourceManager.CreateMaterial("Red", defaultMaterialCI);
 
-	defaultMaterialParameters.baseColor = glm::vec3(0.0f, 0.0f, 1.0f);
-	resourceManager.CreateMaterial("Blue", defaultMaterialParameters);
+	defaultMaterialCI.baseColor = glm::vec3(0.0f, 1.0f, 0.0f);
+	resourceManager.CreateMaterial("Green", defaultMaterialCI);
+
+	defaultMaterialCI.baseColor = glm::vec3(0.0f, 0.0f, 1.0f);
+	resourceManager.CreateMaterial("Blue", defaultMaterialCI);
 
 
 	scene.AddCameraNode(nullptr, { 2.5f, 5.f, 20.f }, glm::identity<glm::quat>(), false, 45.f, 0.01f, 1000.f, true);
