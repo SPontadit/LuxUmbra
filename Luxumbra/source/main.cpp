@@ -11,6 +11,8 @@ int main(int ac, char* av[])
 
 	std::shared_ptr<lux::resource::Texture> texture = resourceManager.GetTexture("data/textures/Diffuse_Floor.jpg");
 
+	resourceManager.UseCubemap("data/envmaps/quarry_02_2k.hdr");
+
 	lux::resource::MaterialCreateInfo defaultMaterialCI;
 	defaultMaterialCI.baseColor = glm::vec3(1.0f);
 	defaultMaterialCI.metallic = false;

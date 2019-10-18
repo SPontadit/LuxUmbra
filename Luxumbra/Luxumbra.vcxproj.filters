@@ -67,6 +67,9 @@
     <Filter Include="Resource Files\cameraSpaceLight">
       <UniqueIdentifier>{9657d792-7a0d-490b-a3e1-6ca30b796184}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resource Files\envMap">
+      <UniqueIdentifier>{8014d845-31e5-4aed-b4b6-9e77d00c3700}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\main.cpp">
@@ -279,6 +282,12 @@
     </None>
     <None Include="data\shaders\cameraSpaceLight\cameraSpaceLight.vert">
       <Filter>Resource Files\cameraSpaceLight</Filter>
+    </None>
+    <None Include="data\shaders\envMap\envMap.frag">
+      <Filter>Resource Files\envMap</Filter>
+    </None>
+    <None Include="data\shaders\envMap\envMap.vert">
+      <Filter>Resource Files\envMap</Filter>
     </None>
   </ItemGroup>
 </Project>

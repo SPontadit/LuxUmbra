@@ -255,7 +255,22 @@ namespace lux::rhi
 		lightsUniformDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		lightsUniformDescriptorPoolSize.descriptorCount = swapchainImageCount;
 
-		std::array<VkDescriptorPoolSize, 3> descriptorPoolSizes = { blitInputDescriptorPoolSize, rtViewProjUniformDescriptorPoolSize, lightsUniformDescriptorPoolSize };
+		VkDescriptorPoolSize envMapSamplerDescriptorPoolSize = {};
+		envMapSamplerDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		envMapSamplerDescriptorPoolSize.descriptorCount = swapchainImageCount;
+
+		VkDescriptorPoolSize envMapUniformDescriptorPoolSize = {};
+		envMapUniformDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		envMapUniformDescriptorPoolSize.descriptorCount = swapchainImageCount;
+
+		std::array<VkDescriptorPoolSize, 5> descriptorPoolSizes = 
+		{ 
+			blitInputDescriptorPoolSize, 
+			rtViewProjUniformDescriptorPoolSize, 
+			lightsUniformDescriptorPoolSize, 
+			envMapSamplerDescriptorPoolSize,
+			envMapUniformDescriptorPoolSize
+		};
 
 		VkDescriptorPoolCreateInfo descriptorPoolCI = {};
 		descriptorPoolCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -288,6 +303,7 @@ namespace lux::rhi
 		blitGraphicsPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_CLOCKWISE;
 		blitGraphicsPipelineCI.enableDepthTest = VK_TRUE;
 		blitGraphicsPipelineCI.enableDepthWrite = VK_TRUE;
+		blitGraphicsPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS;
 		blitGraphicsPipelineCI.viewDescriptorSetLayoutBindings = { blitDescriptorSetLayoutBinding };
 
 		CreateGraphicsPipeline(blitGraphicsPipelineCI, forward.blitGraphicsPipeline);
@@ -348,11 +364,44 @@ namespace lux::rhi
 		rtGraphicsPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		rtGraphicsPipelineCI.enableDepthTest = VK_TRUE;
 		rtGraphicsPipelineCI.enableDepthWrite = VK_TRUE;
+		rtGraphicsPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS;
 		rtGraphicsPipelineCI.viewDescriptorSetLayoutBindings = { rtViewProjDescriptorSetLayoutBinding, lightDescriptorSetLayoutBinding };
 		rtGraphicsPipelineCI.materialDescriptorSetLayoutBindings = { materialParametersDescriptorSetLayoutBinding, materialAlbedoDescriptorSetLayoutBinding };
 		rtGraphicsPipelineCI.pushConstants = { rtModelPushConstantRange, lightCountPushConstantRange };
 
 		CreateGraphicsPipeline(rtGraphicsPipelineCI, forward.rtGraphicsPipeline);
+
+
+		// Env map Pipeline
+		VkDescriptorSetLayoutBinding envMapViewProjDescriptorSetLayoutBinding = {};
+		envMapViewProjDescriptorSetLayoutBinding.binding = 0;
+		envMapViewProjDescriptorSetLayoutBinding.descriptorCount = 1;
+		envMapViewProjDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		envMapViewProjDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+		VkDescriptorSetLayoutBinding envMapSamplerDescriptorSetLayoutBinding = {};
+		envMapSamplerDescriptorSetLayoutBinding.binding = 1;
+		envMapSamplerDescriptorSetLayoutBinding.descriptorCount = 1;
+		envMapSamplerDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		envMapSamplerDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		GraphicsPipelineCreateInfo envMapGraphicsPipelineCI = {};
+		envMapGraphicsPipelineCI.renderPass = forward.renderPass;
+		envMapGraphicsPipelineCI.subpassIndex = ForwardRenderer::FORWARD_SUBPASS_RENDER_TO_TARGET;
+		envMapGraphicsPipelineCI.binaryVertexFilePath = "data/shaders/envMap/envMap.vert.spv";
+		envMapGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/envMap/envMap.frag.spv";
+		envMapGraphicsPipelineCI.emptyVertexInput = true;
+		envMapGraphicsPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+		envMapGraphicsPipelineCI.viewportWidth = TO_FLOAT(swapchainExtent.width);
+		envMapGraphicsPipelineCI.viewportHeight = TO_FLOAT(swapchainExtent.height);
+		envMapGraphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_NONE;
+		envMapGraphicsPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_CLOCKWISE;
+		envMapGraphicsPipelineCI.enableDepthTest = VK_TRUE;
+		envMapGraphicsPipelineCI.enableDepthWrite = VK_FALSE;
+		envMapGraphicsPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+		envMapGraphicsPipelineCI.viewDescriptorSetLayoutBindings = { envMapViewProjDescriptorSetLayoutBinding, envMapSamplerDescriptorSetLayoutBinding};
+	
+		CreateGraphicsPipeline(envMapGraphicsPipelineCI, forward.envMapGraphicsPipeline);
 	}
 
 	void RHI::InitForwardSampler() noexcept
@@ -376,6 +425,14 @@ namespace lux::rhi
 		samplerCI.maxLod = 0.0f;
 
 		CHECK_VK(vkCreateSampler(device, &samplerCI, nullptr, &forward.sampler));
+
+
+		samplerCI.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		samplerCI.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		samplerCI.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		samplerCI.borderColor = VK_BORDER_COLOR_INT_OPAQUE_WHITE;
+
+		CHECK_VK(vkCreateSampler(device, &samplerCI, nullptr, &forward.cubemapSampler));
 	}
 
 	void RHI::InitForwardDescriptorSets() noexcept
@@ -638,17 +695,10 @@ namespace lux::rhi
 			}
 		}
 
-		
-		//for (; it != itE; ++it)
-		//{
-		//	forward.modelConstant.model = (*it)->GetWorldTransform();
-		//	vkCmdPushConstants(commandBuffer, forward.rtGraphicsPipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(RtModelConstant), &forward.modelConstant);
+		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.envMapGraphicsPipeline.pipeline);
+		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.envMapGraphicsPipeline.pipelineLayout, 0, 1, &forward.envMapViewDescriptorSets[currentFrame], 0, nullptr);
 
-		//	const resource::Mesh& currentMesh = (*it)->GetMesh();
-		//	vkCmdBindVertexBuffers(commandBuffer, 0, 1, &currentMesh.vertexBuffer.buffer, offset);
-		//	vkCmdBindIndexBuffer(commandBuffer, currentMesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-		//	vkCmdDrawIndexed(commandBuffer, currentMesh.indexCount, 1, 0, 0, 0);
-		//}
+		vkCmdDraw(commandBuffer, 4, 1, 0, 0);
 
 		RenderImgui();
 
@@ -705,6 +755,7 @@ namespace lux::rhi
 	{
 		DestroyGraphicsPipeline(forward.blitGraphicsPipeline);
 		DestroyGraphicsPipeline(forward.rtGraphicsPipeline);
+		DestroyGraphicsPipeline(forward.envMapGraphicsPipeline);
 	}
 
 	void RHI::DestroyForwardRenderer() noexcept
@@ -722,7 +773,10 @@ namespace lux::rhi
 			vkDestroyImageView(device, forward.rtColorAttachmentImageViews[i], nullptr);
 			vkFreeMemory(device, forward.rtColorAttachmentImageMemories[i], nullptr);
 		}
+		
 		vkDestroySampler(device, forward.sampler, nullptr);
+		vkDestroySampler(device, forward.cubemapSampler, nullptr);
+
 		vkDestroyImage(device, forward.rtDepthAttachmentImage, nullptr);
 		vkDestroyImageView(device, forward.rtDepthAttachmentImageView, nullptr);
 		vkFreeMemory(device, forward.rtDepthAttachmentMemory, nullptr);

@@ -207,6 +207,8 @@
     <None Include="data\shaders\cameraSpaceLight\cameraSpaceLight.vert" />
     <None Include="data\shaders\directLighting\directLighting.frag" />
     <None Include="data\shaders\directLighting\directLighting.vert" />
+    <None Include="data\shaders\envMap\envMap.frag" />
+    <None Include="data\shaders\envMap\envMap.vert" />
     <None Include="data\shaders\mesh\mesh.frag" />
     <None Include="data\shaders\mesh\mesh.vert" />
     <None Include="data\shaders\texture\triangle.frag" />

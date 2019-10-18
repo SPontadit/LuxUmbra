@@ -617,6 +617,58 @@ namespace lux::rhi
 		}
 	}
 
+	void RHI::CreateEnvMapDescriptorSet(Image& image) noexcept
+	{
+		std::vector<VkDescriptorSetLayout> envViewDescriptorSetLayout(swapchainImageCount, forward.envMapGraphicsPipeline.viewDescriptorSetLayout);
+		VkDescriptorSetAllocateInfo envMapViewDescriptorSetAI = {};
+		envMapViewDescriptorSetAI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		envMapViewDescriptorSetAI.descriptorPool = forward.descriptorPool;
+		envMapViewDescriptorSetAI.descriptorSetCount = swapchainImageCount;
+		envMapViewDescriptorSetAI.pSetLayouts = envViewDescriptorSetLayout.data();
+
+		forward.envMapViewDescriptorSets.resize(TO_SIZE_T(swapchainImageCount));
+		CHECK_VK(vkAllocateDescriptorSets(device, &envMapViewDescriptorSetAI, forward.envMapViewDescriptorSets.data()));
+
+		VkWriteDescriptorSet envMapWriteViewProjDescriptorSet = {};
+		envMapWriteViewProjDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		envMapWriteViewProjDescriptorSet.descriptorCount = 1;
+		envMapWriteViewProjDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		envMapWriteViewProjDescriptorSet.dstBinding = 0;
+		envMapWriteViewProjDescriptorSet.dstArrayElement = 0;
+
+		VkDescriptorBufferInfo envMapViewProjDescriptorBufferInfo = {};
+		envMapViewProjDescriptorBufferInfo.offset = 0;
+		envMapViewProjDescriptorBufferInfo.range = sizeof(RtViewProjUniform);
+
+
+		VkDescriptorImageInfo descriptorSamplerImageInfo = {};
+		descriptorSamplerImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		descriptorSamplerImageInfo.sampler = forward.sampler;
+		descriptorSamplerImageInfo.imageView = image.imageView;
+
+		VkWriteDescriptorSet envMapWriteSamplerDescriptorSet = {};
+		envMapWriteSamplerDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		envMapWriteSamplerDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		envMapWriteSamplerDescriptorSet.descriptorCount = 1;
+		envMapWriteSamplerDescriptorSet.dstBinding = 1;
+		envMapWriteSamplerDescriptorSet.dstArrayElement = 0;
+		envMapWriteSamplerDescriptorSet.pImageInfo = &descriptorSamplerImageInfo;
+
+
+		for (size_t i = 0; i < swapchainImageCount; i++)
+		{
+			envMapViewProjDescriptorBufferInfo.buffer = forward.viewProjUniformBuffers[i].buffer;
+
+			envMapWriteViewProjDescriptorSet.pBufferInfo = &envMapViewProjDescriptorBufferInfo;
+			envMapWriteViewProjDescriptorSet.dstSet = forward.envMapViewDescriptorSets[i];
+
+			envMapWriteSamplerDescriptorSet.dstSet = forward.envMapViewDescriptorSets[i];
+
+			std::array<VkWriteDescriptorSet, 2> writeDescriptorSets = { envMapWriteViewProjDescriptorSet, envMapWriteSamplerDescriptorSet};
+			vkUpdateDescriptorSets(device, TO_UINT32_T(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
+		}
+	}
+
 	VkCommandBuffer RHI::BeginSingleTimeCommandBuffer() const noexcept
 	{
 		VkCommandBufferAllocateInfo commandBufferAI = {};

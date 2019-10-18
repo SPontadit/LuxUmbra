@@ -24,6 +24,7 @@ namespace lux::rhi
 		VkFrontFace rasterizerFrontFace;
 		bool enableDepthTest;
 		bool enableDepthWrite;
+		VkCompareOp depthCompareOp;
 		std::vector<VkDescriptorSetLayoutBinding> viewDescriptorSetLayoutBindings;
 		std::vector<VkDescriptorSetLayoutBinding> materialDescriptorSetLayoutBindings;
 		std::vector<VkDescriptorSetLayoutBinding> modelDescriptorSetLayoutBindings;

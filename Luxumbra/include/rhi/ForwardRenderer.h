@@ -46,6 +46,9 @@ namespace lux::rhi
 		std::vector<VkDescriptorSet> rtViewDescriptorSets;
 		std::vector<VkDescriptorSet> rtModelDescriptorSets;
 
+		GraphicsPipeline envMapGraphicsPipeline;
+		std::vector<VkDescriptorSet> envMapViewDescriptorSets;
+
 		RtModelConstant modelConstant;
 		std::vector<Buffer> viewProjUniformBuffers;
 
@@ -58,6 +61,7 @@ namespace lux::rhi
 		VkImageView rtDepthAttachmentImageView;
 
 		VkSampler sampler;
+		VkSampler cubemapSampler;
 
 		enum ForwardAttachmentBindPoints : uint32_t
 		{

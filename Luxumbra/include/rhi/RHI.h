@@ -64,6 +64,11 @@ namespace lux::rhi
 		void FillImage(const ImageCreateInfo& luxImageCI, Image& image) noexcept;
 		void DestroyImage(Image& image) noexcept;
 
+		void CreateEnvMapDescriptorSet(Image& image) noexcept;
+		
+		void GenerateCubemap(const ImageCreateInfo& luxImageCI, Image& image) noexcept;
+
+
 		void RebuildForwardGraphicsPipeline() noexcept;
 
 		static const uint32_t SWAPCHAIN_MIN_IMAGE_COUNT = 2;

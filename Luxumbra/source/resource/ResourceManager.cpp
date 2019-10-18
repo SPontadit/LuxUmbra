@@ -25,7 +25,7 @@ namespace lux::resource
 
 
 	ResourceManager::ResourceManager(rhi::RHI&  rhi) noexcept
-		: rhi(rhi)
+		: rhi(rhi), cubemap(nullptr)
 	{
 	}
 
@@ -181,6 +181,36 @@ namespace lux::resource
 		return material;
 	}
 
+	void ResourceManager::UseCubemap(const std::string& filenames) noexcept
+	{
+		cubemap = std::make_shared<Texture>();
+
+		float* textureData;
+		int textureWidth, textureHeight, textureChannels;
+
+		textureData = stbi_loadf(filenames.c_str(), &textureWidth, &textureHeight, &textureChannels, STBI_rgb_alpha);
+
+		uint64_t imageSize = textureWidth * textureHeight * 4 * sizeof(float);
+
+		rhi::ImageCreateInfo imageCI = {};
+		imageCI.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+		imageCI.width = TO_UINT32_T(textureWidth);
+		imageCI.height = TO_UINT32_T(textureHeight);
+		imageCI.arrayLayers = 1;
+		imageCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		imageCI.subresourceRangeLayerCount = 1;
+		imageCI.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		imageCI.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
+		imageCI.imageData = textureData;
+		imageCI.imageSize = imageSize;
+
+		rhi.CreateImage(imageCI, cubemap->image);
+
+		rhi.CreateEnvMapDescriptorSet(cubemap->image);
+
+		stbi_image_free(textureData);
+	}
+
 	std::shared_ptr<Mesh> ResourceManager::LoadMesh(const std::string& filename) noexcept
 	{
 		std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>();
@@ -263,8 +293,11 @@ namespace lux::resource
 		imageCI.format = VK_FORMAT_R8G8B8A8_UNORM;
 		imageCI.width = TO_UINT32_T(textureWidth);
 		imageCI.height = TO_UINT32_T(textureHeight);
+		imageCI.arrayLayers = 1;
 		imageCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		imageCI.subresourceRangeLayerCount = 1;
 		imageCI.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		imageCI.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
 		imageCI.imageData = textureData;
 		imageCI.imageSize = imageSize;
 
@@ -321,6 +354,11 @@ namespace lux::resource
 		}
 
 		textures.clear();
+
+		if (cubemap != nullptr)
+		{
+			rhi.DestroyImage(cubemap->image);
+		}
 	}
 
 } // namespace lux::resource

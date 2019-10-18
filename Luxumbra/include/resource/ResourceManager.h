@@ -38,6 +38,8 @@ namespace lux::resource
 	
 		std::shared_ptr<Material> CreateMaterial(const std::string& name, MaterialCreateInfo materialCI) noexcept;
 
+		void UseCubemap(const std::string& filenames) noexcept;
+
 		std::shared_ptr<Material> GetMaterial(const std::string& name) noexcept;
 		std::shared_ptr<Mesh> GetMesh(const std::string& filename) noexcept;
 		std::shared_ptr<Mesh> GetMesh(MeshPrimitive meshPrimitive) noexcept;
@@ -57,6 +59,8 @@ namespace lux::resource
 
 		rhi::RHI& rhi;
 		
+		std::shared_ptr<Texture> cubemap;
+
 		std::unordered_map<std::string, std::shared_ptr<Material>> materials;
 		std::unordered_map<std::string, std::shared_ptr<Mesh>> meshes;
 		std::unordered_map<std::string, std::shared_ptr<Texture>> textures;

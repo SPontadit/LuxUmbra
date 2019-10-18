@@ -144,7 +144,7 @@ namespace lux::rhi
 		depthStencilStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 		depthStencilStateCI.depthTestEnable = luxGraphicsPipelineCI.enableDepthTest;
 		depthStencilStateCI.depthWriteEnable = luxGraphicsPipelineCI.enableDepthWrite;
-		depthStencilStateCI.depthCompareOp = VK_COMPARE_OP_LESS;
+		depthStencilStateCI.depthCompareOp = luxGraphicsPipelineCI.depthCompareOp;
 		depthStencilStateCI.depthBoundsTestEnable = VK_FALSE;
 
 
