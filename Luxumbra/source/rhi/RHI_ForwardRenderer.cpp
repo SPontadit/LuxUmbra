@@ -683,6 +683,7 @@ namespace lux::rhi
 
 	void RHI::RebuildForwardGraphicsPipeline() noexcept
 	{
+		vkDeviceWaitIdle(device);
 		DestroyForwardGraphicsPipeline();
 		InitForwardGraphicsPipelines();
 	}

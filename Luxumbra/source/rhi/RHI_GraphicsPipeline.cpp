@@ -232,5 +232,4 @@ namespace lux::rhi
 		vkDestroyDescriptorSetLayout(device, graphicsPipeline.modelDescriptorSetLayout, nullptr);
 	}
 
-
 } // namespace lux::rhi

@@ -64,6 +64,7 @@ namespace lux::rhi
 		void FillImage(const ImageCreateInfo& luxImageCI, Image& image) noexcept;
 		void DestroyImage(Image& image) noexcept;
 
+		void RebuildForwardGraphicsPipeline() noexcept;
 
 		static const uint32_t SWAPCHAIN_MIN_IMAGE_COUNT = 2;
 		ForwardRenderer forward;
@@ -119,8 +120,6 @@ namespace lux::rhi
 		void BuildLightUniformBuffers(size_t lightCount) noexcept;
 
 		void UpdateForwardUniformBuffers(const scene::CameraNode* camera, const std::vector<resource::Material*>& materials, const std::vector<scene::LightNode*>& lights) noexcept;
-
-		void RebuildForwardGraphicsPipeline() noexcept;
 
 		void DestroyForwardRenderer() noexcept;
 		void DestroySwapchainRelatedResources() noexcept;

@@ -69,6 +69,12 @@ namespace lux
 
 		ImGui::Begin("Luxumbra Engine");
 		
+		if (ImGui::Button("Reload Shader"))
+		{
+			rhi.RebuildForwardGraphicsPipeline();
+		}
+
+		ImGui::NewLine();
 
 		scene::CameraNode* camera = scene.GetCurrentCamera();
 		DisplayCameraNode(camera);
