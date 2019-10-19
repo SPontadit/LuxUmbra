@@ -193,6 +193,7 @@ namespace lux::resource
 		cubemap = std::make_shared<Texture>();
 		irradiance = std::make_shared<Texture>();
 
+		// Load Cubemap
 		float* textureData;
 		int textureWidth, textureHeight, textureChannels;
 
@@ -200,6 +201,7 @@ namespace lux::resource
 
 		uint64_t imageSize = textureWidth * textureHeight * 4 * sizeof(float);
 
+		// Create source image
 		rhi::ImageCreateInfo imageCI = {};
 		imageCI.format = VK_FORMAT_R32G32B32A32_SFLOAT;
 		imageCI.width = TO_UINT32_T(textureWidth);
@@ -215,6 +217,8 @@ namespace lux::resource
 		rhi::Image source;
 		rhi.CreateImage(imageCI, source);
 
+
+		// Create Cubemap Image
 		imageCI.arrayLayers = 6;
 		imageCI.subresourceRangeLayerCount = 6;
 		imageCI.imageViewType = VK_IMAGE_VIEW_TYPE_CUBE;
@@ -225,15 +229,18 @@ namespace lux::resource
 
 		rhi.CreateImage(imageCI, cubemap->image);
 
+
+		// Create Irradiance Image
 		imageCI.width = 128;
 		imageCI.height = 128;
 		rhi.CreateImage(imageCI, irradiance->image);
 
-		rhi.GenerateCubemap(imageCI, source, cubemap->image);
-		rhi.GenerateIrradianceMap(imageCI, cubemap->image, irradiance->image);
 
-		rhi.CreateEnvMapDescriptorSet(cubemap->image);
+		// Generate Cubemap
+		rhi.GenerateCubemapFromHDR(source, cubemap->image);
+		rhi.GenerateIrradianceFromCubemap(cubemap->image, irradiance->image);
 
+		rhi.CreateEnvMapDescriptorSet(irradiance->image);
 
 		rhi.DestroyImage(source);
 		stbi_image_free(textureData);

@@ -21,6 +21,14 @@ namespace lux::rhi
 		uint64_t imageSize;
 	};
 
+	struct CubeMapCreateInfo
+	{
+		VkFormat format;
+		uint32_t size;
+		std::string binaryVertexFilePath;
+		std::string binaryFragmentFilePath;
+		VkSampler sampler;
+	};
 
 	struct Image
 	{

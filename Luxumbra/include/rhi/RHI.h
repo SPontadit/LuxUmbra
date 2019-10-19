@@ -66,8 +66,9 @@ namespace lux::rhi
 
 		void CreateEnvMapDescriptorSet(Image& image) noexcept;
 		
-		void GenerateCubemap(const ImageCreateInfo& luxImageCI, Image& source, Image& image) noexcept;
-		void GenerateIrradianceMap(const ImageCreateInfo& luxImageCI, Image& source, Image& image) noexcept;
+		void GenerateCubemapFromHDR(const Image& HDRSource, Image& cubemap) noexcept;
+		void GenerateIrradianceFromCubemap(const Image& cubemapSource, Image& irradiance) noexcept;
+
 
 		void SetCubeMesh(std::shared_ptr<resource::Mesh> mesh) noexcept;
 
@@ -127,6 +128,8 @@ namespace lux::rhi
 		void InitForwardDescriptorSets() noexcept;
 		void InitForwardUniformBuffers() noexcept;
 		void BuildLightUniformBuffers(size_t lightCount) noexcept;
+
+		void GenerateCubemap(const CubeMapCreateInfo& luxCubemapCI, const Image& source, Image& image) noexcept;
 
 		void UpdateForwardUniformBuffers(const scene::CameraNode* camera, const std::vector<resource::Material*>& materials, const std::vector<scene::LightNode*>& lights) noexcept;
 
