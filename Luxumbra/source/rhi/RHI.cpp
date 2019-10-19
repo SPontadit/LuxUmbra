@@ -13,9 +13,10 @@ namespace lux::rhi
 		: isInitialized(false), instance(VK_NULL_HANDLE), surface(VK_NULL_HANDLE), physicalDevice(VK_NULL_HANDLE), device(VK_NULL_HANDLE),
 		graphicsQueueIndex(UINT32_MAX), presentQueueIndex(UINT32_MAX), graphicsQueue(VK_NULL_HANDLE), presentQueue(VK_NULL_HANDLE),
 		swapchainImageFormat(VK_FORMAT_UNDEFINED), swapchainExtent({ 0, 0 }), swapchainImageSubresourceRange{}, swapchain(VK_NULL_HANDLE),
-		swapchainImageCount(0), swapchainImages(0), swapchainImageViews(0),
-		commandPool(VK_NULL_HANDLE), commandBuffers(0),
-		forward(), frameCount(0), currentFrame(0), cube(nullptr)
+		swapchainImageCount(0), swapchainImages(0), swapchainImageViews(0), msaaSamples(VK_SAMPLE_COUNT_1_BIT),
+		presentSemaphores(0), acquireSemaphores(0), fences(0),
+		imguiDescriptorPool(VK_NULL_HANDLE), materialDescriptorPool(VK_NULL_HANDLE), commandPool(VK_NULL_HANDLE), commandBuffers(0),
+		lightUniformBuffers(0), lightCountPushConstant(), forward(), frameCount(0), currentFrame(0), cube(nullptr)
 #ifdef VULKAN_ENABLE_VALIDATION
 		, debugReportCallback(VK_NULL_HANDLE)
 #endif // VULKAN_ENABLE_VALIDATION
@@ -193,6 +194,22 @@ namespace lux::rhi
 		}
 
 		ASSERT(physicalDevice != VK_NULL_HANDLE);
+
+		// MSAA 
+		VkSampleCountFlags counts = std::min(physicalDeviceProperties.limits.framebufferColorSampleCounts, physicalDeviceProperties.limits.framebufferDepthSampleCounts);
+
+		if (counts & VK_SAMPLE_COUNT_64_BIT)
+			msaaSamples = VK_SAMPLE_COUNT_64_BIT;
+		else if (counts & VK_SAMPLE_COUNT_32_BIT)
+			msaaSamples = VK_SAMPLE_COUNT_32_BIT;
+		else if (counts & VK_SAMPLE_COUNT_16_BIT)
+			msaaSamples = VK_SAMPLE_COUNT_16_BIT;
+		else if (counts & VK_SAMPLE_COUNT_8_BIT)
+			msaaSamples = VK_SAMPLE_COUNT_8_BIT;
+		else if (counts & VK_SAMPLE_COUNT_4_BIT)
+			msaaSamples = VK_SAMPLE_COUNT_4_BIT;
+		else if (counts & VK_SAMPLE_COUNT_2_BIT)
+			msaaSamples = VK_SAMPLE_COUNT_2_BIT;
 
 		// Device
 
@@ -485,6 +502,7 @@ namespace lux::rhi
 		imguiInitInfo.Allocator = VK_NULL_HANDLE;
 		imguiInitInfo.MinImageCount = SWAPCHAIN_MIN_IMAGE_COUNT;
 		imguiInitInfo.ImageCount = swapchainImageCount;
+		imguiInitInfo.MSAASamples = msaaSamples;
 
 		ImGui_ImplVulkan_Init(&imguiInitInfo, forward.renderPass);
 

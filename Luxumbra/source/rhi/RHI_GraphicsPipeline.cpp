@@ -105,7 +105,7 @@ namespace lux::rhi
 		VkPipelineMultisampleStateCreateInfo multisampleStateCI = {};
 		multisampleStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 		multisampleStateCI.sampleShadingEnable = VK_FALSE;
-		multisampleStateCI.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+		multisampleStateCI.rasterizationSamples = luxGraphicsPipelineCI.disableMSAA ? VK_SAMPLE_COUNT_1_BIT : msaaSamples;
 		multisampleStateCI.minSampleShading = 1.0f;
 		multisampleStateCI.pSampleMask = nullptr;
 		multisampleStateCI.alphaToCoverageEnable = VK_FALSE;

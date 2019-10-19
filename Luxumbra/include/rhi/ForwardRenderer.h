@@ -56,9 +56,13 @@ namespace lux::rhi
 		std::vector<VkImageView> rtColorAttachmentImageViews;
 		std::vector<VkDeviceMemory> rtColorAttachmentImageMemories;
 
+		VkImage rtResolveColorAttachmentImage;
+		VkImageView rtResolveColorAttachmentImageView;
+		VkDeviceMemory rtResolveColorAttachmentMemory;
+
 		VkImage rtDepthAttachmentImage;
-		VkDeviceMemory rtDepthAttachmentMemory;
 		VkImageView rtDepthAttachmentImageView;
+		VkDeviceMemory rtDepthAttachmentMemory;
 
 		VkSampler sampler;
 		VkSampler cubemapSampler;
@@ -68,6 +72,7 @@ namespace lux::rhi
 			FORWARD_SWAPCHAIN_ATTACHMENT_BIND_POINT = 0,
 			FORWARD_RT_COLOR_ATTACHMENT_BIND_POINT,
 			FORWARD_RT_DEPTH_ATTACHMENT_BIND_POINT,
+			FORWARD_RT_RESOLVE_COLOR_ATTACHMENT_BIND_POINT,
 			FORWARD_ATTACHMENT_BIND_POINT_COUNT
 		};
 

@@ -22,6 +22,7 @@ namespace lux::rhi
 		float viewportHeight;
 		VkCullModeFlags rasterizerCullMode;
 		VkFrontFace rasterizerFrontFace;
+		bool disableMSAA;
 		bool enableDepthTest;
 		bool enableDepthWrite;
 		VkCompareOp depthCompareOp;

@@ -12,9 +12,11 @@ namespace lux::rhi
 	using sortedMeshNodesConstIterator = std::map<std::string, std::vector<scene::MeshNode*>>::const_iterator;
 	
 	ForwardRenderer::ForwardRenderer() noexcept
-		: renderPass(VK_NULL_HANDLE), frameBuffers(0), blitGraphicsPipeline(),
-		rtColorAttachmentImages(0), rtColorAttachmentImageMemories(0), rtColorAttachmentImageViews(0),
-		rtDepthAttachmentImage(VK_NULL_HANDLE), rtDepthAttachmentMemory(VK_NULL_HANDLE), rtDepthAttachmentImageView(VK_NULL_HANDLE)
+		: renderPass(VK_NULL_HANDLE), frameBuffers(0), descriptorPool(VK_NULL_HANDLE), blitGraphicsPipeline(), blitDescriptorSets(0),
+		rtGraphicsPipeline(), rtViewDescriptorSets(0), rtModelDescriptorSets(0), rtColorAttachmentImages(0), rtColorAttachmentImageMemories(0), rtColorAttachmentImageViews(0),
+		rtResolveColorAttachmentImage(VK_NULL_HANDLE), rtResolveColorAttachmentMemory(VK_NULL_HANDLE), rtResolveColorAttachmentImageView(VK_NULL_HANDLE),
+		rtDepthAttachmentImage(VK_NULL_HANDLE), rtDepthAttachmentMemory(VK_NULL_HANDLE), rtDepthAttachmentImageView(VK_NULL_HANDLE),
+		envMapGraphicsPipeline(), envMapViewDescriptorSets(0), modelConstant(), viewProjUniformBuffers(0), sampler(VK_NULL_HANDLE), cubemapSampler(VK_NULL_HANDLE)
 	{
 
 	}
@@ -33,7 +35,7 @@ namespace lux::rhi
 
 		VkAttachmentDescription rtColorAttachment = {};
 		rtColorAttachment.format = swapchainImageFormat;
-		rtColorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		rtColorAttachment.samples = msaaSamples;
 		rtColorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		rtColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 		rtColorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -47,13 +49,25 @@ namespace lux::rhi
 		rtDepthAttachment.format = FindSupportedImageFormat(depthAttachmentFormats, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 		ASSERT(rtDepthAttachment.format != VK_FORMAT_MAX_ENUM);
 
-		rtDepthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		rtDepthAttachment.samples = msaaSamples;
 		rtDepthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		rtDepthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		rtDepthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		rtDepthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		rtDepthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		rtDepthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+
+		VkAttachmentDescription rtResolveColorAttachment = {};
+		rtResolveColorAttachment.format = swapchainImageFormat;
+		rtResolveColorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		rtResolveColorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		rtResolveColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		rtResolveColorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		rtResolveColorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		rtResolveColorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		rtResolveColorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
 
 		VkAttachmentReference swapchainAttachmentRef = {};
 		swapchainAttachmentRef.attachment = ForwardRenderer::FORWARD_SWAPCHAIN_ATTACHMENT_BIND_POINT;
@@ -63,8 +77,12 @@ namespace lux::rhi
 		rtColorAttachmentRef.attachment = ForwardRenderer::FORWARD_RT_COLOR_ATTACHMENT_BIND_POINT;
 		rtColorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
+		VkAttachmentReference rtResolveColorAttachmentRef = {};
+		rtResolveColorAttachmentRef.attachment = ForwardRenderer::FORWARD_RT_RESOLVE_COLOR_ATTACHMENT_BIND_POINT;
+		rtResolveColorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
 		VkAttachmentReference swapchainInputAttachmentRef = {};
-		swapchainInputAttachmentRef.attachment = ForwardRenderer::FORWARD_RT_COLOR_ATTACHMENT_BIND_POINT;
+		swapchainInputAttachmentRef.attachment = ForwardRenderer::FORWARD_RT_RESOLVE_COLOR_ATTACHMENT_BIND_POINT;
 		swapchainInputAttachmentRef.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 		VkAttachmentReference rtDepthAttachmentRef = {};
@@ -76,6 +94,7 @@ namespace lux::rhi
 		renderToTargetSubpass.pColorAttachments = &rtColorAttachmentRef;
 		renderToTargetSubpass.pDepthStencilAttachment = &rtDepthAttachmentRef;
 		renderToTargetSubpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+		renderToTargetSubpass.pResolveAttachments = &rtResolveColorAttachmentRef;
 
 		VkSubpassDescription copySubpass = {};
 		copySubpass.colorAttachmentCount = 1;
@@ -87,7 +106,8 @@ namespace lux::rhi
 		std::array<VkAttachmentDescription, TO_SIZE_T(ForwardRenderer::FORWARD_ATTACHMENT_BIND_POINT_COUNT)> attachments{
 			swapchainAttachment,
 			rtColorAttachment,
-			rtDepthAttachment
+			rtDepthAttachment,
+			rtResolveColorAttachment
 		};
 
 		std::array<VkSubpassDescription, TO_SIZE_T(ForwardRenderer::FORWARD_SUBPASS_COUNT)> subpasses{
@@ -133,9 +153,9 @@ namespace lux::rhi
 		rtColorAttachmentImageCI.extent = { swapchainExtent.width, swapchainExtent.height, 1 };
 		rtColorAttachmentImageCI.mipLevels = 1;
 		rtColorAttachmentImageCI.arrayLayers = 1;
-		rtColorAttachmentImageCI.samples = VK_SAMPLE_COUNT_1_BIT;
+		rtColorAttachmentImageCI.samples = msaaSamples;
 		rtColorAttachmentImageCI.tiling = VK_IMAGE_TILING_OPTIMAL;
-		rtColorAttachmentImageCI.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
+		rtColorAttachmentImageCI.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
 		rtColorAttachmentImageCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		rtColorAttachmentImageCI.queueFamilyIndexCount = 1;
 		rtColorAttachmentImageCI.pQueueFamilyIndices = &graphicsQueueIndex;
@@ -186,7 +206,7 @@ namespace lux::rhi
 		rtDepthAttachmentImageCI.extent = { swapchainExtent.width, swapchainExtent.height, 1 };
 		rtDepthAttachmentImageCI.mipLevels = 1;
 		rtDepthAttachmentImageCI.arrayLayers = 1;
-		rtDepthAttachmentImageCI.samples = VK_SAMPLE_COUNT_1_BIT;
+		rtDepthAttachmentImageCI.samples = msaaSamples;
 		rtDepthAttachmentImageCI.tiling = VK_IMAGE_TILING_OPTIMAL;
 		rtDepthAttachmentImageCI.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 		rtDepthAttachmentImageCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -216,6 +236,45 @@ namespace lux::rhi
 
 		CommandTransitionImageLayout(forward.rtDepthAttachmentImage, depthImageFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
+
+		// Resolve MSAA
+		VkImageCreateInfo rtResolveColorAttachmentImageCI = {};
+		rtResolveColorAttachmentImageCI.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+		rtResolveColorAttachmentImageCI.imageType = VK_IMAGE_TYPE_2D;
+		rtResolveColorAttachmentImageCI.format = swapchainImageFormat;
+		rtResolveColorAttachmentImageCI.extent = { swapchainExtent.width, swapchainExtent.height, 1 };
+		rtResolveColorAttachmentImageCI.mipLevels = 1;
+		rtResolveColorAttachmentImageCI.arrayLayers = 1;
+		rtResolveColorAttachmentImageCI.samples = VK_SAMPLE_COUNT_1_BIT;
+		rtResolveColorAttachmentImageCI.tiling = VK_IMAGE_TILING_OPTIMAL;
+		rtResolveColorAttachmentImageCI.usage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
+		rtResolveColorAttachmentImageCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		rtResolveColorAttachmentImageCI.queueFamilyIndexCount = 1;
+		rtResolveColorAttachmentImageCI.pQueueFamilyIndices = &graphicsQueueIndex;
+		rtResolveColorAttachmentImageCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+		CHECK_VK(vkCreateImage(device, &rtResolveColorAttachmentImageCI, nullptr, &forward.rtResolveColorAttachmentImage));
+
+		vkGetImageMemoryRequirements(device, forward.rtResolveColorAttachmentImage, &memoryRequirements);
+		rtAttachmentImageAI.allocationSize = memoryRequirements.size;
+		rtAttachmentImageAI.memoryTypeIndex = FindMemoryType(memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+		CHECK_VK(vkAllocateMemory(device, &rtAttachmentImageAI, nullptr, &forward.rtResolveColorAttachmentMemory));
+		CHECK_VK(vkBindImageMemory(device, forward.rtResolveColorAttachmentImage, forward.rtResolveColorAttachmentMemory, 0));
+
+		VkImageViewCreateInfo rtResolveColorAttachmentImageViewCI = {};
+		rtResolveColorAttachmentImageViewCI.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		rtResolveColorAttachmentImageViewCI.image = forward.rtResolveColorAttachmentImage;
+		rtResolveColorAttachmentImageViewCI.components = { VK_COMPONENT_SWIZZLE_IDENTITY };
+		rtResolveColorAttachmentImageViewCI.format = swapchainImageFormat;
+		rtResolveColorAttachmentImageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		rtResolveColorAttachmentImageViewCI.subresourceRange = swapchainImageSubresourceRange;
+
+		CHECK_VK(vkCreateImageView(device, &rtResolveColorAttachmentImageViewCI, nullptr, &forward.rtResolveColorAttachmentImageView));
+
+		CommandTransitionImageLayout(forward.rtResolveColorAttachmentImage, swapchainImageFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+
 		// Framebuffers
 
 		std::array<VkImageView, TO_SIZE_T(ForwardRenderer::FORWARD_ATTACHMENT_BIND_POINT_COUNT)> attachments { VK_NULL_HANDLE };
@@ -236,6 +295,7 @@ namespace lux::rhi
 			attachments[TO_SIZE_T(ForwardRenderer::FORWARD_SWAPCHAIN_ATTACHMENT_BIND_POINT)] = swapchainImageViews[i];
 			attachments[TO_SIZE_T(ForwardRenderer::FORWARD_RT_COLOR_ATTACHMENT_BIND_POINT)] = forward.rtColorAttachmentImageViews[i];
 			attachments[TO_SIZE_T(ForwardRenderer::FORWARD_RT_DEPTH_ATTACHMENT_BIND_POINT)] = forward.rtDepthAttachmentImageView;
+			attachments[TO_SIZE_T(ForwardRenderer::FORWARD_RT_RESOLVE_COLOR_ATTACHMENT_BIND_POINT)] = forward.rtResolveColorAttachmentImageView;
 
 			CHECK_VK(vkCreateFramebuffer(device, &framebufferCI, nullptr, &forward.frameBuffers[i]));
 		}
@@ -301,6 +361,7 @@ namespace lux::rhi
 		blitGraphicsPipelineCI.viewportHeight = TO_FLOAT(swapchainExtent.height);
 		blitGraphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_BACK_BIT;
 		blitGraphicsPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_CLOCKWISE;
+		blitGraphicsPipelineCI.disableMSAA = true;
 		blitGraphicsPipelineCI.enableDepthTest = VK_TRUE;
 		blitGraphicsPipelineCI.enableDepthWrite = VK_TRUE;
 		blitGraphicsPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS;
@@ -462,7 +523,7 @@ namespace lux::rhi
 		
 		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
-			blitDescriptorImageInfo.imageView = forward.rtColorAttachmentImageViews[i];
+			blitDescriptorImageInfo.imageView = forward.rtResolveColorAttachmentImageView;
 			blitWriteDescriptorSet.dstSet = forward.blitDescriptorSets[i];
 		
 			vkUpdateDescriptorSets(device, 1, &blitWriteDescriptorSet, 0, nullptr);
@@ -779,6 +840,10 @@ namespace lux::rhi
 		
 		vkDestroySampler(device, forward.sampler, nullptr);
 		vkDestroySampler(device, forward.cubemapSampler, nullptr);
+
+		vkDestroyImage(device, forward.rtResolveColorAttachmentImage, nullptr);
+		vkDestroyImageView(device, forward.rtResolveColorAttachmentImageView, nullptr);
+		vkFreeMemory(device, forward.rtResolveColorAttachmentMemory, nullptr);
 
 		vkDestroyImage(device, forward.rtDepthAttachmentImage, nullptr);
 		vkDestroyImageView(device, forward.rtDepthAttachmentImageView, nullptr);

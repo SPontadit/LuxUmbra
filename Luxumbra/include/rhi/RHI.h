@@ -90,6 +90,8 @@ namespace lux::rhi
 		VkQueue graphicsQueue;
 		VkQueue presentQueue;
 
+		VkSampleCountFlagBits msaaSamples;
+
 		VkFormat swapchainImageFormat;
 		VkExtent2D swapchainExtent;
 		VkImageSubresourceRange swapchainImageSubresourceRange;

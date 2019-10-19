@@ -260,6 +260,7 @@ namespace lux::rhi
 		graphicsPipelineCI.viewportHeight = TO_FLOAT(luxCubemapCI.size);
 		graphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_NONE;
 		graphicsPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_CLOCKWISE;
+		graphicsPipelineCI.disableMSAA = true;
 		graphicsPipelineCI.enableDepthTest = false;
 		graphicsPipelineCI.enableDepthWrite = false;
 		graphicsPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
