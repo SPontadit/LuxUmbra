@@ -25,7 +25,7 @@ namespace lux::resource
 
 
 	ResourceManager::ResourceManager(rhi::RHI&  rhi) noexcept
-		: rhi(rhi), cubemap(nullptr), irradiance(nullptr)
+		: rhi(rhi), cubemap(nullptr), irradiance(nullptr), defaultTexture(nullptr)
 	{
 	}
 
@@ -40,6 +40,8 @@ namespace lux::resource
 	{
 		//BuildPrimitiveMeshes();
 		LoadPrimitiveMehes();
+
+		defaultTexture = LoadTexture("data/textures/DefaultTexture.jpg");
 	}
 
 	std::shared_ptr<Material> ResourceManager::GetMaterial(const std::string& materialName) noexcept
@@ -179,6 +181,9 @@ namespace lux::resource
 
 	std::shared_ptr<Material> ResourceManager::CreateMaterial(const std::string& name, MaterialCreateInfo materialCI) noexcept
 	{
+		if (materialCI.albedo == nullptr)
+			materialCI.albedo = defaultTexture;
+
 		std::shared_ptr<Material> material = std::make_shared<Material>(name, materialCI);
 
 		rhi.CreateMaterial(*material);
@@ -315,7 +320,7 @@ namespace lux::resource
 		return mesh;
 	}
 
-	std::shared_ptr<Texture> ResourceManager::LoadTexture(const std::string& filename) noexcept
+	std::shared_ptr<Texture> ResourceManager::LoadTexture(const std::string& filename, bool isPrimitive) noexcept
 	{
 		std::shared_ptr<Texture> texture = std::make_shared<Texture>();
 
@@ -341,7 +346,8 @@ namespace lux::resource
 
 		stbi_image_free(textureData);
 	
-		textures[filename] = texture;
+		if (isPrimitive == false)
+			textures[filename] = texture;
 
 		return texture;
 	}
@@ -390,6 +396,8 @@ namespace lux::resource
 		}
 
 		textures.clear();
+
+		rhi.DestroyImage(defaultTexture->image);
 
 		if (cubemap != nullptr)
 		{

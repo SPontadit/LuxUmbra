@@ -57,7 +57,7 @@ namespace lux::resource
 		void GenerateSphere(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, uint16_t horizSegments, uint16_t vertiSegments, float sphereScale = 1.f);
 
 		std::shared_ptr<Mesh> LoadMesh(const std::string& filename, bool isPrimitive = false) noexcept;
-		std::shared_ptr<Texture> LoadTexture(const std::string& filename) noexcept;
+		std::shared_ptr<Texture> LoadTexture(const std::string& filename, bool isPrimitive = false) noexcept;
 
 		rhi::RHI& rhi;
 		
@@ -67,6 +67,8 @@ namespace lux::resource
 		std::unordered_map<std::string, std::shared_ptr<Material>> materials;
 		std::unordered_map<std::string, std::shared_ptr<Mesh>> meshes;
 		std::unordered_map<std::string, std::shared_ptr<Texture>> textures;
+
+		std::shared_ptr<Texture> defaultTexture;
 		std::array<std::shared_ptr<Mesh>, TO_SIZE_T(MeshPrimitive::MESH_PRIMITIVE_COUNT)> primitiveMeshes;
 	};
 
