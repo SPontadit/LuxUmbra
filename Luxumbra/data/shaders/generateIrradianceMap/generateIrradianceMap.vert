@@ -8,16 +8,18 @@ layout(location = 2) in vec3 inNormal;
 
 layout(location = 0) out vec3 outPositionLS;
 
-layout(binding = 0) uniform ViewProj
+layout(push_constant) uniform PushConstants
 {
-	mat4 proj;
-	mat4 view;
-} vp;
+	mat4 mvp;
+	float deltaPhi;
+	float deltaTheta;
+} pushConstants;
+
 
 
 void main() 
 {
 	outPositionLS = inPosition;
 
-	gl_Position = (vp.proj * vp.view * vec4(inPosition, 0.0)).xyww;
+	gl_Position = pushConstants.mvp * vec4(inPosition, 1.0);
 }

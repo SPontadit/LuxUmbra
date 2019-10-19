@@ -390,7 +390,6 @@ namespace lux::rhi
 		envMapGraphicsPipelineCI.subpassIndex = ForwardRenderer::FORWARD_SUBPASS_RENDER_TO_TARGET;
 		envMapGraphicsPipelineCI.binaryVertexFilePath = "data/shaders/envMap/envMap.vert.spv";
 		envMapGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/envMap/envMap.frag.spv";
-		envMapGraphicsPipelineCI.emptyVertexInput = true;
 		envMapGraphicsPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 		envMapGraphicsPipelineCI.viewportWidth = TO_FLOAT(swapchainExtent.width);
 		envMapGraphicsPipelineCI.viewportHeight = TO_FLOAT(swapchainExtent.height);
@@ -695,10 +694,14 @@ namespace lux::rhi
 			}
 		}
 
+
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.envMapGraphicsPipeline.pipeline);
 		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.envMapGraphicsPipeline.pipelineLayout, 0, 1, &forward.envMapViewDescriptorSets[currentFrame], 0, nullptr);
 
-		vkCmdDraw(commandBuffer, 4, 1, 0, 0);
+		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &cube->vertexBuffer.buffer, offset);
+		vkCmdBindIndexBuffer(commandBuffer, cube->indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+
+		vkCmdDrawIndexed(commandBuffer, cube->indexCount, 1, 0, 0, 0);
 
 		RenderImgui();
 

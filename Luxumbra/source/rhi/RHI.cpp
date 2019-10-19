@@ -15,7 +15,7 @@ namespace lux::rhi
 		swapchainImageFormat(VK_FORMAT_UNDEFINED), swapchainExtent({ 0, 0 }), swapchainImageSubresourceRange{}, swapchain(VK_NULL_HANDLE),
 		swapchainImageCount(0), swapchainImages(0), swapchainImageViews(0),
 		commandPool(VK_NULL_HANDLE), commandBuffers(0),
-		forward(), frameCount(0), currentFrame(0)
+		forward(), frameCount(0), currentFrame(0), cube(nullptr)
 #ifdef VULKAN_ENABLE_VALIDATION
 		, debugReportCallback(VK_NULL_HANDLE)
 #endif // VULKAN_ENABLE_VALIDATION
@@ -643,7 +643,7 @@ namespace lux::rhi
 
 		VkDescriptorImageInfo descriptorSamplerImageInfo = {};
 		descriptorSamplerImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		descriptorSamplerImageInfo.sampler = forward.sampler;
+		descriptorSamplerImageInfo.sampler = forward.cubemapSampler;
 		descriptorSamplerImageInfo.imageView = image.imageView;
 
 		VkWriteDescriptorSet envMapWriteSamplerDescriptorSet = {};
@@ -709,6 +709,13 @@ namespace lux::rhi
 	{
 		VkCommandBuffer commandBuffer = BeginSingleTimeCommandBuffer();
 
+		CommandTransitionImageLayout(commandBuffer, image, format, oldLayout, newLayout);
+
+		EndSingleTimeCommandBuffer(commandBuffer);
+	}
+
+	void RHI::CommandTransitionImageLayout(VkCommandBuffer commandBuffer, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t layerCount) noexcept
+	{
 		VkImageMemoryBarrier imageMemoryBarrier = {};
 		imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 		imageMemoryBarrier.oldLayout = oldLayout;
@@ -717,53 +724,78 @@ namespace lux::rhi
 		imageMemoryBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		imageMemoryBarrier.subresourceRange.levelCount = 1;
 		imageMemoryBarrier.subresourceRange.baseMipLevel = 0;
-		imageMemoryBarrier.subresourceRange.layerCount = 1;
+		imageMemoryBarrier.subresourceRange.layerCount = layerCount;
 		imageMemoryBarrier.subresourceRange.baseArrayLayer = 0;
 
 		VkPipelineStageFlagBits srcStageMask;
 		VkPipelineStageFlagBits dstStageMask;
 
+		// TODO: Verify src/dst Stage Mash ...
+
 		switch (oldLayout)
 		{
-			case VK_IMAGE_LAYOUT_UNDEFINED:
-				imageMemoryBarrier.srcAccessMask = 0;
-				srcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-				break;
-			
-			case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-				imageMemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-				srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
-				break;
+		case VK_IMAGE_LAYOUT_UNDEFINED:
+			imageMemoryBarrier.srcAccessMask = 0;
+			srcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+			break;
+		case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+			imageMemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+			srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+			break;
+		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+			imageMemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+			break;
+		case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+			imageMemoryBarrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+			srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+			break;
+		case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+			imageMemoryBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+			break;
 		}
 
 		switch (newLayout)
 		{
-			case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-				imageMemoryBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-				dstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
-				break;
-			
-			case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-				imageMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-				dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-				break;
-			
-			case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-				imageMemoryBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-				
-				if (format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT)
-				{
-					imageMemoryBarrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-				}
+		case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+			imageMemoryBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+			dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+			break;
+		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+			imageMemoryBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			dstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+			break;
 
-				imageMemoryBarrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-				dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-				break;
+		case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+			imageMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+			dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+			break;
+
+		case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+			imageMemoryBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+			break;
+
+		case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+			imageMemoryBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+			if (format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT)
+			{
+				imageMemoryBarrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+			}
+
+			imageMemoryBarrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+			break;
 		}
 
 		vkCmdPipelineBarrier(commandBuffer, srcStageMask, dstStageMask, 0, 0, nullptr, 0, nullptr, 1, &imageMemoryBarrier);
+	}
 
-		EndSingleTimeCommandBuffer(commandBuffer);
+	void RHI::SetCubeMesh(std::shared_ptr<resource::Mesh> mesh) noexcept
+	{
+		cube = mesh;
 	}
 
 	void RHI::WaitIdle() noexcept

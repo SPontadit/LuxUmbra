@@ -66,8 +66,10 @@ namespace lux::rhi
 
 		void CreateEnvMapDescriptorSet(Image& image) noexcept;
 		
-		void GenerateCubemap(const ImageCreateInfo& luxImageCI, Image& image) noexcept;
+		void GenerateCubemap(const ImageCreateInfo& luxImageCI, Image& source, Image& image) noexcept;
+		void GenerateIrradianceMap(const ImageCreateInfo& luxImageCI, Image& source, Image& image) noexcept;
 
+		void SetCubeMesh(std::shared_ptr<resource::Mesh> mesh) noexcept;
 
 		void RebuildForwardGraphicsPipeline() noexcept;
 
@@ -110,6 +112,7 @@ namespace lux::rhi
 		std::vector<Buffer> lightUniformBuffers;
 		LightCountPushConstant lightCountPushConstant;
 
+		std::shared_ptr<resource::Mesh> cube;
 		uint32_t frameCount;
 		uint32_t currentFrame;
 
@@ -140,6 +143,7 @@ namespace lux::rhi
 		VkCommandBuffer BeginSingleTimeCommandBuffer() const noexcept;
 		void EndSingleTimeCommandBuffer(VkCommandBuffer commandBuffer) const noexcept;
 
+		void CommandTransitionImageLayout(VkCommandBuffer, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t layerCount = 1) noexcept;
 		void CommandTransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) noexcept;
 
 		void CreateGraphicsPipeline(const GraphicsPipelineCreateInfo& luxGraphicsPipelineCI, GraphicsPipeline& graphicsPipeline) noexcept;

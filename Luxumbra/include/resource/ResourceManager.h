@@ -16,9 +16,10 @@ namespace lux::resource
 {
 	using namespace lux;
 
-	enum class MeshPrimitive
+	enum class MeshPrimitive : uint32_t
 	{
 		MESH_SPHERE_PRIMITIVE = 0,
+		MESH_CUBE_PRIMITIVE = 1,
 		MESH_PRIMITIVE_COUNT
 	};
 
@@ -52,14 +53,16 @@ namespace lux::resource
 		
 
 		void BuildPrimitiveMeshes() noexcept;
+		void LoadPrimitiveMehes() noexcept;
 		void GenerateSphere(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, uint16_t horizSegments, uint16_t vertiSegments, float sphereScale = 1.f);
 
-		std::shared_ptr<Mesh> LoadMesh(const std::string& filename) noexcept;
+		std::shared_ptr<Mesh> LoadMesh(const std::string& filename, bool isPrimitive = false) noexcept;
 		std::shared_ptr<Texture> LoadTexture(const std::string& filename) noexcept;
 
 		rhi::RHI& rhi;
 		
 		std::shared_ptr<Texture> cubemap;
+		std::shared_ptr<Texture> irradiance;
 
 		std::unordered_map<std::string, std::shared_ptr<Material>> materials;
 		std::unordered_map<std::string, std::shared_ptr<Mesh>> meshes;

@@ -25,7 +25,7 @@ namespace lux::resource
 
 
 	ResourceManager::ResourceManager(rhi::RHI&  rhi) noexcept
-		: rhi(rhi), cubemap(nullptr)
+		: rhi(rhi), cubemap(nullptr), irradiance(nullptr)
 	{
 	}
 
@@ -38,7 +38,8 @@ namespace lux::resource
 
 	void ResourceManager::Initialize() noexcept
 	{
-		BuildPrimitiveMeshes();
+		//BuildPrimitiveMeshes();
+		LoadPrimitiveMehes();
 	}
 
 	std::shared_ptr<Material> ResourceManager::GetMaterial(const std::string& materialName) noexcept
@@ -86,8 +87,6 @@ namespace lux::resource
 
 	void ResourceManager::GenerateSphere(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, uint16_t horizSegments, uint16_t vertiSegments, float sphereScale)
 	{
-		const float PI = 3.14159265359f;
-
 		indices.reserve((vertiSegments + 1)*(horizSegments + 1));
 		vertices.reserve((vertiSegments + 1)*(horizSegments + 1));
 
@@ -170,6 +169,14 @@ namespace lux::resource
 		primitiveMeshes[TO_SIZE_T(MeshPrimitive::MESH_SPHERE_PRIMITIVE)] = sphereMesh;
 	}
 
+	void ResourceManager::LoadPrimitiveMehes() noexcept
+	{
+		primitiveMeshes[TO_UINT32_T(MeshPrimitive::MESH_SPHERE_PRIMITIVE)] = LoadMesh("data/models/Sphere.fbx", true);
+		primitiveMeshes[TO_UINT32_T(MeshPrimitive::MESH_CUBE_PRIMITIVE)] = LoadMesh("data/models/Cube.fbx", true);
+
+		rhi.SetCubeMesh(primitiveMeshes[TO_UINT32_T(MeshPrimitive::MESH_CUBE_PRIMITIVE)]);
+	}
+
 	std::shared_ptr<Material> ResourceManager::CreateMaterial(const std::string& name, MaterialCreateInfo materialCI) noexcept
 	{
 		std::shared_ptr<Material> material = std::make_shared<Material>(name, materialCI);
@@ -184,6 +191,7 @@ namespace lux::resource
 	void ResourceManager::UseCubemap(const std::string& filenames) noexcept
 	{
 		cubemap = std::make_shared<Texture>();
+		irradiance = std::make_shared<Texture>();
 
 		float* textureData;
 		int textureWidth, textureHeight, textureChannels;
@@ -203,15 +211,35 @@ namespace lux::resource
 		imageCI.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
 		imageCI.imageData = textureData;
 		imageCI.imageSize = imageSize;
+		
+		rhi::Image source;
+		rhi.CreateImage(imageCI, source);
+
+		imageCI.arrayLayers = 6;
+		imageCI.subresourceRangeLayerCount = 6;
+		imageCI.imageViewType = VK_IMAGE_VIEW_TYPE_CUBE;
+		imageCI.imageData = nullptr;
+		imageCI.imageSize = 0;
+		imageCI.width = 1024;
+		imageCI.height = 1024;
 
 		rhi.CreateImage(imageCI, cubemap->image);
 
+		imageCI.width = 128;
+		imageCI.height = 128;
+		rhi.CreateImage(imageCI, irradiance->image);
+
+		rhi.GenerateCubemap(imageCI, source, cubemap->image);
+		rhi.GenerateIrradianceMap(imageCI, cubemap->image, irradiance->image);
+
 		rhi.CreateEnvMapDescriptorSet(cubemap->image);
 
+
+		rhi.DestroyImage(source);
 		stbi_image_free(textureData);
 	}
 
-	std::shared_ptr<Mesh> ResourceManager::LoadMesh(const std::string& filename) noexcept
+	std::shared_ptr<Mesh> ResourceManager::LoadMesh(const std::string& filename, bool isPrimitive) noexcept
 	{
 		std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>();
 		Assimp::Importer importer;
@@ -274,7 +302,8 @@ namespace lux::resource
 
 		mesh->indexCount = TO_UINT32_T(indices.size());
 
-		meshes[filename] = mesh;
+		if (isPrimitive == false)
+			meshes[filename] = mesh;
 
 		return mesh;
 	}
@@ -358,6 +387,11 @@ namespace lux::resource
 		if (cubemap != nullptr)
 		{
 			rhi.DestroyImage(cubemap->image);
+		}
+
+		if (irradiance != nullptr)
+		{
+			rhi.DestroyImage(irradiance->image);
 		}
 	}
 

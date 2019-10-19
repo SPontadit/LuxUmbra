@@ -70,6 +70,12 @@
     <Filter Include="Resource Files\envMap">
       <UniqueIdentifier>{8014d845-31e5-4aed-b4b6-9e77d00c3700}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resource Files\generateIrradianceMap">
+      <UniqueIdentifier>{6bc8c4e2-a1a7-477c-b947-ad6006257918}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\generateCubeMap">
+      <UniqueIdentifier>{417a7c2e-387a-486f-916d-a6590918944e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\main.cpp">
@@ -288,6 +294,18 @@
     </None>
     <None Include="data\shaders\envMap\envMap.vert">
       <Filter>Resource Files\envMap</Filter>
+    </None>
+    <None Include="data\shaders\generateIrradianceMap\generateIrradianceMap.frag">
+      <Filter>Resource Files\generateIrradianceMap</Filter>
+    </None>
+    <None Include="data\shaders\generateIrradianceMap\generateIrradianceMap.vert">
+      <Filter>Resource Files\generateIrradianceMap</Filter>
+    </None>
+    <None Include="data\shaders\generateCubeMap\generateCubeMap.frag">
+      <Filter>Resource Files\generateCubeMap</Filter>
+    </None>
+    <None Include="data\shaders\generateCubeMap\generateCubeMap.vert">
+      <Filter>Resource Files\generateCubeMap</Filter>
     </None>
   </ItemGroup>
 </Project>
