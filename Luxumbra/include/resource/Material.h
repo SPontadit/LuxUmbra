@@ -17,6 +17,7 @@ namespace lux::resource
 	struct MaterialCreateInfo
 	{
 		std::shared_ptr<Texture> albedo;
+		std::shared_ptr<Texture> normal;
 		glm::vec3 baseColor;
 		float metallic;
 		float perceptualRoughness;
@@ -51,6 +52,7 @@ namespace lux::resource
 		std::string name;
 		MaterialParameters parameter;
 		std::shared_ptr<Texture> albedo;
+		std::shared_ptr<Texture> normal;
 
 		
 		std::vector<rhi::Buffer> buffer;

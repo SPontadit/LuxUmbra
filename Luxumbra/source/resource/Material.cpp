@@ -7,6 +7,7 @@ namespace lux::resource
 		: name(name)
 	{
 		albedo = materialCI.albedo;
+		normal = materialCI.normal;
 		parameter.baseColor = materialCI.baseColor;
 		parameter.reflectance = materialCI.reflectance;
 		parameter.perceptualRoughness = materialCI.perceptualRoughness;

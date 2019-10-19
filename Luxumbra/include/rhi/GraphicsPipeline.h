@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "rhi\LuxVkImpl.h"
+#include "Vertex.h"
 
 namespace lux::rhi
 {
@@ -16,7 +17,7 @@ namespace lux::rhi
 		uint32_t subpassIndex;
 		std::string binaryVertexFilePath;
 		std::string binaryFragmentFilePath;
-		bool emptyVertexInput;
+		lux::VertexLayout vertexLayout;
 		VkPrimitiveTopology primitiveTopology;
 		float viewportWidth;
 		float viewportHeight;

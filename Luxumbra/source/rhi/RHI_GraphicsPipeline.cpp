@@ -38,28 +38,42 @@ namespace lux::rhi
 
 		std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages = { vertexStageCI, fragmentStageCI };
 
-
-		VkVertexInputBindingDescription bindingDescription = Vertex::GetBindingDescription();
-		std::array<VkVertexInputAttributeDescription, 3> attributesDescription = Vertex::GetAttributeDescriptions();
-
 		VkPipelineVertexInputStateCreateInfo vertexInputStateCI = {};
 		vertexInputStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-		if (luxGraphicsPipelineCI.emptyVertexInput)
+		switch (luxGraphicsPipelineCI.vertexLayout)
 		{
+		case lux::VertexLayout::NO_VERTEX_LAYOUT:
 			vertexInputStateCI.vertexBindingDescriptionCount = 0;
 			vertexInputStateCI.pVertexBindingDescriptions = nullptr;
 			vertexInputStateCI.vertexAttributeDescriptionCount = 0;
 			vertexInputStateCI.pVertexAttributeDescriptions = nullptr;
-		}
-		else
+			break;
+
+		case lux::VertexLayout::VERTEX_BASIC_LAYOUT:
 		{
+			VkVertexInputBindingDescription bindingDescription = Vertex::GetBindingDescription();
+			std::array<VkVertexInputAttributeDescription, 3> attributesDescription = Vertex::GetBasicAttributeDescriptions();
+
 			vertexInputStateCI.vertexBindingDescriptionCount = 1;
 			vertexInputStateCI.pVertexBindingDescriptions = &bindingDescription;
 			vertexInputStateCI.vertexAttributeDescriptionCount = TO_UINT32_T(attributesDescription.size());
 			vertexInputStateCI.pVertexAttributeDescriptions = attributesDescription.data();
+			break;
 		}
 
+		case lux::VertexLayout::VERTEX_FULL_LAYOUT:
+			VkVertexInputBindingDescription bindingDescription = Vertex::GetBindingDescription();
+			std::array<VkVertexInputAttributeDescription, 5> attributesDescription = Vertex::GetFullAttributeDescriptions();
+
+			vertexInputStateCI.vertexBindingDescriptionCount = 1;
+			vertexInputStateCI.pVertexBindingDescriptions = &bindingDescription;
+			vertexInputStateCI.vertexAttributeDescriptionCount = TO_UINT32_T(attributesDescription.size());
+			vertexInputStateCI.pVertexAttributeDescriptions = attributesDescription.data();
+			break;
+		default:
+			break;
+		}
 
 		VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateCI = {};
 		inputAssemblyStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;

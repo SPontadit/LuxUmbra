@@ -255,6 +255,7 @@ namespace lux::rhi
 		graphicsPipelineCI.subpassIndex = 0;
 		graphicsPipelineCI.binaryVertexFilePath = luxCubemapCI.binaryVertexFilePath;
 		graphicsPipelineCI.binaryFragmentFilePath = luxCubemapCI.binaryFragmentFilePath;
+		graphicsPipelineCI.vertexLayout = lux::VertexLayout::VERTEX_BASIC_LAYOUT;
 		graphicsPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		graphicsPipelineCI.viewportWidth = TO_FLOAT(luxCubemapCI.size); // TODO: Change if issue -> swapchain extent
 		graphicsPipelineCI.viewportHeight = TO_FLOAT(luxCubemapCI.size);

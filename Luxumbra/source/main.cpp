@@ -9,7 +9,8 @@ int main(int ac, char* av[])
 	lux::scene::Scene& scene = luxUmbra.GetScene();
 	lux::resource::ResourceManager& resourceManager = luxUmbra.GetResourceManager();
 
-	std::shared_ptr<lux::resource::Texture> texture = resourceManager.GetTexture("data/textures/Diffuse_Floor.jpg");
+	std::shared_ptr<lux::resource::Texture> albedo = resourceManager.GetTexture("data/textures/Brick_Diffuse.jpg");
+	std::shared_ptr<lux::resource::Texture> normal = resourceManager.GetTexture("data/textures/Brick_Normal.jpg");
 
 	resourceManager.UseCubemap("data/envmaps/quarry_02_2k.hdr");
 
@@ -18,18 +19,12 @@ int main(int ac, char* av[])
 	defaultMaterialCI.metallic = false;
 	defaultMaterialCI.perceptualRoughness = 0.5f;
 	defaultMaterialCI.reflectance = 0.5f;
-	//defaultMaterialCI.albedo = texture;
+	defaultMaterialCI.albedo = albedo;
 
 	resourceManager.CreateMaterial("White", defaultMaterialCI);
 
-	defaultMaterialCI.baseColor = glm::vec3(1.0f, 0.0f, 0.0f);
-	resourceManager.CreateMaterial("Red", defaultMaterialCI);
-
-	defaultMaterialCI.baseColor = glm::vec3(0.0f, 1.0f, 0.0f);
-	resourceManager.CreateMaterial("Green", defaultMaterialCI);
-
-	defaultMaterialCI.baseColor = glm::vec3(0.0f, 0.0f, 1.0f);
-	resourceManager.CreateMaterial("Blue", defaultMaterialCI);
+	defaultMaterialCI.normal = normal;
+	resourceManager.CreateMaterial("Texture", defaultMaterialCI);
 
 
 	scene.AddCameraNode(nullptr, { 2.5f, 5.f, 20.f }, glm::identity<glm::quat>(), false, 45.f, 0.01f, 1000.f, true);
@@ -38,7 +33,7 @@ int main(int ac, char* av[])
 	{
 		scene.AddMeshNode(nullptr, { i * 3.0f - 2.0f, 5.f, 0.f }, glm::quat(glm::radians(glm::vec3( 90.0f / 5.0f * i, 0.0f, 0.0f))), false, lux::resource::MeshPrimitive::MESH_SPHERE_PRIMITIVE, "White");
 		//scene.AddMeshNode(nullptr, { i * 3.0f - 2.0f, 10.f, 0.f }, glm::quat(glm::radians(glm::vec3( 90.0f / 5.0f * i, 0.0f, 0.0f))), false, lux::resource::MeshPrimitive::MESH_SPHERE_PRIMITIVE, "White");
-		scene.AddMeshNode(nullptr, { i * 3.0f - 2.0f, 10.f, 0.f }, glm::quat(glm::radians(glm::vec3(90.0f / 5.0f * i, 0.0f, 0.0f))), false, lux::resource::MeshPrimitive::MESH_CUBE_PRIMITIVE, "White");
+		scene.AddMeshNode(nullptr, { i * 3.0f - 2.0f, 10.f, 0.f }, glm::quat(glm::radians(glm::vec3(90.0f / 5.0f * i, 0.0f, 0.0f))), false, lux::resource::MeshPrimitive::MESH_CUBE_PRIMITIVE, "Texture");
 		//scene.AddMeshNode(nullptr, { i * 2.0f, 5.f, 0.f }, glm::identity<glm::quat>(), false, lux::resource::MeshPrimitive::MESH_SPHERE_PRIMITIVE, "Red");
 		//scene.AddMeshNode(nullptr, { i * 2.0f, 15.f, 0.f }, glm::identity<glm::quat>(), false, lux::resource::MeshPrimitive::MESH_SPHERE_PRIMITIVE, "White");
 		//scene.AddMeshNode(nullptr, { i * 2.0f, 15.f, 0.f }, glm::identity<glm::quat>(), false, lux::resource::MeshPrimitive::MESH_SPHERE_PRIMITIVE, "Blue");

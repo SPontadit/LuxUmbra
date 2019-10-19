@@ -432,7 +432,7 @@ namespace lux::rhi
 
 		VkDescriptorPoolSize materialsSamplerDescriptorPoolSize = {};
 		materialsSamplerDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		materialsSamplerDescriptorPoolSize.descriptorCount = swapchainImageCount * MATERIAL_MAX_SET;
+		materialsSamplerDescriptorPoolSize.descriptorCount = swapchainImageCount * 2 * MATERIAL_MAX_SET;
 
 		std::array<VkDescriptorPoolSize, 2> descriptorPoolSizes = { materialsUniformDescriptorPoolSize, materialsSamplerDescriptorPoolSize };
 
@@ -611,6 +611,21 @@ namespace lux::rhi
 		writeMaterialAlbedoDescriptorSet.pImageInfo = &materialAlbedoDescriptorImageInfo;
 
 
+		// Normal
+		VkDescriptorImageInfo materialNormalDescriptorImageInfo = {};
+		materialNormalDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		materialNormalDescriptorImageInfo.sampler = forward.sampler;
+		materialNormalDescriptorImageInfo.imageView = material.normal->image.imageView;
+
+		VkWriteDescriptorSet writeMaterialNormalDescriptorSet = {};
+		writeMaterialNormalDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeMaterialNormalDescriptorSet.descriptorCount = 1;
+		writeMaterialNormalDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		writeMaterialNormalDescriptorSet.dstBinding = 2;
+		writeMaterialNormalDescriptorSet.dstArrayElement = 0;
+		writeMaterialNormalDescriptorSet.pImageInfo = &materialNormalDescriptorImageInfo;
+
+
 		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
 			CreateBuffer(materialBufferCI, material.buffer[i]);
@@ -620,8 +635,9 @@ namespace lux::rhi
 			writeMaterialParametersDescriptorSet.dstSet = material.descriptorSet[i];
 
 			writeMaterialAlbedoDescriptorSet.dstSet = material.descriptorSet[i];
+			writeMaterialNormalDescriptorSet.dstSet = material.descriptorSet[i];
 
-			std::array<VkWriteDescriptorSet, 2> writeDescriptorSets = { writeMaterialParametersDescriptorSet, writeMaterialAlbedoDescriptorSet };
+			std::array<VkWriteDescriptorSet, 3> writeDescriptorSets = { writeMaterialParametersDescriptorSet, writeMaterialAlbedoDescriptorSet, writeMaterialNormalDescriptorSet };
 
 			vkUpdateDescriptorSets(device, TO_UINT32_T(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
 		}

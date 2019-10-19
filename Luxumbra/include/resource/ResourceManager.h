@@ -68,7 +68,8 @@ namespace lux::resource
 		std::unordered_map<std::string, std::shared_ptr<Mesh>> meshes;
 		std::unordered_map<std::string, std::shared_ptr<Texture>> textures;
 
-		std::shared_ptr<Texture> defaultTexture;
+		std::shared_ptr<Texture> defaultAlbedo;
+		std::shared_ptr<Texture> defaultNormalMap;
 		std::array<std::shared_ptr<Mesh>, TO_SIZE_T(MeshPrimitive::MESH_PRIMITIVE_COUNT)> primitiveMeshes;
 	};
 

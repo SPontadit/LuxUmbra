@@ -25,7 +25,7 @@ namespace lux::resource
 
 
 	ResourceManager::ResourceManager(rhi::RHI&  rhi) noexcept
-		: rhi(rhi), cubemap(nullptr), irradiance(nullptr), defaultTexture(nullptr)
+		: rhi(rhi), cubemap(nullptr), irradiance(nullptr), defaultAlbedo(nullptr)
 	{
 	}
 
@@ -41,7 +41,8 @@ namespace lux::resource
 		//BuildPrimitiveMeshes();
 		LoadPrimitiveMehes();
 
-		defaultTexture = LoadTexture("data/textures/DefaultTexture.jpg");
+		defaultAlbedo = LoadTexture("data/textures/DefaultAlbedo.jpg", true);
+		defaultNormalMap = LoadTexture("data/textures/DefaultNormalMap.jpg", true);
 	}
 
 	std::shared_ptr<Material> ResourceManager::GetMaterial(const std::string& materialName) noexcept
@@ -182,7 +183,10 @@ namespace lux::resource
 	std::shared_ptr<Material> ResourceManager::CreateMaterial(const std::string& name, MaterialCreateInfo materialCI) noexcept
 	{
 		if (materialCI.albedo == nullptr)
-			materialCI.albedo = defaultTexture;
+			materialCI.albedo = defaultAlbedo;
+
+		if (materialCI.normal == nullptr)
+			materialCI.normal = defaultNormalMap;
 
 		std::shared_ptr<Material> material = std::make_shared<Material>(name, materialCI);
 
@@ -255,7 +259,9 @@ namespace lux::resource
 	{
 		std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>();
 		Assimp::Importer importer;
-		const aiScene* scene = importer.ReadFile(filename, aiProcess_Triangulate | aiProcess_ConvertToLeftHanded | aiProcess_GlobalScale | aiProcess_PreTransformVertices);
+
+		unsigned int postProcessFlags = aiProcess_Triangulate | aiProcess_ConvertToLeftHanded | aiProcess_GlobalScale | aiProcess_PreTransformVertices | aiProcess_CalcTangentSpace;
+		const aiScene* scene = importer.ReadFile(filename, postProcessFlags);
 
 		if (scene == nullptr || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || scene->mRootNode == nullptr)
 		{
@@ -266,16 +272,22 @@ namespace lux::resource
 		std::vector<Vertex> vertices;
 		std::vector<uint32_t> indices;
 		
+		const aiVector3D Zero3D(0.0f, 0.0f, 0.0f);
+
 		for (size_t i = 0; i < scene->mNumMeshes; i++)
 		{
 			for (size_t j = 0; j < scene->mMeshes[i]->mNumVertices; j++)
 			{
+
 				Vertex vertex;
 
 				vertex.position = glm::make_vec3(&scene->mMeshes[i]->mVertices[j].x);
 				vertex.normal = glm::make_vec3(&scene->mMeshes[i]->mNormals[j].x);
 				vertex.textureCoordinate = glm::make_vec2(&scene->mMeshes[i]->mTextureCoords[0][j].x);
 			
+				vertex.tangent = glm::make_vec3((scene->mMeshes[i]->HasTangentsAndBitangents()) ? (&scene->mMeshes[i]->mTangents[j].x) : &Zero3D.x);
+				vertex.bitangent = glm::make_vec3((scene->mMeshes[i]->HasTangentsAndBitangents()) ? (&scene->mMeshes[i]->mBitangents[j].x) : &Zero3D.x);
+
 				//vertex.position.y *= -1.0f;
 				//vertex.normal.y *= -1.0f;
 
@@ -397,7 +409,8 @@ namespace lux::resource
 
 		textures.clear();
 
-		rhi.DestroyImage(defaultTexture->image);
+		rhi.DestroyImage(defaultAlbedo->image);
+		rhi.DestroyImage(defaultNormalMap->image);
 
 		if (cubemap != nullptr)
 		{

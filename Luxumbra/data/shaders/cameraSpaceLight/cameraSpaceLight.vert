@@ -4,11 +4,15 @@
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec2 inTextureCoordinate;
 layout(location = 2) in vec3 inNormal;
+layout(location = 3) in vec3 inTangent;
+layout(location = 4) in vec3 inBitangent;
 
-layout(location = 0) out vec3 outPositionVS;
-layout(location = 1) out vec2 outTextureCoordinateLS;
-layout(location = 2) out vec3 outNormalVS;
-layout(location = 3) out mat4 outViewMatrice;
+layout(location = 0) out VsOut
+{
+	vec2 textureCoordinateLS;
+	mat4 viewMatrix;
+	mat3 TBN;
+} vsOut;
 
 
 layout(binding = 0) uniform ViewProj
@@ -24,15 +28,16 @@ layout(push_constant) uniform Model
 
 void main() 
 {
-	vec3 fragPos = (m.model * vec4(inPosition, 1.0)).xyz;
-	outPositionVS = mat3(vp.view) * fragPos;
+    gl_Position = vp.proj * vp.view * m.model * vec4(inPosition, 1.0);
 
-    gl_Position = vp.proj * vp.view * vec4(fragPos, 1.0);
+	vsOut.viewMatrix =  vp.view;
+	vsOut.textureCoordinateLS = inTextureCoordinate;
 
-	outViewMatrice =  vp.view;
+	vec3 T = normalize(mat3(m.model) * inTangent);
+	vec3 B = normalize(mat3(m.model) * inBitangent);
+	vec3 N = normalize(mat3(m.model) * inNormal);
 
-	mat3 normalMatrix = transpose(inverse(mat3(vp.view * m.model)));
-	outNormalVS = normalize(normalMatrix * inNormal);
-	
-	outTextureCoordinateLS = inTextureCoordinate;
+	mat3 TBN = transpose(mat3(T, B, N));
+
+	vsOut.TBN = TBN;
 }
