@@ -316,7 +316,7 @@ namespace lux::rhi
 		for (uint32_t i = 0; i < availableSurfaceFormatCount; i++)
 		{
 			const VkSurfaceFormatKHR& availableSurfaceFormat = availableSurfaceFormats[TO_SIZE_T(i)];
-			if (availableSurfaceFormat.format == VK_FORMAT_B8G8R8A8_UNORM && availableSurfaceFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+			if ((availableSurfaceFormat.format == VK_FORMAT_B8G8R8A8_SRGB || availableSurfaceFormat.format == VK_FORMAT_R8G8B8A8_SRGB) && availableSurfaceFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
 			{
 				surfaceFormat = availableSurfaceFormat;
 				break;

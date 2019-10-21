@@ -76,7 +76,7 @@ void main()
 	// Tonemapping
 	//outColor = outColor / (outColor + vec4(1.0));
 
-	outColor = pow(outColor, vec4(1.0/2.2));
+	//outColor = pow(outColor, vec4(1.0/2.2));
 }
 
 vec3 getNormalFromMap()
