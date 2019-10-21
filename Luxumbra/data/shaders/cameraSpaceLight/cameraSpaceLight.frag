@@ -7,6 +7,7 @@ layout(location = 0) in FsIn
 {
 	vec3 positionWS;
 	vec2 textureCoordinateLS;
+	vec3 normalWS;
 	mat4 viewMatrix;
 	mat3 TBN;
 } fsIn;
@@ -19,10 +20,12 @@ struct Light
 	vec3 color;
 };
 
-layout(binding = 1) uniform LightBuffer
+layout(set = 0, binding = 1) uniform LightBuffer
 {
 	Light lights[LIGHT_MAX_COUNT];
 } lightBuffer;
+
+layout(set = 0, binding = 2) uniform samplerCube irradianceMap;
 
 layout(push_constant) uniform PushConsts
 {
@@ -61,6 +64,7 @@ float D_GGX(float VdotH, float roughness);
 float V_SmithGGXCorrelated(float NdotV, float NdotL, float roughness);
 vec3 F_Schlick(float NdotH, vec3 f0);
 float F_Schlick(float NdotH, float f0, float f90);
+vec3 F_SchlickRoughness(float VdotH, vec3 f0, float roughness);
 float Fd_Lambert();
 float Fd_Burley(float NdotV, float NdotL, float LdotH, float roughness);
 
@@ -68,12 +72,35 @@ float Fd_Burley(float NdotV, float NdotL, float LdotH, float roughness);
 void main() 
 {
 	outColor = vec4(CameraSpace(), 1.0);
+
+	// Tonemapping
+	//outColor = outColor / (outColor + vec4(1.0));
+
 	outColor = pow(outColor, vec4(1.0/2.2));
+}
+
+vec3 getNormalFromMap()
+{
+    vec3 tangentNormal = texture(normalMap, fsIn.textureCoordinateLS).xyz * 2.0 - 1.0;
+
+    vec3 Q1  = dFdx(fsIn.positionWS);
+    vec3 Q2  = dFdy(fsIn.positionWS);
+    vec2 st1 = dFdx(fsIn.textureCoordinateLS);
+    vec2 st2 = dFdy(fsIn.textureCoordinateLS);
+
+    vec3 N   = normalize(fsIn.normalWS);
+    vec3 T  = normalize(Q1*st2.t - Q2*st1.t);
+    vec3 B  = -normalize(cross(N, T));
+    mat3 TBN = mat3(T, B, N);
+
+    return normalize(TBN  * tangentNormal);
 }
 
 vec3 CameraSpace()
 {
 	vec3 directColor  = vec3(0.0);
+
+
 
 	vec3 positionTS = fsIn.TBN * mat3(fsIn.viewMatrix) *  fsIn.positionWS;
 	vec3 viewTS = fsIn.TBN * -fsIn.viewMatrix[3].xyz;
@@ -81,6 +108,10 @@ vec3 CameraSpace()
 	
 	vec3 normal = texture(normalMap, fsIn.textureCoordinateLS).rgb;
 	normal = normalize(normal * 2.0 - 1.0);
+//	normal = mat3(fsIn.viewMatrix) * transpose(fsIn.TBN) * normal;
+
+	// Temporary hack ...
+	//normal =  getNormalFromMap();
 
 	float NdotV = max(dot(normal, viewDir), 0.001);
 
@@ -109,7 +140,12 @@ vec3 CameraSpace()
 		directColor += (diffuseColor * Kdiff * Fd_Burley(NdotV, NdotL, LdotH, roughness) + specular) * lightBuffer.lights[i].color * NdotL;
 	}
 
-	return directColor;
+	vec3 irradiance = texture(irradianceMap, fsIn.normalWS).xyz;
+
+	vec3 Kdiff = 1.0 - F_SchlickRoughness(NdotV, F0, roughness);
+	vec3 indirectDiffuseColor = irradiance * diffuseColor * Kdiff;
+
+	return directColor + indirectDiffuseColor;
 }
 
 float Fd_Lambert()
@@ -144,10 +180,13 @@ float V_SmithGGXCorrelated(float NdotV, float NdotL, float roughness)
 vec3 F_Schlick(float VdotH, vec3 f0)
 {
 	return f0 + (vec3(1.0) - f0) * pow(1.0 - VdotH, 5.0);
-	float f = pow(1.0 - VdotH, 5.0);
-
-	return f + f0 * (1.0 - f);
 }
+
+vec3 F_SchlickRoughness(float VdotH, vec3 f0, float roughness)
+{
+	return f0 + (max(vec3(1.0 - roughness), f0) - f0) * pow(1.0 - VdotH, 5.0);
+}
+
 
 float F_Schlick(float VdotH, float f0, float f90)
 {

@@ -9,7 +9,5 @@ void main()
 {
 	vec4 color = subpassLoad(inputColor);
 
-	outColor = outColor / (outColor + vec4(1.0));
-	
 	outColor = color;
 }

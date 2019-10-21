@@ -315,6 +315,10 @@ namespace lux::rhi
 		lightsUniformDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		lightsUniformDescriptorPoolSize.descriptorCount = swapchainImageCount;
 
+		VkDescriptorPoolSize irradianceMapDescriptorPoolSize = {};
+		irradianceMapDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		irradianceMapDescriptorPoolSize.descriptorCount = swapchainImageCount;
+
 		VkDescriptorPoolSize envMapSamplerDescriptorPoolSize = {};
 		envMapSamplerDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		envMapSamplerDescriptorPoolSize.descriptorCount = swapchainImageCount;
@@ -323,11 +327,12 @@ namespace lux::rhi
 		envMapUniformDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		envMapUniformDescriptorPoolSize.descriptorCount = swapchainImageCount;
 
-		std::array<VkDescriptorPoolSize, 5> descriptorPoolSizes = 
+		std::array<VkDescriptorPoolSize, 6> descriptorPoolSizes = 
 		{ 
 			blitInputDescriptorPoolSize, 
 			rtViewProjUniformDescriptorPoolSize, 
 			lightsUniformDescriptorPoolSize, 
+			irradianceMapDescriptorPoolSize,
 			envMapSamplerDescriptorPoolSize,
 			envMapUniformDescriptorPoolSize
 		};
@@ -385,6 +390,11 @@ namespace lux::rhi
 		lightDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		lightDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
+		VkDescriptorSetLayoutBinding irradianceMapDescriptorSetLayoutBinding = {};
+		irradianceMapDescriptorSetLayoutBinding.binding = 2;
+		irradianceMapDescriptorSetLayoutBinding.descriptorCount = 1;
+		irradianceMapDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		irradianceMapDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 		// Material Layout
 		VkDescriptorSetLayoutBinding materialParametersDescriptorSetLayoutBinding = {};
@@ -434,7 +444,7 @@ namespace lux::rhi
 		rtGraphicsPipelineCI.enableDepthTest = VK_TRUE;
 		rtGraphicsPipelineCI.enableDepthWrite = VK_TRUE;
 		rtGraphicsPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS;
-		rtGraphicsPipelineCI.viewDescriptorSetLayoutBindings = { rtViewProjDescriptorSetLayoutBinding, lightDescriptorSetLayoutBinding };
+		rtGraphicsPipelineCI.viewDescriptorSetLayoutBindings = { rtViewProjDescriptorSetLayoutBinding, lightDescriptorSetLayoutBinding, irradianceMapDescriptorSetLayoutBinding };
 		rtGraphicsPipelineCI.materialDescriptorSetLayoutBindings = { materialParametersDescriptorSetLayoutBinding, materialAlbedoDescriptorSetLayoutBinding, materialNormalDescriptorSetLayoutBinding };
 		rtGraphicsPipelineCI.pushConstants = { rtModelPushConstantRange, lightCountPushConstantRange };
 

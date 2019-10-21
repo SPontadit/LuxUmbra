@@ -12,18 +12,18 @@ int main(int ac, char* av[])
 	std::shared_ptr<lux::resource::Texture> albedo = resourceManager.GetTexture("data/textures/Brick_Diffuse.jpg");
 	std::shared_ptr<lux::resource::Texture> normal = resourceManager.GetTexture("data/textures/Brick_Normal.jpg");
 
-	resourceManager.UseCubemap("data/envmaps/quarry_02_2k.hdr");
+	resourceManager.UseCubemap("data/envmaps/Ridgecrest_Road_Ref.hdr");
 
 	lux::resource::MaterialCreateInfo defaultMaterialCI;
 	defaultMaterialCI.baseColor = glm::vec3(1.0f);
 	defaultMaterialCI.metallic = false;
 	defaultMaterialCI.perceptualRoughness = 0.5f;
 	defaultMaterialCI.reflectance = 0.5f;
-	defaultMaterialCI.albedo = albedo;
+	//defaultMaterialCI.albedo = albedo;
+	//defaultMaterialCI.normal = normal;
 
 	resourceManager.CreateMaterial("White", defaultMaterialCI);
 
-	defaultMaterialCI.normal = normal;
 	resourceManager.CreateMaterial("Texture", defaultMaterialCI);
 
 

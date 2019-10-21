@@ -249,7 +249,7 @@ namespace lux::resource
 		rhi.GenerateCubemapFromHDR(source, cubemap->image);
 		rhi.GenerateIrradianceFromCubemap(cubemap->image, irradiance->image);
 
-		rhi.CreateEnvMapDescriptorSet(irradiance->image);
+		rhi.CreateEnvMapDescriptorSet(cubemap->image);
 
 		rhi.DestroyImage(source);
 		stbi_image_free(textureData);

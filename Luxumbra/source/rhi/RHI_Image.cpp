@@ -127,6 +127,28 @@ namespace lux::rhi
 		irradianceCI.sampler = forward.cubemapSampler;
 
 		GenerateCubemap(irradianceCI, cubemapSource, irradiance);
+
+
+		// Update Descriptor Set
+		VkDescriptorImageInfo irradianceMapDescriptorImageInfo = {};
+		irradianceMapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		irradianceMapDescriptorImageInfo.sampler = forward.cubemapSampler;
+		irradianceMapDescriptorImageInfo.imageView = irradiance.imageView;
+
+		VkWriteDescriptorSet writeIrradianceMapDescriptorSet = {};
+		writeIrradianceMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeIrradianceMapDescriptorSet.descriptorCount = 1;
+		writeIrradianceMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		writeIrradianceMapDescriptorSet.dstBinding = 2;
+		writeIrradianceMapDescriptorSet.dstArrayElement = 0;
+		writeIrradianceMapDescriptorSet.pImageInfo = &irradianceMapDescriptorImageInfo;
+
+		for (size_t i = 0; i < swapchainImageCount; i++)
+		{
+			writeIrradianceMapDescriptorSet.dstSet = forward.rtViewDescriptorSets[i];
+
+			vkUpdateDescriptorSets(device, 1, &writeIrradianceMapDescriptorSet, 0, nullptr);
+		}
 	}
 
 	void RHI::GenerateCubemap(const CubeMapCreateInfo& luxCubemapCI, const Image& source, Image& image) noexcept
