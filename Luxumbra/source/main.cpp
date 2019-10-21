@@ -19,8 +19,8 @@ int main(int ac, char* av[])
 	defaultMaterialCI.metallic = false;
 	defaultMaterialCI.perceptualRoughness = 0.5f;
 	defaultMaterialCI.reflectance = 0.5f;
-	//defaultMaterialCI.albedo = albedo;
-	//defaultMaterialCI.normal = normal;
+	defaultMaterialCI.albedo = albedo;
+	defaultMaterialCI.normal = normal;
 
 	resourceManager.CreateMaterial("White", defaultMaterialCI);
 

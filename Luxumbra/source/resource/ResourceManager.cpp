@@ -240,8 +240,8 @@ namespace lux::resource
 
 
 		// Create Irradiance Image
-		imageCI.width = 128;
-		imageCI.height = 128;
+		imageCI.width = IRRADIANCE_TEXTURE_SIZE;
+		imageCI.height = IRRADIANCE_TEXTURE_SIZE;
 		rhi.CreateImage(imageCI, irradiance->image);
 
 

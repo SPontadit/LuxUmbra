@@ -121,7 +121,7 @@ namespace lux::rhi
 	{
 		rhi::CubeMapCreateInfo irradianceCI = {};
 		irradianceCI.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-		irradianceCI.size = 128;
+		irradianceCI.size = IRRADIANCE_TEXTURE_SIZE;
 		irradianceCI.binaryVertexFilePath = "data/shaders/generateIrradianceMap/generateIrradianceMap.vert.spv";
 		irradianceCI.binaryFragmentFilePath = "data/shaders/generateIrradianceMap/generateIrradianceMap.frag.spv";
 		irradianceCI.sampler = forward.cubemapSampler;
@@ -259,7 +259,7 @@ namespace lux::rhi
 		{
 			glm::mat4 mvp;
 			float deltaPhi = (2.0f * PI) / 180.0f;
-			float deltaTheta = (0.5f * PI) / 128.0f; //dimensiom
+			float deltaTheta = (0.5f * PI) / TO_FLOAT(IRRADIANCE_TEXTURE_SIZE); //dimensiom
 		} pushConstant;
 
 		VkPushConstantRange pushConstantRange = {};
