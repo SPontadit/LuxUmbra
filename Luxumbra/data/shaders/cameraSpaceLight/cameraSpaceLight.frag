@@ -5,6 +5,7 @@
 
 layout(location = 0) in FsIn
 {
+	vec3 positionWS;
 	vec2 textureCoordinateLS;
 	mat4 viewMatrix;
 	mat3 TBN;
@@ -49,12 +50,11 @@ layout(set = 1, binding = 2) uniform sampler2D normalMap;
 //	vec4 parameter;
 //} material;
 
-
-
 const float PI = 3.1415926;
 
-vec3 WorldSpace();
 vec3 CameraSpace();
+
+// PBR
 vec3 RemapDiffuseColor(vec3 baseColor, float metallic);
 vec3 GetF0(float reflectance, float metallic, vec3 baseColor);
 float D_GGX(float VdotH, float roughness);
@@ -74,11 +74,14 @@ void main()
 vec3 CameraSpace()
 {
 	vec3 directColor  = vec3(0.0);
+
+	vec3 positionTS = fsIn.TBN * mat3(fsIn.viewMatrix) *  fsIn.positionWS;
+	vec3 viewTS = fsIn.TBN * -fsIn.viewMatrix[3].xyz;
+	vec3 viewDir = normalize(viewTS - positionTS);
 	
 	vec3 normal = texture(normalMap, fsIn.textureCoordinateLS).rgb;
 	normal = normalize(normal * 2.0 - 1.0);
 
-	vec3 viewDir = normalize(fsIn.TBN * (-fsIn.viewMatrix[3].xyz));
 	float NdotV = max(dot(normal, viewDir), 0.001);
 
 	vec3 baseColor = pow(texture(albedo, fsIn.textureCoordinateLS).rgb * material.baseColor, vec3(2.2));

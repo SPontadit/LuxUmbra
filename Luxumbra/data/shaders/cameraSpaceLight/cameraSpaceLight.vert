@@ -9,6 +9,7 @@ layout(location = 4) in vec3 inBitangent;
 
 layout(location = 0) out VsOut
 {
+	vec3 positionWS;
 	vec2 textureCoordinateLS;
 	mat4 viewMatrix;
 	mat3 TBN;
@@ -28,8 +29,10 @@ layout(push_constant) uniform Model
 
 void main() 
 {
-    gl_Position = vp.proj * vp.view * m.model * vec4(inPosition, 1.0);
+	vec4 fragPosition = m.model * vec4(inPosition, 1.0);
+    gl_Position = vp.proj * vp.view * fragPosition;
 
+	vsOut.positionWS = fragPosition.xyz;
 	vsOut.viewMatrix =  vp.view;
 	vsOut.textureCoordinateLS = inTextureCoordinate;
 

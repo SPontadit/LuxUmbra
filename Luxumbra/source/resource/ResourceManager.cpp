@@ -25,7 +25,7 @@ namespace lux::resource
 
 
 	ResourceManager::ResourceManager(rhi::RHI&  rhi) noexcept
-		: rhi(rhi), cubemap(nullptr), irradiance(nullptr), defaultAlbedo(nullptr)
+		: rhi(rhi), cubemap(nullptr), irradiance(nullptr), defaultWhite(nullptr)
 	{
 	}
 
@@ -41,7 +41,7 @@ namespace lux::resource
 		//BuildPrimitiveMeshes();
 		LoadPrimitiveMehes();
 
-		defaultAlbedo = LoadTexture("data/textures/DefaultAlbedo.jpg", true);
+		defaultWhite = LoadTexture("data/textures/DefaultWhite.jpg", true);
 		defaultNormalMap = LoadTexture("data/textures/DefaultNormalMap.jpg", true);
 	}
 
@@ -183,7 +183,7 @@ namespace lux::resource
 	std::shared_ptr<Material> ResourceManager::CreateMaterial(const std::string& name, MaterialCreateInfo materialCI) noexcept
 	{
 		if (materialCI.albedo == nullptr)
-			materialCI.albedo = defaultAlbedo;
+			materialCI.albedo = defaultWhite;
 
 		if (materialCI.normal == nullptr)
 			materialCI.normal = defaultNormalMap;
@@ -409,7 +409,7 @@ namespace lux::resource
 
 		textures.clear();
 
-		rhi.DestroyImage(defaultAlbedo->image);
+		rhi.DestroyImage(defaultWhite->image);
 		rhi.DestroyImage(defaultNormalMap->image);
 
 		if (cubemap != nullptr)
