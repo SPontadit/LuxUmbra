@@ -9,7 +9,7 @@ layout(location = 0) in FsIn
 	vec2 textureCoordinateLS;
 	vec3 normalWS;
 	mat4 viewMatrix;
-	mat3 TBN;
+	mat3 textureToViewMatrix;
 } fsIn;
 
 layout(location = 0) out vec4 outColor;
@@ -102,16 +102,14 @@ vec3 CameraSpace()
 
 
 
-	vec3 positionTS = fsIn.TBN * mat3(fsIn.viewMatrix) *  fsIn.positionWS;
-	vec3 viewTS = fsIn.TBN * -fsIn.viewMatrix[3].xyz;
-	vec3 viewDir = normalize(viewTS - positionTS);
-	
+	vec3 viewWS = -fsIn.viewMatrix[3].xyz;
+	vec3 viewDir = normalize(viewWS - fsIn.positionWS);
+	viewDir = mat3(fsIn.viewMatrix) * viewDir;
+
 	vec3 normal = texture(normalMap, fsIn.textureCoordinateLS).rgb;
 	normal = normalize(normal * 2.0 - 1.0);
-//	normal = mat3(fsIn.viewMatrix) * transpose(fsIn.TBN) * normal;
+	normal = fsIn.textureToViewMatrix * normal;
 
-	// Temporary hack ...
-	//normal =  getNormalFromMap();
 
 	float NdotV = max(dot(normal, viewDir), 0.001);
 
@@ -122,7 +120,7 @@ vec3 CameraSpace()
 
 	for(int i = 0; i < pushConsts.lightCount; ++i)
 	{
-		vec3 lightDir = normalize(fsIn.TBN * mat3(fsIn.viewMatrix) * -lightBuffer.lights[i].parameter.xyz);
+		vec3 lightDir = normalize(mat3(fsIn.viewMatrix) * -lightBuffer.lights[i].parameter.xyz);
 		vec3 h = normalize(viewDir + lightDir);
 	
 		float NdotH = max(dot(normal, h), 0.001);

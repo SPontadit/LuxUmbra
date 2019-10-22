@@ -13,7 +13,7 @@ layout(location = 0) out VsOut
 	vec2 textureCoordinateLS;
 	vec3 normalWS;
 	mat4 viewMatrix;
-	mat3 TBN;
+	mat3 textureToViewMatrix;
 } vsOut;
 
 
@@ -40,12 +40,12 @@ void main()
 	mat3 normalMatrix = transpose(inverse(mat3(m.model)));
 	vsOut.normalWS = normalMatrix * inNormal;
 
-	vec3 T = normalize(mat3(m.model) * inTangent);
-	vec3 B = normalize(mat3(m.model) * inBitangent);
-	vec3 N = normalize(mat3(m.model) * inNormal);
+	mat3 modelToView = mat3(vp.view) * mat3(m.model);
+
+	vec3 T = normalize(modelToView * inTangent);
+	vec3 B = normalize(modelToView * inBitangent);
+	vec3 N = normalize(modelToView * inNormal);
 
 
-	mat3 TBN = transpose(mat3(T, B, N));
-
-	vsOut.TBN = TBN;
+	vsOut.textureToViewMatrix = mat3(T, B, N);
 }
