@@ -48,7 +48,7 @@ namespace lux::scene
 		return lightNodes;
 	}
 
-	Node* Scene::AddNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition) noexcept
+	Node* Scene::AddNode(Node* parent, glm::vec3 position, glm::vec3 rotation, bool isWorldPosition) noexcept
 	{
 		Node* node;
 		
@@ -66,7 +66,7 @@ namespace lux::scene
 		return node;
 	}
 
-	CameraNode* Scene::AddCameraNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition, float fovy, float nearDist, float farDist, bool makeCurrentCamera) noexcept
+	CameraNode* Scene::AddCameraNode(Node* parent, glm::vec3 position, glm::vec3 rotation, bool isWorldPosition, float fovy, float nearDist, float farDist, bool makeCurrentCamera) noexcept
 	{
 		CameraNode* cameraNode;
 
@@ -87,7 +87,7 @@ namespace lux::scene
 		return cameraNode;
 	}
 
-	MeshNode* Scene::AddMeshNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition, const std::string& meshFileName, const std::string& materialName) noexcept
+	MeshNode* Scene::AddMeshNode(Node* parent, glm::vec3 position, glm::vec3 rotation, bool isWorldPosition, const std::string& meshFileName, const std::string& materialName) noexcept
 	{
 		MeshNode* meshNode;
 
@@ -108,7 +108,7 @@ namespace lux::scene
 		return meshNode;
 	}
 
-	MeshNode* Scene::AddMeshNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition, resource::MeshPrimitive meshPrimitive, const std::string& materialName) noexcept
+	MeshNode* Scene::AddMeshNode(Node* parent, glm::vec3 position, glm::vec3 rotation, bool isWorldPosition, resource::MeshPrimitive meshPrimitive, const std::string& materialName) noexcept
 	{
 		MeshNode* meshNode;
 		std::shared_ptr<resource::Material> material = resourceManager->GetMaterial(materialName);
@@ -128,7 +128,7 @@ namespace lux::scene
 		return meshNode;
 	}
 
-	LightNode* Scene::AddLightNode(Node* parent, glm::vec3 position, glm::quat rotation, bool isWorldPosition, LightType type, glm::vec3 color) noexcept
+	LightNode* Scene::AddLightNode(Node* parent, glm::vec3 position, glm::vec3 rotation, bool isWorldPosition, LightType type, glm::vec3 color) noexcept
 	{
 		LightNode* lightNode;
 

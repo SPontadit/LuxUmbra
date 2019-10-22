@@ -14,7 +14,7 @@ namespace lux::scene
 	public:
 		CameraNode() = delete;
 		CameraNode(Node* parent,  const Window* window, float fovy, float nearDist, float farDist) noexcept;
-		CameraNode(Node* parent, glm::vec3 position, glm::quat rotation, const Window* window, float fovy, float nearDist, float farDist) noexcept;
+		CameraNode(Node* parent, glm::vec3 position, glm::vec3 rotation, const Window* window, float fovy, float nearDist, float farDist) noexcept;
 		CameraNode(const CameraNode&) = delete;
 		CameraNode(CameraNode&&) = delete;
 

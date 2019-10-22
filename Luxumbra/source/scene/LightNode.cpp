@@ -12,7 +12,7 @@ namespace lux::scene
 
 	}
 
-	LightNode::LightNode(Node* parent, glm::vec3 position, glm::quat rotation, LightType type, glm::vec3 color) noexcept
+	LightNode::LightNode(Node* parent, glm::vec3 position, glm::vec3 rotation, LightType type, glm::vec3 color) noexcept
 		: Node(parent, position, rotation), type(type), color(color)
 	{
 

@@ -182,16 +182,13 @@ namespace lux
 		}
 
 		// Rotation
-		glm::quat rotation = node->GetLocalRotation();
-		glm::vec3 eulerRotation = glm::degrees(glm::eulerAngles(rotation));
+		glm::vec3 rotation = glm::degrees(node->GetLocalRotation());
 
-		ImGui::DragFloat3("Rot", glm::value_ptr(eulerRotation));
+		ImGui::DragFloat3("Rot", glm::value_ptr(rotation));
 
-		glm::quat newRotation = glm::quat(glm::radians(eulerRotation));
-
-		if (newRotation != rotation)
+		if (rotation != node->GetLocalRotation())
 		{
-			node->SetLocalRotation(newRotation);
+			node->SetLocalRotation(glm::radians(rotation));
 		}
 	}
 
