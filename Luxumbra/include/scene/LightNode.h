@@ -3,7 +3,10 @@
 
 #include "Luxumbra.h"
 
+#include <vector>
+
 #include "scene\Node.h"
+#include "scene\MeshNode.h"
 
 namespace lux::scene
 {
@@ -35,9 +38,38 @@ namespace lux::scene
 		void SetColor(glm::vec3 newColor) noexcept;
 		glm::vec3 GetColor() const noexcept;
 
+		glm::mat4 GetViewTransform() const noexcept;
+		glm::mat4 GetProjectionTransform() const noexcept;
+
+		void ComputeVolumeInfo(const std::vector<MeshNode*>& meshNodes) noexcept;
+
 	private:
 		LightType type;
 		glm::vec3 color;
+
+		union VolumeInfo
+		{
+			VolumeInfo(LightType type) noexcept;
+
+			struct Directional
+			{
+				Directional() noexcept;
+
+				glm::vec3 viewPos;
+				float left, right, top, bottom;
+				float nearDist, farDist;
+			} directional;
+
+			struct Point
+			{
+				Point() noexcept;
+
+				float radius, attenuation;
+			} point;
+
+		} volumeInfo;
+
+		void ComputeDirectionalVolumeInfo(const std::vector<MeshNode*>& meshNodes) noexcept;
 	};
 
 } // namespace lux::scene

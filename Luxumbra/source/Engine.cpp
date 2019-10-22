@@ -92,7 +92,7 @@ namespace lux
 		ImGui::Checkbox("Metallic", &metallic);
 		material.metallic = metallic;
 
-		if (material.metallic == false)
+		if (material.metallic == 0.f)
 		{
 			ImGui::SliderFloat("Reflectance", &material.reflectance, 0.0f, 1.0f, "%.3f");
 		}
