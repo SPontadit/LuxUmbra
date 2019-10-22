@@ -16,7 +16,8 @@ namespace lux::rhi
 		swapchainImageCount(0), swapchainImages(0), swapchainImageViews(0), msaaSamples(VK_SAMPLE_COUNT_1_BIT),
 		presentSemaphores(0), acquireSemaphores(0), fences(0),
 		imguiDescriptorPool(VK_NULL_HANDLE), materialDescriptorPool(VK_NULL_HANDLE), commandPool(VK_NULL_HANDLE), commandBuffers(0),
-		lightUniformBuffers(0), lightCountPushConstant(), forward(), frameCount(0), currentFrame(0), cube(nullptr)
+		lightUniformBuffers(0), lightCountPushConstant(), frameCount(0), currentFrame(0), cube(nullptr),
+		shadowMapper(), forward()
 #ifdef VULKAN_ENABLE_VALIDATION
 		, debugReportCallback(VK_NULL_HANDLE)
 #endif // VULKAN_ENABLE_VALIDATION
@@ -30,6 +31,8 @@ namespace lux::rhi
 
 		vkDestroyDescriptorPool(device, imguiDescriptorPool, nullptr);
 		ImGui_ImplVulkan_Shutdown();
+
+		DestroyShadowMapper();
 
 		DestroySwapchainRelatedResources();
 
@@ -60,7 +63,7 @@ namespace lux::rhi
 		InitSwapchain();
 
 		InitCommandBuffer();
-		
+
 		InitForwardRenderPass();
 
 		InitForwardFramebuffers();
@@ -76,6 +79,12 @@ namespace lux::rhi
 		BuildLightUniformBuffers(2);
 
 		InitForwardDescriptorSets();
+
+		InitShadowMapperRenderPass();
+
+		InitShadowMapperFramebuffer();
+
+		InitShadowMapperPipelines();
 
 		// End
 
@@ -293,6 +302,10 @@ namespace lux::rhi
 
 		vkGetDeviceQueue(device, graphicsQueueIndex, 0, &graphicsQueue);
 		vkGetDeviceQueue(device, presentQueueIndex, 0, &presentQueue);
+
+		std::vector<VkFormat> depthAttachmentFormats{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT };
+		depthImageFormat = FindSupportedImageFormat(depthAttachmentFormats, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+		ASSERT(depthImageFormat != VK_FORMAT_MAX_ENUM);
 	}
 
 	void RHI::InitSwapchain() noexcept

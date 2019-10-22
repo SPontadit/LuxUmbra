@@ -157,6 +157,7 @@
     <ClCompile Include="source\rhi\RHI_GraphicsPipeline.cpp" />
     <ClCompile Include="source\rhi\RHI.cpp" />
     <ClCompile Include="source\rhi\RHI_Image.cpp" />
+    <ClCompile Include="source\rhi\RHI_ShadowMapping.cpp" />
     <ClCompile Include="source\scene\CameraNode.cpp" />
     <ClCompile Include="source\scene\LightNode.cpp" />
     <ClCompile Include="source\scene\MeshNode.cpp" />
@@ -189,6 +190,8 @@
     <ClInclude Include="include\rhi\LuxVkImpl.h" />
     <ClInclude Include="include\rhi\GraphicsPipeline.h" />
     <ClInclude Include="include\rhi\RHI.h" />
+    <ClInclude Include="include\rhi\ShadowMappingPipeline.h" />
+    <ClInclude Include="include\rhi\ShadowMapper.h" />
     <ClInclude Include="include\scene\CameraNode.h" />
     <ClInclude Include="include\scene\LightNode.h" />
     <ClInclude Include="include\scene\MeshNode.h" />
@@ -205,6 +208,7 @@
     <None Include="data\shaders\blit\blit.vert" />
     <None Include="data\shaders\cameraSpaceLight\cameraSpaceLight.frag" />
     <None Include="data\shaders\cameraSpaceLight\cameraSpaceLight.vert" />
+    <None Include="data\shaders\CompileShaders.bat" />
     <None Include="data\shaders\directLighting\directLighting.frag" />
     <None Include="data\shaders\directLighting\directLighting.vert" />
     <None Include="data\shaders\envMap\envMap.frag" />
@@ -215,6 +219,7 @@
     <None Include="data\shaders\generateIrradianceMap\generateIrradianceMap.vert" />
     <None Include="data\shaders\mesh\mesh.frag" />
     <None Include="data\shaders\mesh\mesh.vert" />
+    <None Include="data\shaders\shadowMapping\directionalShadowMapping.vert" />
     <None Include="data\shaders\texture\triangle.frag" />
     <None Include="data\shaders\texture\triangle.vert" />
     <None Include="include\Logger.inl" />

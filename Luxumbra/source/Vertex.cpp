@@ -13,6 +13,18 @@ namespace lux
 		return bindingDescription;
 	}
 
+	VkVertexInputAttributeDescription Vertex::GetPositionOnlyAttributeDescription() noexcept
+	{
+		VkVertexInputAttributeDescription attributeDescription = {};
+
+		attributeDescription.binding = 0;
+		attributeDescription.location = 0;
+		attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescription.offset = offsetof(Vertex, position);
+
+		return attributeDescription;
+	}
+
 	std::array<VkVertexInputAttributeDescription, 3> Vertex::GetBasicAttributeDescriptions() noexcept
 	{
 		std::array<VkVertexInputAttributeDescription, 3> attributeDescription = {};

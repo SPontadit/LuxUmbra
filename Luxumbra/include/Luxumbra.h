@@ -8,6 +8,7 @@
 #define PI 3.14159265359f
 
 #define IRRADIANCE_TEXTURE_SIZE 128
+#define SHADOW_MAP_TEXTURE_SIZE 2048
 
 #define TO_SIZE_T(x) static_cast<size_t>(x)
 #define TO_UINT32_T(x) static_cast<uint32_t>(x)

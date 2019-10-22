@@ -9,6 +9,7 @@
 #include "Window.h"
 #include "rhi\GraphicsPipeline.h"
 #include "rhi\ForwardRenderer.h"
+#include "rhi\ShadowMapper.h"
 #include "rhi\Image.h"
 #include "rhi\Buffer.h"
 #include "resource\Mesh.h"
@@ -92,6 +93,8 @@ namespace lux::rhi
 
 		VkSampleCountFlagBits msaaSamples;
 
+		VkFormat depthImageFormat;
+
 		VkFormat swapchainImageFormat;
 		VkExtent2D swapchainExtent;
 		VkImageSubresourceRange swapchainImageSubresourceRange;
@@ -119,9 +122,12 @@ namespace lux::rhi
 		uint32_t frameCount;
 		uint32_t currentFrame;
 
+		ShadowMapper shadowMapper;
+
 		void InitInstanceAndDevice(const Window& window) noexcept;
 		void InitSwapchain() noexcept;
 		void InitCommandBuffer() noexcept;
+
 		void InitForwardRenderPass() noexcept;
 		void InitForwardFramebuffers() noexcept;
 		void InitForwardGraphicsPipelines() noexcept;
@@ -129,14 +135,20 @@ namespace lux::rhi
 		void InitForwardDescriptorPool() noexcept;
 		void InitForwardDescriptorSets() noexcept;
 		void InitForwardUniformBuffers() noexcept;
+
+		void InitShadowMapperRenderPass() noexcept;
+		void InitShadowMapperFramebuffer() noexcept;
+		void InitShadowMapperPipelines() noexcept;
+
 		void BuildLightUniformBuffers(size_t lightCount) noexcept;
 
 		void GenerateCubemap(const CubeMapCreateInfo& luxCubemapCI, const Image& source, Image& image) noexcept;
 
 		void UpdateForwardUniformBuffers(const scene::CameraNode* camera, const std::vector<resource::Material*>& materials, const std::vector<scene::LightNode*>& lights) noexcept;
 
-		void DestroyForwardRenderer() noexcept;
 		void DestroySwapchainRelatedResources() noexcept;
+		void DestroyShadowMapper() noexcept;
+		void DestroyForwardRenderer() noexcept;
 		void DestroyForwardGraphicsPipeline() noexcept;
 
 		void InitImgui() noexcept;

@@ -44,11 +44,7 @@ namespace lux::rhi
 		rtColorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 		VkAttachmentDescription rtDepthAttachment = {};
-
-		std::vector<VkFormat> depthAttachmentFormats{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT };
-		rtDepthAttachment.format = FindSupportedImageFormat(depthAttachmentFormats, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
-		ASSERT(rtDepthAttachment.format != VK_FORMAT_MAX_ENUM);
-
+		rtDepthAttachment.format = depthImageFormat;
 		rtDepthAttachment.samples = msaaSamples;
 		rtDepthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		rtDepthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -194,10 +190,6 @@ namespace lux::rhi
 		}
 
 		// Depth attachment
-
-		std::vector<VkFormat> depthAttachmentFormats{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT };
-		VkFormat depthImageFormat = FindSupportedImageFormat(depthAttachmentFormats, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
-		ASSERT(depthImageFormat != VK_FORMAT_MAX_ENUM);
 
 		VkImageCreateInfo rtDepthAttachmentImageCI = {};
 		rtDepthAttachmentImageCI.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;

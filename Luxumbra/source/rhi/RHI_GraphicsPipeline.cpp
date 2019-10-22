@@ -9,6 +9,8 @@
 namespace lux::rhi
 {
 
+	using namespace lux;
+
 	GraphicsPipeline::GraphicsPipeline() noexcept
 		: pipeline(VK_NULL_HANDLE), pipelineLayout(VK_NULL_HANDLE), 
 		viewDescriptorSetLayout(VK_NULL_HANDLE), materialDescriptorSetLayout(VK_NULL_HANDLE), modelDescriptorSetLayout(VK_NULL_HANDLE)
@@ -18,39 +20,64 @@ namespace lux::rhi
 
 	void RHI::CreateGraphicsPipeline(const GraphicsPipelineCreateInfo& luxGraphicsPipelineCI, GraphicsPipeline& graphicsPipeline) noexcept
 	{
-		VkShaderModule vertexShaderModule;
-		VkShaderModule fragmentShaderModule;
+		VkShaderModule vertexShaderModule = VK_NULL_HANDLE;
+		VkShaderModule fragmentShaderModule = VK_NULL_HANDLE;
 
-		CreateShaderModule(luxGraphicsPipelineCI.binaryVertexFilePath, &vertexShaderModule);
-		CreateShaderModule(luxGraphicsPipelineCI.binaryFragmentFilePath, &fragmentShaderModule);
+		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 
-		VkPipelineShaderStageCreateInfo vertexStageCI = {};
-		vertexStageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		vertexStageCI.stage = VK_SHADER_STAGE_VERTEX_BIT;
-		vertexStageCI.module = vertexShaderModule;
-		vertexStageCI.pName = "main";
+		bool useVertexShaderStage = !luxGraphicsPipelineCI.binaryVertexFilePath.empty();
+		bool useFragmentShaderStage = !luxGraphicsPipelineCI.binaryFragmentFilePath.empty();
 
-		VkPipelineShaderStageCreateInfo fragmentStageCI = {};
-		fragmentStageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		fragmentStageCI.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-		fragmentStageCI.module = fragmentShaderModule;
-		fragmentStageCI.pName = "main";
+		if (useVertexShaderStage)
+		{
+			CreateShaderModule(luxGraphicsPipelineCI.binaryVertexFilePath, &vertexShaderModule);
 
-		std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages = { vertexStageCI, fragmentStageCI };
+			VkPipelineShaderStageCreateInfo vertexStageCI = {};
+			vertexStageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+			vertexStageCI.stage = VK_SHADER_STAGE_VERTEX_BIT;
+			vertexStageCI.module = vertexShaderModule;
+			vertexStageCI.pName = "main";
+
+			shaderStages.emplace_back(vertexStageCI);
+		}
+
+		if (useFragmentShaderStage)
+		{
+			CreateShaderModule(luxGraphicsPipelineCI.binaryFragmentFilePath, &fragmentShaderModule);
+
+			VkPipelineShaderStageCreateInfo fragmentStageCI = {};
+			fragmentStageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+			fragmentStageCI.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+			fragmentStageCI.module = fragmentShaderModule;
+			fragmentStageCI.pName = "main";
+
+			shaderStages.emplace_back(fragmentStageCI);
+		}
 
 		VkPipelineVertexInputStateCreateInfo vertexInputStateCI = {};
 		vertexInputStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
 		switch (luxGraphicsPipelineCI.vertexLayout)
 		{
-		case lux::VertexLayout::NO_VERTEX_LAYOUT:
+		case VertexLayout::NO_VERTEX_LAYOUT:
 			vertexInputStateCI.vertexBindingDescriptionCount = 0;
 			vertexInputStateCI.pVertexBindingDescriptions = nullptr;
 			vertexInputStateCI.vertexAttributeDescriptionCount = 0;
 			vertexInputStateCI.pVertexAttributeDescriptions = nullptr;
 			break;
 
-		case lux::VertexLayout::VERTEX_BASIC_LAYOUT:
+		case VertexLayout::VERTEX_POSITION_ONLY_LAYOUT:
+		{
+			VkVertexInputBindingDescription bindingDescription = Vertex::GetBindingDescription();
+			VkVertexInputAttributeDescription attributeDescription = Vertex::GetPositionOnlyAttributeDescription();
+
+			vertexInputStateCI.vertexBindingDescriptionCount = 1;
+			vertexInputStateCI.pVertexBindingDescriptions = &bindingDescription;
+			vertexInputStateCI.vertexAttributeDescriptionCount = 1;
+			vertexInputStateCI.pVertexAttributeDescriptions = &attributeDescription;
+		}
+
+		case VertexLayout::VERTEX_BASIC_LAYOUT:
 		{
 			VkVertexInputBindingDescription bindingDescription = Vertex::GetBindingDescription();
 			std::array<VkVertexInputAttributeDescription, 3> attributesDescription = Vertex::GetBasicAttributeDescriptions();
@@ -62,7 +89,8 @@ namespace lux::rhi
 			break;
 		}
 
-		case lux::VertexLayout::VERTEX_FULL_LAYOUT:
+		case VertexLayout::VERTEX_FULL_LAYOUT:
+		{
 			VkVertexInputBindingDescription bindingDescription = Vertex::GetBindingDescription();
 			std::array<VkVertexInputAttributeDescription, 5> attributesDescription = Vertex::GetFullAttributeDescriptions();
 
@@ -71,6 +99,8 @@ namespace lux::rhi
 			vertexInputStateCI.vertexAttributeDescriptionCount = TO_UINT32_T(attributesDescription.size());
 			vertexInputStateCI.pVertexAttributeDescriptions = attributesDescription.data();
 			break;
+		}
+
 		default:
 			break;
 		}
@@ -221,13 +251,15 @@ namespace lux::rhi
 
 		CHECK_VK(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineCI, nullptr, &graphicsPipeline.pipeline));
 	
-		vkDestroyShaderModule(device, vertexShaderModule, nullptr);
-		vkDestroyShaderModule(device, fragmentShaderModule, nullptr);
+		if (useVertexShaderStage)
+			vkDestroyShaderModule(device, vertexShaderModule, nullptr);
+		if (useFragmentShaderStage)
+			vkDestroyShaderModule(device, fragmentShaderModule, nullptr);
 	}
 
 	void RHI::CreateShaderModule(const std::string& binaryFilePath, VkShaderModule* shaderModule) const noexcept
 	{
-		std::vector<char> shaderCode = lux::utility::ReadFile(binaryFilePath);
+		std::vector<char> shaderCode = utility::ReadFile(binaryFilePath);
 
 		VkShaderModuleCreateInfo shaderModuleCI = {};
 		shaderModuleCI.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
