@@ -87,42 +87,7 @@ namespace lux
 		DisplayLightNodes(scene.GetLightNodes());
 		ImGui::NewLine();
 
-
-		if (ImGui::TreeNodeEx("Materials", ImGuiTreeNodeFlags_DefaultOpen))
-		{
-			std::set<std::string> materialNames;
-			const std::vector<scene::MeshNode*>& meshNodes = scene.GetMeshNodes();
-			for (size_t i = 0; i < meshNodes.size(); i++)
-			{
-				resource::Material* currentMaterial = &meshNodes[i]->GetMaterial();
-				std::set<std::string>::iterator mat = materialNames.find(currentMaterial->name);
-
-				if (mat == materialNames.end())
-				{
-					materialNames.insert(currentMaterial->name);
-
-					if (ImGui::TreeNode(currentMaterial->name.c_str()))
-					{
-						resource::MaterialParameters& matParameters = currentMaterial->parameter;
-
-						ImGui::ColorEdit3("Base Color", glm::value_ptr(matParameters.baseColor));
-						bool metallic = (bool)matParameters.metallic;
-						ImGui::Checkbox("Metallic", &metallic);
-						matParameters.metallic = metallic;
-
-						if (matParameters.metallic == false)
-						{
-							ImGui::SliderFloat("Reflectance", &matParameters.reflectance, 0.0f, 1.0f, "%.3f");
-						}
-
-						ImGui::SliderFloat("Roughness", &matParameters.perceptualRoughness, 0.0f, 1.0f, "%.3f");
-
-						ImGui::TreePop();
-					}
-				}
-			}
-			ImGui::TreePop();
-		}
+		DisplayMaterials();
 
 		ImGui::End();
 
@@ -200,6 +165,45 @@ namespace lux
 				}
 			}
 		
+			ImGui::TreePop();
+		}
+	}
+
+	void Engine::DisplayMaterials() noexcept
+	{
+		if (ImGui::TreeNodeEx("Materials", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			std::set<std::string> materialNames;
+			const std::vector<scene::MeshNode*>& meshNodes = scene.GetMeshNodes();
+			for (size_t i = 0; i < meshNodes.size(); i++)
+			{
+				resource::Material* currentMaterial = &meshNodes[i]->GetMaterial();
+				std::set<std::string>::iterator mat = materialNames.find(currentMaterial->name);
+
+				if (mat == materialNames.end())
+				{
+					materialNames.insert(currentMaterial->name);
+
+					if (ImGui::TreeNode(currentMaterial->name.c_str()))
+					{
+						resource::MaterialParameters& matParameters = currentMaterial->parameter;
+
+						ImGui::ColorEdit3("Base Color", glm::value_ptr(matParameters.baseColor));
+						bool metallic = (bool)matParameters.metallic;
+						ImGui::Checkbox("Metallic", &metallic);
+						matParameters.metallic = metallic;
+
+						if (matParameters.metallic == false)
+						{
+							ImGui::SliderFloat("Reflectance", &matParameters.reflectance, 0.0f, 1.0f, "%.3f");
+						}
+
+						ImGui::SliderFloat("Roughness", &matParameters.perceptualRoughness, 0.0f, 1.0f, "%.3f");
+
+						ImGui::TreePop();
+					}
+				}
+			}
 			ImGui::TreePop();
 		}
 	}
