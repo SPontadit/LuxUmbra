@@ -50,7 +50,7 @@ namespace lux::rhi
 		const RHI& operator=(RHI&&) = delete;
 
 		bool Initialize(const Window& window) noexcept;
-		void RenderForward(const scene::CameraNode* camera, const std::vector<scene::MeshNode*> meshes, const std::vector<scene::LightNode*>& lights) noexcept;
+		void Render(const scene::CameraNode* camera, scene::LightNode* shadowCastingDirectional, const std::vector<scene::MeshNode*> meshes, const std::vector<scene::LightNode*>& lights) noexcept;
 
 		void WaitIdle() noexcept;
 
@@ -139,6 +139,12 @@ namespace lux::rhi
 		void InitShadowMapperRenderPass() noexcept;
 		void InitShadowMapperFramebuffer() noexcept;
 		void InitShadowMapperPipelines() noexcept;
+		void InitShadowMapperViewProjUniformBuffer() noexcept;
+		void InitShadowMapperDescriptorPool() noexcept;
+		void InitShadowMapperDescriptorSets() noexcept;
+
+		void RenderShadowMaps(VkCommandBuffer commandBuffer, int imageIndex, scene::LightNode* shadowCastingDirectional, const std::vector<scene::MeshNode*>& meshes) noexcept;
+		void RenderForward(VkCommandBuffer commandBuffer, int imageIndex, const scene::CameraNode* camera, const std::vector<scene::MeshNode*> meshes, const std::vector<scene::LightNode*>& lights) noexcept;
 
 		void BuildLightUniformBuffers(size_t lightCount) noexcept;
 

@@ -75,6 +75,7 @@ namespace lux::rhi
 			vertexInputStateCI.pVertexBindingDescriptions = &bindingDescription;
 			vertexInputStateCI.vertexAttributeDescriptionCount = 1;
 			vertexInputStateCI.pVertexAttributeDescriptions = &attributeDescription;
+			break;
 		}
 
 		case VertexLayout::VERTEX_BASIC_LAYOUT:

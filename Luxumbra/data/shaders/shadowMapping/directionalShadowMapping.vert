@@ -5,8 +5,8 @@ layout(location = 0) in vec3 inPosition;
 
 layout(set = 0, binding = 0) uniform ViewProj
 {
-	mat4 proj;
 	mat4 view;
+	mat4 proj;
 } vp;
 
 layout(push_constant) uniform Model

@@ -64,6 +64,8 @@ namespace lux::rhi
 
 		InitCommandBuffer();
 
+		// Forward renderer
+
 		InitForwardRenderPass();
 
 		InitForwardFramebuffers();
@@ -80,11 +82,19 @@ namespace lux::rhi
 
 		InitForwardDescriptorSets();
 
+		// Shadow mapper
+
 		InitShadowMapperRenderPass();
 
 		InitShadowMapperFramebuffer();
 
 		InitShadowMapperPipelines();
+
+		InitShadowMapperViewProjUniformBuffer();
+
+		InitShadowMapperDescriptorPool();
+
+		InitShadowMapperDescriptorSets();
 
 		// End
 
@@ -476,6 +486,69 @@ namespace lux::rhi
 
 		commandBuffers.resize(TO_SIZE_T(swapchainImageCount));
 		CHECK_VK(vkAllocateCommandBuffers(device, &commandBufferAI, commandBuffers.data()));
+	}
+
+	void RHI::Render(const scene::CameraNode* camera, scene::LightNode* shadowCastingDirectional, const std::vector<scene::MeshNode*> meshes, const std::vector<scene::LightNode*>& lights) noexcept
+	{
+		// Acquire next image
+		VkFence* fence = &fences[currentFrame];
+		VkCommandBuffer commandBuffer = commandBuffers[currentFrame];
+
+		vkWaitForFences(device, 1, fence, false, UINT64_MAX);
+		vkResetFences(device, 1, fence);
+		vkResetCommandBuffer(commandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+
+		VkSemaphore* acquireSemaphore = &acquireSemaphores[currentFrame];
+		VkSemaphore* presentSemaphore = &presentSemaphores[currentFrame];
+
+		uint32_t imageIndex;
+		uint64_t timeout = UINT64_MAX;
+
+		CHECK_VK(vkAcquireNextImageKHR(device, swapchain, timeout, *acquireSemaphore, VK_NULL_HANDLE, &imageIndex));
+
+
+		// Begin Command Buffer
+		VkCommandBufferBeginInfo commandBufferBI = {};
+		commandBufferBI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		commandBufferBI.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+		CHECK_VK(vkBeginCommandBuffer(commandBuffer, &commandBufferBI));
+
+		RenderShadowMaps(commandBuffer, imageIndex, shadowCastingDirectional, meshes);
+
+		RenderForward(commandBuffer, imageIndex, camera, meshes, lights);
+
+		CHECK_VK(vkEndCommandBuffer(commandBuffer));
+
+		// Submit Command Buffer
+		VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+		VkSubmitInfo submitInfo = {};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &commandBuffer;
+		submitInfo.pWaitDstStageMask = &stageMask;
+		submitInfo.waitSemaphoreCount = 1;
+		submitInfo.pWaitSemaphores = acquireSemaphore;
+		submitInfo.signalSemaphoreCount = 1;
+		submitInfo.pSignalSemaphores = presentSemaphore;
+
+		CHECK_VK(vkQueueSubmit(presentQueue, 1, &submitInfo, *fence));
+
+
+		// Present
+		VkPresentInfoKHR presentInfo = {};
+		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		presentInfo.waitSemaphoreCount = 1;
+		presentInfo.pWaitSemaphores = presentSemaphore;
+		presentInfo.swapchainCount = 1;
+		presentInfo.pSwapchains = &swapchain;
+		presentInfo.pImageIndices = &imageIndex;
+
+		CHECK_VK(vkQueuePresentKHR(graphicsQueue, &presentInfo));
+
+		frameCount++;
+		currentFrame = frameCount % swapchainImageCount;
 	}
 
 	void RHI::InitImgui() noexcept

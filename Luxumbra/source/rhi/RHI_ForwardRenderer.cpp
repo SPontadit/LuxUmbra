@@ -664,32 +664,9 @@ namespace lux::rhi
 	}
 
 	// TODO: Ref sur le vecteur de meshes ?
-	void RHI::RenderForward(const scene::CameraNode* camera, const std::vector<scene::MeshNode*> meshes, const std::vector<scene::LightNode*>& lights) noexcept
+	void RHI::RenderForward(VkCommandBuffer commandBuffer, int imageIndex, const scene::CameraNode* camera, const std::vector<scene::MeshNode*> meshes, const std::vector<scene::LightNode*>& lights) noexcept
 	{
-		// Acquire next image
-		VkFence* fence = &fences[currentFrame];
-		VkCommandBuffer commandBuffer = commandBuffers[currentFrame];
-
-		vkWaitForFences(device, 1, fence, false, UINT64_MAX);
-		vkResetFences(device, 1, fence);
-		vkResetCommandBuffer(commandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
-
-		VkSemaphore* acquireSemaphore = &acquireSemaphores[currentFrame];
-		VkSemaphore* presentSemaphore = &presentSemaphores[currentFrame];
-
-		uint32_t imageIndex;
-		uint64_t timeout = UINT64_MAX;
-
-		CHECK_VK(vkAcquireNextImageKHR(device, swapchain, timeout, *acquireSemaphore, VK_NULL_HANDLE, &imageIndex));
-
-
-		// Begin Command Buffer
-		VkCommandBufferBeginInfo commandBufferBI = {};
-		commandBufferBI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		commandBufferBI.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-		CHECK_VK(vkBeginCommandBuffer(commandBuffer, &commandBufferBI));
-
+		VkDeviceSize vertexBufferOffsets[] = { 0 };
 
 		VkClearColorValue clearColor{ 0.5f, 0.5703125f, 0.6171875f, 1.0F };
 
@@ -737,9 +714,6 @@ namespace lux::rhi
 
 		vkCmdPushConstants(commandBuffer, forward.rtGraphicsPipeline.pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(RtModelConstant), sizeof(LightCountPushConstant), &lightCountPushConstant);
 
-		VkDeviceSize offset[] = { 0 };
-
-
 		sortedMeshNodesConstIterator it = sortedMeshNodes.cbegin();
 		sortedMeshNodesConstIterator itE = sortedMeshNodes.cend();
 		
@@ -760,7 +734,7 @@ namespace lux::rhi
 				vkCmdPushConstants(commandBuffer, forward.rtGraphicsPipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(RtModelConstant), &forward.modelConstant);
 
 				const resource::Mesh& currentMesh = (*itMesh)->GetMesh();
-				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &currentMesh.vertexBuffer.buffer, offset);
+				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &currentMesh.vertexBuffer.buffer, vertexBufferOffsets);
 				vkCmdBindIndexBuffer(commandBuffer, currentMesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 				vkCmdDrawIndexed(commandBuffer, currentMesh.indexCount, 1, 0, 0, 0);
 			}
@@ -770,7 +744,7 @@ namespace lux::rhi
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.envMapGraphicsPipeline.pipeline);
 		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.envMapGraphicsPipeline.pipelineLayout, 0, 1, &forward.envMapViewDescriptorSets[currentFrame], 0, nullptr);
 
-		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &cube->vertexBuffer.buffer, offset);
+		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &cube->vertexBuffer.buffer, vertexBufferOffsets);
 		vkCmdBindIndexBuffer(commandBuffer, cube->indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 
 		vkCmdDrawIndexed(commandBuffer, cube->indexCount, 1, 0, 0, 0);
@@ -785,38 +759,6 @@ namespace lux::rhi
 		vkCmdDraw(commandBuffer, 4, 1, 0, 0);
 
 		vkCmdEndRenderPass(commandBuffer);
-
-		CHECK_VK(vkEndCommandBuffer(commandBuffer));
-
-		// Submit Command Buffer
-		VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-		VkSubmitInfo submitInfo = {};
-		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &commandBuffer;
-		submitInfo.pWaitDstStageMask = &stageMask;
-		submitInfo.waitSemaphoreCount = 1;
-		submitInfo.pWaitSemaphores = acquireSemaphore;
-		submitInfo.signalSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = presentSemaphore;
-
-		CHECK_VK(vkQueueSubmit(presentQueue, 1, &submitInfo, *fence));
-
-
-		// Present
-		VkPresentInfoKHR presentInfo = {};
-		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-		presentInfo.waitSemaphoreCount = 1;
-		presentInfo.pWaitSemaphores = presentSemaphore;
-		presentInfo.swapchainCount = 1;
-		presentInfo.pSwapchains = &swapchain;
-		presentInfo.pImageIndices = &imageIndex;
-
-		CHECK_VK(vkQueuePresentKHR(graphicsQueue, &presentInfo));
-
-		frameCount++;
-		currentFrame = frameCount % swapchainImageCount;
 	}
 
 	void RHI::RebuildForwardGraphicsPipeline() noexcept

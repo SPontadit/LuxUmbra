@@ -27,7 +27,7 @@ int main(int ac, char* av[])
 	resourceManager.CreateMaterial("Texture", defaultMaterialCI);
 
 
-	scene.AddCameraNode(nullptr, { 2.5f, 5.f, 20.f }, glm::identity<glm::quat>(), false, 45.f, 0.01f, 1000.f, true);
+	scene.AddCameraNode(nullptr, { 2.5f, 5.f, 20.f }, glm::identity<glm::quat>(), false, 45.f, 1.f, 30.f, true);
 
 	for (size_t i = 0; i < 5; i++)
 	{

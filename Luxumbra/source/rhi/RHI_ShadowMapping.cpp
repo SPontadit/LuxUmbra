@@ -1,0 +1,233 @@
+#include "rhi\RHI.h"
+
+#include "glm\glm.hpp"
+
+namespace lux::rhi
+{
+
+	using namespace lux;
+
+	ShadowMapper::ShadowMapper() noexcept
+		: renderPass(VK_NULL_HANDLE),
+		shadowMap(), framebuffer(VK_NULL_HANDLE),
+		directionalShadowMappingPipeline(),
+		viewProjUniformBuffer(),
+		descriptorPool(VK_NULL_HANDLE), viewProjUniformBufferDescriptorSet(VK_NULL_HANDLE)
+	{
+
+	}
+
+	void RHI::InitShadowMapperRenderPass() noexcept
+	{
+		VkAttachmentDescription depthAttachment = {};
+		depthAttachment.format = depthImageFormat;
+		depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+
+		VkAttachmentReference depthAttachmentRef = {};
+		depthAttachmentRef.attachment = 0;
+		depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+		VkSubpassDescription subpass = {};
+		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+		subpass.pDepthStencilAttachment = &depthAttachmentRef;
+
+		VkRenderPassCreateInfo renderPassCI = {};
+		renderPassCI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+		renderPassCI.attachmentCount = 1;
+		renderPassCI.pAttachments = &depthAttachment;
+		renderPassCI.subpassCount = 1;
+		renderPassCI.pSubpasses = &subpass;
+
+		CHECK_VK(vkCreateRenderPass(device, &renderPassCI, nullptr, &shadowMapper.renderPass));
+	}
+
+	void RHI::InitShadowMapperFramebuffer() noexcept
+	{
+		ImageCreateInfo imageCI = {};
+		imageCI.format = depthImageFormat;
+		imageCI.width = SHADOW_MAP_TEXTURE_SIZE;
+		imageCI.height = SHADOW_MAP_TEXTURE_SIZE;
+		imageCI.arrayLayers = 1;
+		imageCI.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		imageCI.subresourceRangeLayerCount = 1;
+		imageCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+		imageCI.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
+
+		CreateImage(imageCI, shadowMapper.shadowMap);
+
+		CommandTransitionImageLayout(shadowMapper.shadowMap.image, depthImageFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+
+		VkFramebufferCreateInfo framebufferCI = {};
+		framebufferCI.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferCI.renderPass = shadowMapper.renderPass;
+		framebufferCI.width = SHADOW_MAP_TEXTURE_SIZE;
+		framebufferCI.height = SHADOW_MAP_TEXTURE_SIZE;
+		framebufferCI.layers = 1;
+		framebufferCI.attachmentCount = 1;
+		framebufferCI.pAttachments = &shadowMapper.shadowMap.imageView;
+
+		CHECK_VK(vkCreateFramebuffer(device, &framebufferCI, nullptr, &shadowMapper.framebuffer));
+	}
+
+	void RHI::InitShadowMapperPipelines() noexcept
+	{
+		VkDescriptorSetLayoutBinding viewProjUniformBufferDescriptorSetLayoutBinding = {};
+		viewProjUniformBufferDescriptorSetLayoutBinding.binding = 0;
+		viewProjUniformBufferDescriptorSetLayoutBinding.descriptorCount = 1;
+		viewProjUniformBufferDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		viewProjUniformBufferDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+		VkPushConstantRange modelPushConstantRange = {};
+		modelPushConstantRange.offset = 0;
+		modelPushConstantRange.size = sizeof(ShadowMappingModelConstant);
+		modelPushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+		GraphicsPipelineCreateInfo directionalShadowMappingPipelineCI = {};
+		directionalShadowMappingPipelineCI.renderPass = shadowMapper.renderPass;
+		directionalShadowMappingPipelineCI.subpassIndex = 0;
+		directionalShadowMappingPipelineCI.binaryVertexFilePath = "data/shaders/shadowMapping/directionalShadowMapping.vert.spv";
+		directionalShadowMappingPipelineCI.vertexLayout = VertexLayout::VERTEX_POSITION_ONLY_LAYOUT;
+		directionalShadowMappingPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		directionalShadowMappingPipelineCI.viewportWidth = TO_FLOAT(SHADOW_MAP_TEXTURE_SIZE);
+		directionalShadowMappingPipelineCI.viewportHeight = TO_FLOAT(SHADOW_MAP_TEXTURE_SIZE);
+		directionalShadowMappingPipelineCI.rasterizerCullMode = VK_CULL_MODE_BACK_BIT;
+		directionalShadowMappingPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+		directionalShadowMappingPipelineCI.disableMSAA = VK_TRUE;
+		directionalShadowMappingPipelineCI.enableDepthTest = VK_TRUE;
+		directionalShadowMappingPipelineCI.enableDepthWrite = VK_TRUE;
+		directionalShadowMappingPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS;
+		directionalShadowMappingPipelineCI.viewDescriptorSetLayoutBindings = { viewProjUniformBufferDescriptorSetLayoutBinding };
+		directionalShadowMappingPipelineCI.pushConstants = { modelPushConstantRange };
+
+		CreateGraphicsPipeline(directionalShadowMappingPipelineCI, shadowMapper.directionalShadowMappingPipeline);
+	}
+
+	void RHI::InitShadowMapperViewProjUniformBuffer() noexcept
+	{
+		BufferCreateInfo bufferCI = {};
+		bufferCI.usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+		bufferCI.size = static_cast<VkDeviceSize>(sizeof(ShadowMappingViewProjUniform));
+		bufferCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		bufferCI.memoryProperty = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+		CreateBuffer(bufferCI, shadowMapper.viewProjUniformBuffer);
+	}
+
+	void RHI::InitShadowMapperDescriptorPool() noexcept
+	{
+		VkDescriptorPoolSize shadowMappingViewProjUBODescriptorPoolSize = {};
+		shadowMappingViewProjUBODescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		shadowMappingViewProjUBODescriptorPoolSize.descriptorCount = LIGHT_MAX_COUNT;
+
+		VkDescriptorPoolCreateInfo descriptorPoolCI = {};
+		descriptorPoolCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		descriptorPoolCI.poolSizeCount = 1;
+		descriptorPoolCI.pPoolSizes = &shadowMappingViewProjUBODescriptorPoolSize;
+		descriptorPoolCI.maxSets = LIGHT_MAX_COUNT;
+
+		CHECK_VK(vkCreateDescriptorPool(device, &descriptorPoolCI, nullptr, &shadowMapper.descriptorPool));
+	}
+
+	void RHI::InitShadowMapperDescriptorSets() noexcept
+	{
+		VkDescriptorSetAllocateInfo descriptorSetAI = {};
+		descriptorSetAI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		descriptorSetAI.descriptorPool = shadowMapper.descriptorPool;
+		descriptorSetAI.descriptorSetCount = 1;
+		descriptorSetAI.pSetLayouts = &shadowMapper.directionalShadowMappingPipeline.viewDescriptorSetLayout;
+
+		CHECK_VK(vkAllocateDescriptorSets(device, &descriptorSetAI, &shadowMapper.viewProjUniformBufferDescriptorSet));
+
+		VkDescriptorBufferInfo viewProjDescriptorBufferInfo = {};
+		viewProjDescriptorBufferInfo.offset = 0;
+		viewProjDescriptorBufferInfo.range = sizeof(ShadowMappingViewProjUniform);
+		viewProjDescriptorBufferInfo.buffer = shadowMapper.viewProjUniformBuffer.buffer;
+
+		VkWriteDescriptorSet writeViewProjUniformBufferDescriptorSet = {};
+		writeViewProjUniformBufferDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeViewProjUniformBufferDescriptorSet.descriptorCount = 1;
+		writeViewProjUniformBufferDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		writeViewProjUniformBufferDescriptorSet.dstBinding = 0;
+		writeViewProjUniformBufferDescriptorSet.dstArrayElement = 0;
+		writeViewProjUniformBufferDescriptorSet.pBufferInfo = &viewProjDescriptorBufferInfo;
+		writeViewProjUniformBufferDescriptorSet.dstSet = shadowMapper.viewProjUniformBufferDescriptorSet;
+
+		vkUpdateDescriptorSets(device, 1, &writeViewProjUniformBufferDescriptorSet, 0, nullptr);
+	}
+
+	void RHI::DestroyShadowMapper() noexcept
+	{
+		vkFreeDescriptorSets(device, shadowMapper.descriptorPool, 1, &shadowMapper.viewProjUniformBufferDescriptorSet);
+
+		vkDestroyDescriptorPool(device, shadowMapper.descriptorPool, nullptr);
+
+		DestroyBuffer(shadowMapper.viewProjUniformBuffer);
+
+		DestroyGraphicsPipeline(shadowMapper.directionalShadowMappingPipeline);
+
+		vkDestroyFramebuffer(device, shadowMapper.framebuffer, nullptr);
+		DestroyImage(shadowMapper.shadowMap);
+
+		vkDestroyRenderPass(device, shadowMapper.renderPass, nullptr);
+	}
+
+	void RHI::RenderShadowMaps(VkCommandBuffer commandBuffer, int imageIndex, scene::LightNode* shadowCastingDirectional, const std::vector<scene::MeshNode*>& meshes) noexcept
+	{
+		VkDeviceSize vertexBufferOffsets[] = { 0 };
+
+		// Shadow mapping
+
+		shadowCastingDirectional->ComputeVolumeInfo(meshes);
+
+		ShadowMappingViewProjUniform shadowMappingViewProjUniform = {};
+		//shadowMappingViewProjUniform.view = shadowCastingDirectional->GetViewTransform();
+		//shadowMappingViewProjUniform.proj = shadowCastingDirectional->GetProjectionTransform();
+		shadowMappingViewProjUniform.view = glm::lookAt(glm::vec3{ 0.f, 10.f, 10.f }, glm::vec3{ 0.f, 10.f, 9.f }, glm::vec3{ 0.f, 1.f, 0.f });
+		//shadowMappingViewProjUniform.proj = glm::ortho(-10.f, 10.f, -10.f, 10.f, 1.f, 20.f);
+		shadowMappingViewProjUniform.proj = glm::perspective(glm::radians(45.f), 1.f, 1.f, 30.f);
+		shadowMappingViewProjUniform.proj[1][1] *= -1.f;
+
+		UpdateBuffer(shadowMapper.viewProjUniformBuffer, &shadowMappingViewProjUniform);
+
+		VkClearValue depthClearValue = {};
+		depthClearValue.depthStencil.depth = 1.f;
+		depthClearValue.depthStencil.stencil = 0;
+
+		VkRenderPassBeginInfo shadowMappingRenderPassBI = {};
+		shadowMappingRenderPassBI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		shadowMappingRenderPassBI.renderPass = shadowMapper.renderPass;
+		shadowMappingRenderPassBI.framebuffer = shadowMapper.framebuffer;
+		shadowMappingRenderPassBI.renderArea = { { 0, 0 }, {SHADOW_MAP_TEXTURE_SIZE, SHADOW_MAP_TEXTURE_SIZE} };
+		shadowMappingRenderPassBI.clearValueCount = 1;
+		shadowMappingRenderPassBI.pClearValues = &depthClearValue;
+
+		vkCmdBeginRenderPass(commandBuffer, &shadowMappingRenderPassBI, VK_SUBPASS_CONTENTS_INLINE);
+
+		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shadowMapper.directionalShadowMappingPipeline.pipeline);
+		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shadowMapper.directionalShadowMappingPipeline.pipelineLayout, 0, 1, &shadowMapper.viewProjUniformBufferDescriptorSet, 0, nullptr);
+
+		ShadowMappingModelConstant shadowMappingModelConstant = {};
+
+		for (uint32_t i = 0, meshCount = TO_UINT32_T(meshes.size()); i < meshCount; i++)
+		{
+			scene::MeshNode* meshNode = meshes[i];
+
+			shadowMappingModelConstant.model = meshNode->GetWorldTransform();
+			vkCmdPushConstants(commandBuffer, shadowMapper.directionalShadowMappingPipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, TO_UINT32_T(sizeof(ShadowMappingModelConstant)), &shadowMappingModelConstant);
+
+			const resource::Mesh& mesh = meshNode->GetMesh();
+			vkCmdBindVertexBuffers(commandBuffer, 0, 1, &mesh.vertexBuffer.buffer, vertexBufferOffsets);
+			vkCmdBindIndexBuffer(commandBuffer, mesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(commandBuffer, mesh.indexCount, 1, 0, 0, 0);
+		}
+
+		vkCmdEndRenderPass(commandBuffer);
+	}
+
+} // namespace lux::rhi
