@@ -103,10 +103,11 @@ vec4 CameraSpace()
 
 	float inv = gl_FrontFacing ? 1.0 : -1.0;
 
-	vec3 viewWS = -fsIn.viewMatrix[3].xyz;
-	vec3 viewDir = normalize(viewWS - fsIn.positionWS);
-	viewDir = mat3(fsIn.viewMatrix) * viewDir;
-	viewDir = normalize(viewDir);
+//	vec3 viewWS = -fsIn.viewMatrix[3].xyz;
+//	vec3 viewDir = normalize(-fsIn.positionWS);
+//	viewDir = mat3(fsIn.viewMatrix) * viewDir;
+//	viewDir = normalize(viewDir);
+	vec3 viewDir = vec3(0.0, 0.0, 1.0);
 
 	vec3 normal = texture(normalMap, fsIn.textureCoordinateLS).rgb;
 	normal = normalize(normal * 2.0 - 1.0) * inv;
@@ -123,9 +124,27 @@ vec4 CameraSpace()
 
 	for(int i = 0; i < pushConsts.lightCount; ++i)
 	{
-		vec3 lightDir = normalize(mat3(fsIn.viewMatrix) * -lightBuffer.lights[i].parameter.xyz);
+		vec3 lightDir;
+		vec3 radiance;
+
+		// Directional
+		if(lightBuffer.lights[i].parameter.w == 0.0)
+		{
+			lightDir = normalize(mat3(fsIn.viewMatrix) * -lightBuffer.lights[i].parameter.xyz);
+			radiance = lightBuffer.lights[i].color;
+
+		}
+		else
+		{
+			vec3 lightPosVS = mat3(fsIn.viewMatrix) * (lightBuffer.lights[i].parameter.xyz - fsIn.positionWS);
+			lightDir = normalize(lightPosVS);
+			float distance = length(lightPosVS);
+			float attenuation = 1.0 / (distance * distance);
+			
+			radiance = lightBuffer.lights[i].color * attenuation;
+		}
+
 		vec3 h = normalize(viewDir + lightDir);
-	
 		float NdotH = max(dot(normal, h), 0.001);
 		float NdotL = max(dot(normal, lightDir), 0.001);
 		float LdotH = max(dot(lightDir, h), 0.001);
@@ -138,7 +157,9 @@ vec4 CameraSpace()
 		vec3 specular = (D * V) * F;
 		vec3 Kdiff = vec3(1.0) - (F0 + (vec3(1.0) - F0) * pow(1.0 - NdotL, 5.0));
 
-		directColor += (diffuseColor * Kdiff * Fd_Burley(NdotV, NdotL, LdotH, roughness) + specular) * lightBuffer.lights[i].color * NdotL;
+		vec3 directDiffuseColor = diffuseColor * Kdiff * Fd_Burley(NdotV, NdotL, LdotH, roughness);
+
+		directColor += (directDiffuseColor + specular) * radiance * NdotL;
 	}
 
 	vec3 irradiance = texture(irradianceMap, fsIn.normalWS).xyz;
