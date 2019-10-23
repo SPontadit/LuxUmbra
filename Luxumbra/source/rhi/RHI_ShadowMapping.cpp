@@ -1,6 +1,7 @@
 #include "rhi\RHI.h"
 
 #include "glm\glm.hpp"
+#include "glm\gtc\matrix_transform.hpp"
 
 namespace lux::rhi
 {
@@ -180,18 +181,41 @@ namespace lux::rhi
 	void RHI::RenderShadowMaps(VkCommandBuffer commandBuffer, int imageIndex, scene::LightNode* shadowCastingDirectional, const std::vector<scene::MeshNode*>& meshes) noexcept
 	{
 		VkDeviceSize vertexBufferOffsets[] = { 0 };
+		uint32_t meshCount = TO_UINT32_T(meshes.size());
 
 		// Shadow mapping
 
-		shadowCastingDirectional->ComputeVolumeInfo(meshes);
-
 		ShadowMappingViewProjUniform shadowMappingViewProjUniform = {};
-		//shadowMappingViewProjUniform.view = shadowCastingDirectional->GetViewTransform();
-		//shadowMappingViewProjUniform.proj = shadowCastingDirectional->GetProjectionTransform();
+
 		shadowMappingViewProjUniform.view = glm::lookAt(glm::vec3{ 0.f, 10.f, 10.f }, glm::vec3{ 0.f, 10.f, 9.f }, glm::vec3{ 0.f, 1.f, 0.f });
-		//shadowMappingViewProjUniform.proj = glm::ortho(-10.f, 10.f, -10.f, 10.f, 1.f, 20.f);
-		shadowMappingViewProjUniform.proj = glm::perspective(glm::radians(45.f), 1.f, 1.f, 30.f);
+
+		AABB meshAABB;
+		AABB sceneAABB;
+
+		glm::mat4 lightTransform = glm::inverse(shadowCastingDirectional->GetWorldTransform());
+
+		for (uint32_t i = 0; i < meshCount; i++)
+		{
+			scene::MeshNode* meshNode = meshes[i];
+
+			meshAABB = meshNode->GetMesh().aabb;
+			meshAABB.Transform(meshNode->GetWorldTransform());
+
+			if (i == 0)
+				sceneAABB = meshAABB;
+			else
+				sceneAABB.MakeFit(meshAABB);
+		}
+
+		glm::vec3 lightPos = (sceneAABB.min + sceneAABB.max) * 0.5f;
+		glm::vec3 lightDir = glm::rotate(shadowCastingDirectional->GetWorldRotation(), glm::vec3(0.f, 0.f, -1.f));
+
+		shadowMappingViewProjUniform.view = glm::lookAt(lightPos, lightPos + lightDir, glm::vec3(0.f, 1.f, 0.f));
+
+		sceneAABB.Transform(lightTransform);
+		shadowMappingViewProjUniform.proj = glm::ortho(sceneAABB.min.x, sceneAABB.max.x, sceneAABB.min.y, sceneAABB.max.y, sceneAABB.min.z, sceneAABB.max.y);
 		shadowMappingViewProjUniform.proj[1][1] *= -1.f;
+
 
 		UpdateBuffer(shadowMapper.viewProjUniformBuffer, &shadowMappingViewProjUniform);
 
@@ -214,7 +238,7 @@ namespace lux::rhi
 
 		ShadowMappingModelConstant shadowMappingModelConstant = {};
 
-		for (uint32_t i = 0, meshCount = TO_UINT32_T(meshes.size()); i < meshCount; i++)
+		for (uint32_t i = 0; i < meshCount; i++)
 		{
 			scene::MeshNode* meshNode = meshes[i];
 

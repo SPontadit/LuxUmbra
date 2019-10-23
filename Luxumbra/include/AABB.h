@@ -7,6 +7,7 @@
 
 namespace lux
 {
+
 	struct AABB
 	{
 		AABB() noexcept;
@@ -21,8 +22,10 @@ namespace lux
 		glm::vec3 min, max;
 
 		AABB& Transform(glm::mat4 transform) noexcept;
-		void MakeFit(glm::vec3 newMin, glm::vec3 newMax) noexcept;
+		void MakeFit(const AABB& other) noexcept;
+		void MakeFit(const glm::vec3& newMin, const glm::vec3& newMax) noexcept;
 	};
-}
+
+} // namespace lux
 
 #endif // AABB_H_INCLUDED

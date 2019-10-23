@@ -17,7 +17,12 @@ namespace lux
 		return *this;
 	}
 
-	void AABB::MakeFit(glm::vec3 newMin, glm::vec3 newMax) noexcept
+	void AABB::MakeFit(const AABB& other) noexcept
+	{
+		MakeFit(other.min, other.max);
+	}
+
+	void AABB::MakeFit(const glm::vec3& newMin, const glm::vec3& newMax) noexcept
 	{
 		if (newMin.x < min.x)
 			min.x = newMin.x;
