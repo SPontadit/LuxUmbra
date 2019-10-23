@@ -17,7 +17,7 @@ namespace lux::scene
 	public:
 		MeshNode() = delete;
 		MeshNode(Node* parent, const std::shared_ptr<resource::Mesh>& mesh, const std::shared_ptr<resource::Material>& material) noexcept;
-		MeshNode(Node* parent, glm::vec3 position, glm::quat rotation, const std::shared_ptr<resource::Mesh>& mesh, const std::shared_ptr<resource::Material>& material) noexcept;
+		MeshNode(Node* parent, glm::vec3 position, glm::vec3 rotation, const std::shared_ptr<resource::Mesh>& mesh, const std::shared_ptr<resource::Material>& material) noexcept;
 		MeshNode(const MeshNode&) = delete;
 		MeshNode(MeshNode&&) = delete;
 

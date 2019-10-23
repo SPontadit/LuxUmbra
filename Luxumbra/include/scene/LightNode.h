@@ -23,7 +23,7 @@ namespace lux::scene
 	public:
 		LightNode() = delete;
 		LightNode(Node* parent, LightType type, glm::vec3 color) noexcept;
-		LightNode(Node* parent, glm::vec3 position, glm::quat rotation, LightType type, glm::vec3 color) noexcept;
+		LightNode(Node* parent, glm::vec3 position, glm::vec3 rotation, LightType type, glm::vec3 color) noexcept;
 		LightNode(const LightNode&) = delete;
 		LightNode(LightNode&&) = delete;
 

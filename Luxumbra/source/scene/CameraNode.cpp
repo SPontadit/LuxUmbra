@@ -8,7 +8,7 @@ namespace lux::scene
 
 	}
 
-	CameraNode::CameraNode(Node* parent, glm::vec3 position, glm::quat rotation, const Window* window, float fovy, float nearDist, float farDist) noexcept
+	CameraNode::CameraNode(Node* parent, glm::vec3 position, glm::vec3 rotation, const Window* window, float fovy, float nearDist, float farDist) noexcept
 		: Node(parent, position, rotation), window(window), fovy(fovy), nearDist(nearDist), farDist(farDist)
 	{
 

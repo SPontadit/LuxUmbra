@@ -56,7 +56,7 @@ namespace lux::resource
 		void LoadPrimitiveMehes() noexcept;
 		void GenerateSphere(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, uint16_t horizSegments, uint16_t vertiSegments, float sphereScale = 1.f);
 
-		std::shared_ptr<Mesh> LoadMesh(const std::string& filename, bool isPrimitive = false) noexcept;
+		std::shared_ptr<Mesh> LoadMesh(const std::string& filename, float scale = 1.0f,  bool isPrimitive = false) noexcept;
 		std::shared_ptr<Texture> LoadTexture(const std::string& filename, bool isPrimitive = false) noexcept;
 
 		rhi::RHI& rhi;

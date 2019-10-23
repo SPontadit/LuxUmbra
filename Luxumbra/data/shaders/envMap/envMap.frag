@@ -9,5 +9,5 @@ layout(binding = 1) uniform samplerCube envMap;
 
 void main() 
 {
-	outColor = pow(texture(envMap, inPositionLS), vec4(1.0));
+	outColor = texture(envMap, inPositionLS);
 }

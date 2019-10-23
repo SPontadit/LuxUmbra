@@ -5,17 +5,17 @@
 namespace lux::scene
 {
 	Node::Node() noexcept
-		: parent(nullptr), position(0.f), rotation(glm::identity<glm::quat>())
+		: parent(nullptr), position(0.f), rotation(0.f)
 	{
 	}
 
 	Node::Node(Node* parent) noexcept
-		: parent(parent), position(0.f), rotation(glm::identity<glm::quat>())
+		: parent(parent), position(0.f), rotation(0.f)
 	{
 
 	}
 
-	Node::Node(Node* parent, glm::vec3 position, glm::quat rotation) noexcept
+	Node::Node(Node* parent, glm::vec3 position, glm::vec3 rotation) noexcept
 		: parent(parent), position(position), rotation(rotation)
 	{
 
@@ -26,14 +26,14 @@ namespace lux::scene
 		return position;
 	}
 
-	glm::quat Node::GetLocalRotation() const noexcept
+	glm::vec3 Node::GetLocalRotation() const noexcept
 	{
 		return rotation;
 	}
 
 	glm::mat4 Node::GetLocalTransform() const noexcept
 	{
-		return glm::translate(glm::identity<glm::mat4>(), position) * glm::toMat4(rotation);
+		return glm::translate(glm::identity<glm::mat4>(), position) * glm::toMat4(glm::quat(rotation));
 	}
 
 	glm::vec3 Node::GetWorldPosition() const noexcept
@@ -71,7 +71,7 @@ namespace lux::scene
 		position = newPosition;
 	}
 
-	void Node::SetLocalRotation(glm::quat newRotation) noexcept
+	void Node::SetLocalRotation(glm::vec3 newRotation) noexcept
 	{
 		rotation = newRotation;
 	}
@@ -86,7 +86,7 @@ namespace lux::scene
 
 	void Node::SetWorldRotation(glm::quat newRotation) noexcept
 	{
-		if (parent)
+		/*if (parent)
 		{
 			glm::quat parentWorlRotation = parent->GetWorldRotation();
 
@@ -96,7 +96,7 @@ namespace lux::scene
 				newRotation = -glm::conjugate(parentWorlRotation) * newRotation;
 		}
 
-		SetLocalRotation(newRotation);
+		SetLocalRotation(newRotation);*/
 	}
 
 } // namespace lux::scene

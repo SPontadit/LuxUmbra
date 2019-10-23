@@ -319,6 +319,9 @@
     <None Include="data\shaders\generateCubeMap\generateCubeMap.vert">
       <Filter>Resource Files\generateCubeMap</Filter>
     </None>
+    <None Include="data\shaders\cameraSpaceLight\cameraSpaceLightCutout.frag">
+      <Filter>Resource Files\cameraSpaceLight</Filter>
+    </None>
     <None Include="data\shaders\shadowMapping\directionalShadowMapping.vert">
       <Filter>Resource Files\shadowMapping</Filter>
     </None>

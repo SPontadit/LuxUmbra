@@ -208,7 +208,7 @@
     <None Include="data\shaders\blit\blit.vert" />
     <None Include="data\shaders\cameraSpaceLight\cameraSpaceLight.frag" />
     <None Include="data\shaders\cameraSpaceLight\cameraSpaceLight.vert" />
-    <None Include="data\shaders\CompileShaders.bat" />
+    <None Include="data\shaders\cameraSpaceLight\cameraSpaceLightCutout.frag" />
     <None Include="data\shaders\directLighting\directLighting.frag" />
     <None Include="data\shaders\directLighting\directLighting.vert" />
     <None Include="data\shaders\envMap\envMap.frag" />
@@ -222,6 +222,7 @@
     <None Include="data\shaders\shadowMapping\directionalShadowMapping.vert" />
     <None Include="data\shaders\texture\triangle.frag" />
     <None Include="data\shaders\texture\triangle.vert" />
+    <None Include="data\shaders\CompileShaders.bat" />
     <None Include="include\Logger.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

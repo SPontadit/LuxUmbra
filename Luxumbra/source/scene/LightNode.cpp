@@ -34,7 +34,7 @@ namespace lux::scene
 		: viewPos(0.f, 0.f, 0.f), left(0.f), right(0.f), top(0.f), bottom(0.f),
 		nearDist(0.f), farDist(0.f)
 	{
-	
+
 	}
 
 	LightNode::VolumeInfo::Point::Point() noexcept
