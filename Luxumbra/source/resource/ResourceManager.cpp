@@ -261,7 +261,7 @@ namespace lux::resource
 		Assimp::Importer importer;
 		importer.SetPropertyFloat(AI_CONFIG_GLOBAL_SCALE_FACTOR_KEY, scale);
 
-		unsigned int postProcessFlags = aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals | aiProcess_PreTransformVertices | aiProcess_CalcTangentSpace;
+		unsigned int postProcessFlags = aiProcess_GenBoundingBoxes | aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals | aiProcess_PreTransformVertices | aiProcess_CalcTangentSpace;
 		postProcessFlags |= scale == 1.0f ? 0 : aiProcess_GlobalScale;
 		
 		const aiScene* scene = importer.ReadFile(filename, postProcessFlags);
@@ -275,27 +275,46 @@ namespace lux::resource
 		std::vector<Vertex> vertices;
 		std::vector<uint32_t> indices;
 		
-		const aiVector3D Zero3D(0.0f, 0.0f, 0.0f);
-
 		for (size_t i = 0; i < scene->mNumMeshes; i++)
 		{
-			for (size_t j = 0; j < scene->mMeshes[i]->mNumVertices; j++)
+			aiMesh* meshPart = scene->mMeshes[i];
+
+			for (size_t j = 0; j < meshPart->mNumVertices; j++)
 			{
 
 				Vertex vertex;
 
-				vertex.position = glm::make_vec3(&scene->mMeshes[i]->mVertices[j].x);
-				vertex.normal = glm::make_vec3(&scene->mMeshes[i]->mNormals[j].x);
-				vertex.textureCoordinate = glm::make_vec2(&scene->mMeshes[i]->mTextureCoords[0][j].x);
-			
-				vertex.tangent = glm::make_vec3((scene->mMeshes[i]->HasTangentsAndBitangents()) ? (&scene->mMeshes[i]->mTangents[j].x) : &Zero3D.x);
-				vertex.bitangent = glm::make_vec3((scene->mMeshes[i]->HasTangentsAndBitangents()) ? (&scene->mMeshes[i]->mBitangents[j].x) : &Zero3D.x);
+				vertex.position = glm::make_vec3(&meshPart->mVertices[j].x);
+				vertex.normal = glm::make_vec3(&meshPart->mNormals[j].x);
+				vertex.textureCoordinate = glm::make_vec2(&meshPart->mTextureCoords[0][j].x);
+
+				if (meshPart->HasTangentsAndBitangents())
+				{
+					vertex.tangent = glm::make_vec3(&meshPart->mTangents[j].x);
+					vertex.bitangent = glm::make_vec3(&meshPart->mBitangents[j].x);
+				}
+				else
+				{
+					vertex.tangent = glm::vec3(0.f);
+					vertex.bitangent = glm::vec3(0.f);
+				}
 
 				//vertex.position.y *= -1.0f;
 				//vertex.normal.y *= -1.0f;
 
 				vertices.push_back(vertex);
 			}
+
+			glm::vec3 aabbMin = glm::make_vec3(&meshPart->mAABB.mMin.x);
+			glm::vec3 aabbMax = glm::make_vec3(&meshPart->mAABB.mMax.x);
+
+			if (i == 0)
+			{
+				mesh->aabb.min = aabbMin;
+				mesh->aabb.max = aabbMax;
+			}
+			else
+				mesh->aabb.MakeFit(aabbMin, aabbMax);
 		}
 
 		for (size_t i = 0; i < scene->mNumMeshes; i++)

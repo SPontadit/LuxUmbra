@@ -4,6 +4,7 @@
 #include "Luxumbra.h"
 
 #include "rhi\Buffer.h"
+#include "AABB.h"
 
 namespace lux::resource
 {
@@ -23,6 +24,8 @@ namespace lux::resource
 		uint32_t indexCount;
 		lux::rhi::Buffer vertexBuffer;
 		lux::rhi::Buffer indexBuffer;
+
+		AABB aabb;
 	};
 
 } // namespace lux::resource
