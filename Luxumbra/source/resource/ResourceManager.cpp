@@ -174,8 +174,8 @@ namespace lux::resource
 
 	void ResourceManager::LoadPrimitiveMehes() noexcept
 	{
-		primitiveMeshes[TO_UINT32_T(MeshPrimitive::MESH_SPHERE_PRIMITIVE)] = LoadMesh("data/models/Sphere.fbx", true);
-		primitiveMeshes[TO_UINT32_T(MeshPrimitive::MESH_CUBE_PRIMITIVE)] = LoadMesh("data/models/Cube.fbx", true);
+		primitiveMeshes[TO_UINT32_T(MeshPrimitive::MESH_SPHERE_PRIMITIVE)] = LoadMesh("data/models/Sphere.fbx", 0.5f, true);
+		primitiveMeshes[TO_UINT32_T(MeshPrimitive::MESH_CUBE_PRIMITIVE)] = LoadMesh("data/models/Cube.fbx", 0.5f, true);
 
 		rhi.SetCubeMesh(primitiveMeshes[TO_UINT32_T(MeshPrimitive::MESH_CUBE_PRIMITIVE)]);
 	}
@@ -255,13 +255,15 @@ namespace lux::resource
 		stbi_image_free(textureData);
 	}
 
-	std::shared_ptr<Mesh> ResourceManager::LoadMesh(const std::string& filename, bool isPrimitive) noexcept
+	std::shared_ptr<Mesh> ResourceManager::LoadMesh(const std::string& filename, float scale, bool isPrimitive) noexcept
 	{
 		std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>();
 		Assimp::Importer importer;
-		importer.SetPropertyFloat(AI_CONFIG_GLOBAL_SCALE_FACTOR_KEY, 0.5f);
+		importer.SetPropertyFloat(AI_CONFIG_GLOBAL_SCALE_FACTOR_KEY, scale);
 
-		unsigned int postProcessFlags = aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals | aiProcess_GlobalScale | aiProcess_PreTransformVertices | aiProcess_CalcTangentSpace;
+		unsigned int postProcessFlags = aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals | aiProcess_PreTransformVertices | aiProcess_CalcTangentSpace;
+		postProcessFlags |= scale == 1.0f ? 0 : aiProcess_GlobalScale;
+		
 		const aiScene* scene = importer.ReadFile(filename, postProcessFlags);
 
 		if (scene == nullptr || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || scene->mRootNode == nullptr)
