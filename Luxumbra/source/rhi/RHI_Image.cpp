@@ -20,7 +20,7 @@ namespace lux::rhi
 		imageCI.extent.width = luxImageCI.width;
 		imageCI.extent.height = luxImageCI.height;
 		imageCI.extent.depth = 1;
-		imageCI.mipLevels = 1;
+		imageCI.mipLevels = luxImageCI.mipmapCount;
 		imageCI.arrayLayers = luxImageCI.arrayLayers;
 		imageCI.samples = VK_SAMPLE_COUNT_1_BIT;
 		imageCI.tiling = VK_IMAGE_TILING_OPTIMAL;
@@ -59,7 +59,7 @@ namespace lux::rhi
 		imageViewCI.format = luxImageCI.format;
 		imageViewCI.viewType = luxImageCI.imageViewType;
 		imageViewCI.subresourceRange.aspectMask = luxImageCI.subresourceRangeAspectMask;
-		imageViewCI.subresourceRange.levelCount = 1;
+		imageViewCI.subresourceRange.levelCount = luxImageCI.mipmapCount;
 		imageViewCI.subresourceRange.baseMipLevel = 0;
 		imageViewCI.subresourceRange.layerCount = luxImageCI.subresourceRangeLayerCount;
 		imageViewCI.subresourceRange.baseArrayLayer = 0;
@@ -125,6 +125,7 @@ namespace lux::rhi
 		irradianceCI.binaryVertexFilePath = "data/shaders/generateIrradianceMap/generateIrradianceMap.vert.spv";
 		irradianceCI.binaryFragmentFilePath = "data/shaders/generateIrradianceMap/generateIrradianceMap.frag.spv";
 		irradianceCI.sampler = forward.cubemapSampler;
+		irradianceCI.mipmapCount = TO_UINT32_T(floor(log2(IRRADIANCE_TEXTURE_SIZE))) + 1;
 
 		GenerateCubemap(irradianceCI, cubemapSource, irradiance);
 
@@ -151,6 +152,40 @@ namespace lux::rhi
 		}
 	}
 
+	void RHI::GeneratePrefilteredFromCubemap(const Image& cubemapSource, Image& prefiltered) noexcept
+	{
+		rhi::CubeMapCreateInfo prefilteredCI = {};
+		prefilteredCI.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+		prefilteredCI.size = PREFILTERED_TEXTURE_SIZE;
+		prefilteredCI.binaryVertexFilePath = "data/shaders/generatePrefilteredMap/generatePrefilteredMap.vert.spv";
+		prefilteredCI.binaryFragmentFilePath = "data/shaders/generatePrefilteredMap/generatePrefilteredMap.frag.spv";
+		prefilteredCI.sampler = forward.cubemapSampler;
+		prefilteredCI.mipmapCount = TO_UINT32_T(floor(log2(PREFILTERED_TEXTURE_SIZE))) + 1;
+
+		GenerateCubemap(prefilteredCI, cubemapSource, prefiltered);
+
+		// Update Descriptor Set
+		VkDescriptorImageInfo prefilteredMapDescriptorImageInfo = {};
+		prefilteredMapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		prefilteredMapDescriptorImageInfo.sampler = forward.cubemapSampler;
+		prefilteredMapDescriptorImageInfo.imageView = prefiltered.imageView;
+
+		VkWriteDescriptorSet writePrefilteredMapDescriptorSet = {};
+		writePrefilteredMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writePrefilteredMapDescriptorSet.descriptorCount = 1;
+		writePrefilteredMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		writePrefilteredMapDescriptorSet.dstBinding = 3;
+		writePrefilteredMapDescriptorSet.dstArrayElement = 0;
+		writePrefilteredMapDescriptorSet.pImageInfo = &prefilteredMapDescriptorImageInfo;
+
+		for (size_t i = 0; i < swapchainImageCount; i++)
+		{
+			writePrefilteredMapDescriptorSet.dstSet = forward.rtViewDescriptorSets[i];
+
+			vkUpdateDescriptorSets(device, 1, &writePrefilteredMapDescriptorSet, 0, nullptr);
+		}
+	}
+
 	void RHI::GenerateCubemap(const CubeMapCreateInfo& luxCubemapCI, const Image& source, Image& image) noexcept
 	{
 		struct OffscreenResource
@@ -162,6 +197,7 @@ namespace lux::rhi
 			VkDescriptorSet descriptorSet;
 			GraphicsPipeline pipeline;
 		} offscreen;
+
 
 		// Attachment
 		VkAttachmentDescription attachmentDescription = {};
@@ -259,7 +295,9 @@ namespace lux::rhi
 		{
 			glm::mat4 mvp;
 			float deltaPhi = (2.0f * PI) / 180.0f;
-			float deltaTheta = (0.5f * PI) / TO_FLOAT(IRRADIANCE_TEXTURE_SIZE); //dimensiom
+			float deltaTheta = (0.5f * PI) / TO_FLOAT(IRRADIANCE_TEXTURE_SIZE); //dimension
+			float roughness;
+			uint32_t samplersCount = 32u;
 		} pushConstant;
 
 		VkPushConstantRange pushConstantRange = {};
@@ -271,6 +309,8 @@ namespace lux::rhi
 		descriptorSetLayoutBinding.descriptorCount = 1;
 		descriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		descriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		VkDynamicState viewportDynamicState = {};
 
 		GraphicsPipelineCreateInfo graphicsPipelineCI = {};
 		graphicsPipelineCI.renderPass = offscreen.renderPass;
@@ -289,6 +329,7 @@ namespace lux::rhi
 		graphicsPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
 		graphicsPipelineCI.viewDescriptorSetLayoutBindings = { descriptorSetLayoutBinding };
 		graphicsPipelineCI.pushConstants = { pushConstantRange };
+		graphicsPipelineCI.dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 
 		CreateGraphicsPipeline(graphicsPipelineCI, offscreen.pipeline);
 
@@ -351,59 +392,92 @@ namespace lux::rhi
 
 		VkCommandBuffer commandBuffer = BeginSingleTimeCommandBuffer();
 
-		CommandTransitionImageLayout(commandBuffer, image.image, luxCubemapCI.format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 6);
+		CommandTransitionImageLayout(commandBuffer, image.image, luxCubemapCI.format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 6, luxCubemapCI.mipmapCount);
 
 		VkDeviceSize offset[] = { 0 };
-		for (uint32_t i = 0; i < 6; i++)
+
+		VkViewport viewport = {};
+		viewport.x = 0.0f;
+		viewport.y = 0.0f;
+		viewport.minDepth = 0.0f;
+		viewport.maxDepth = 1.0f;
+		viewport.width = TO_FLOAT(luxCubemapCI.size);
+		viewport.height = TO_FLOAT(luxCubemapCI.size);
+
+		VkRect2D scissor = {};
+		scissor.extent = { luxCubemapCI.size, luxCubemapCI.size };
+		scissor.offset = { 0, 0 };
+
+		vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+		for (uint32_t mipmap = 0; mipmap < luxCubemapCI.mipmapCount; ++mipmap)
 		{
-			vkCmdBeginRenderPass(commandBuffer, &renderPassBI, VK_SUBPASS_CONTENTS_INLINE);
+			pushConstant.roughness = TO_FLOAT(mipmap) / TO_FLOAT(luxCubemapCI.mipmapCount - 1);
 
-			pushConstant.mvp = glm::perspective(PI / 2.0f, 1.0f, 0.001f, 1000.0f) * matrices[i];
-			vkCmdPushConstants(commandBuffer, offscreen.pipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &pushConstant);
 
-			vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, offscreen.pipeline.pipeline);
-			vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, offscreen.pipeline.pipelineLayout, 0, 1, &offscreen.descriptorSet, 0, nullptr);
+			for (uint32_t face = 0; face < 6; face++)
+			{
+				viewport.width = TO_FLOAT(luxCubemapCI.size * std::pow(0.5f, mipmap));
+				viewport.height = TO_FLOAT(luxCubemapCI.size * std::pow(0.5f, mipmap));
+				vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
-			vkCmdBindVertexBuffers(commandBuffer, 0, 1, &cube->vertexBuffer.buffer, offset);
-			vkCmdBindIndexBuffer(commandBuffer, cube->indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+				vkCmdBeginRenderPass(commandBuffer, &renderPassBI, VK_SUBPASS_CONTENTS_INLINE);
 
-			vkCmdDrawIndexed(commandBuffer, cube->indexCount, 1, 0, 0, 0);
+				pushConstant.mvp = glm::perspective(PI / 2.0f, 1.0f, 0.001f, 1000.0f) * matrices[face];
+				vkCmdPushConstants(commandBuffer, offscreen.pipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &pushConstant);
 
-			vkCmdEndRenderPass(commandBuffer);
+				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, offscreen.pipeline.pipeline);
+				vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, offscreen.pipeline.pipelineLayout, 0, 1, &offscreen.descriptorSet, 0, nullptr);
 
-			CommandTransitionImageLayout(commandBuffer, offscreen.image.image, luxCubemapCI.format, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &cube->vertexBuffer.buffer, offset);
+				vkCmdBindIndexBuffer(commandBuffer, cube->indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 
-			VkImageCopy imageCopy = {};
-			imageCopy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			imageCopy.srcSubresource.baseArrayLayer = 0;
-			imageCopy.srcSubresource.mipLevel = 0;
-			imageCopy.srcSubresource.layerCount = 1;
-			imageCopy.srcOffset = { 0, 0, 0 };
+				vkCmdDrawIndexed(commandBuffer, cube->indexCount, 1, 0, 0, 0);
 
-			imageCopy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			imageCopy.dstSubresource.baseArrayLayer = i;
-			imageCopy.dstSubresource.mipLevel = 0;
-			imageCopy.dstSubresource.layerCount = 1;
-			imageCopy.dstOffset = { 0,0,0 };
+				vkCmdEndRenderPass(commandBuffer);
 
-			imageCopy.extent.width = luxCubemapCI.size;
-			imageCopy.extent.height = luxCubemapCI.size;
-			imageCopy.extent.depth = 1;
+				CommandTransitionImageLayout(commandBuffer, offscreen.image.image, luxCubemapCI.format, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
-			vkCmdCopyImage(commandBuffer, offscreen.image.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageCopy);
+				VkImageCopy imageCopy = {};
+				imageCopy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				imageCopy.srcSubresource.baseArrayLayer = 0;
+				imageCopy.srcSubresource.mipLevel = 0;
+				imageCopy.srcSubresource.layerCount = 1;
+				imageCopy.srcOffset = { 0, 0, 0 };
 
-			CommandTransitionImageLayout(commandBuffer, offscreen.image.image, luxCubemapCI.format, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+				imageCopy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				imageCopy.dstSubresource.baseArrayLayer = face;
+				imageCopy.dstSubresource.mipLevel = mipmap;
+				imageCopy.dstSubresource.layerCount = 1;
+				imageCopy.dstOffset = { 0,0,0 };
+
+				imageCopy.extent.width = TO_UINT32_T(viewport.width);
+				imageCopy.extent.height = TO_UINT32_T(viewport.height);
+				imageCopy.extent.depth = 1;
+
+				vkCmdCopyImage(commandBuffer, offscreen.image.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageCopy);
+
+				CommandTransitionImageLayout(commandBuffer, offscreen.image.image, luxCubemapCI.format, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+			}
+
 		}
 
-		CommandTransitionImageLayout(commandBuffer, image.image, luxCubemapCI.format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 6);
+		CommandTransitionImageLayout(commandBuffer, image.image, luxCubemapCI.format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 6, luxCubemapCI.mipmapCount);
 
 		EndSingleTimeCommandBuffer(commandBuffer);
 
 		DestroyGraphicsPipeline(offscreen.pipeline);
 		vkDestroyDescriptorPool(device, offscreen.descriptorPool, nullptr);
-		vkDestroyFramebuffer(device, offscreen.framebuffer, nullptr);
+		vkDestroyFramebuffer(device, offscreen.framebuffer,
+ nullptr);
 		DestroyImage(offscreen.image);
 		vkDestroyRenderPass(device, offscreen.renderPass, nullptr);
+	}
+
+	void RHI::GenerateBRDFLut(Image& BRDFLut) noexcept
+	{
+
 	}
 
 	void RHI::DestroyImage(Image& image) noexcept

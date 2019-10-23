@@ -320,6 +320,10 @@ namespace lux::rhi
 		irradianceMapDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		irradianceMapDescriptorPoolSize.descriptorCount = swapchainImageCount;
 
+		VkDescriptorPoolSize prefilteredMapDescriptorPoolSize = {};
+		prefilteredMapDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		prefilteredMapDescriptorPoolSize.descriptorCount = swapchainImageCount;
+
 		VkDescriptorPoolSize envMapSamplerDescriptorPoolSize = {};
 		envMapSamplerDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		envMapSamplerDescriptorPoolSize.descriptorCount = swapchainImageCount;
@@ -328,12 +332,13 @@ namespace lux::rhi
 		envMapUniformDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		envMapUniformDescriptorPoolSize.descriptorCount = swapchainImageCount;
 
-		std::array<VkDescriptorPoolSize, 6> descriptorPoolSizes = 
+		std::array<VkDescriptorPoolSize, 7> descriptorPoolSizes = 
 		{ 
 			blitInputDescriptorPoolSize, 
 			rtViewProjUniformDescriptorPoolSize, 
 			lightsUniformDescriptorPoolSize, 
 			irradianceMapDescriptorPoolSize,
+			prefilteredMapDescriptorPoolSize,
 			envMapSamplerDescriptorPoolSize,
 			envMapUniformDescriptorPoolSize
 		};
@@ -397,6 +402,12 @@ namespace lux::rhi
 		irradianceMapDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		irradianceMapDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
+		VkDescriptorSetLayoutBinding prefilteredMapDescriptorSetLayoutBinding = {};
+		prefilteredMapDescriptorSetLayoutBinding.binding = 3;
+		prefilteredMapDescriptorSetLayoutBinding.descriptorCount = 1;
+		prefilteredMapDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		prefilteredMapDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
 		// Material Layout
 		VkDescriptorSetLayoutBinding materialParametersDescriptorSetLayoutBinding = {};
 		materialParametersDescriptorSetLayoutBinding.binding = 0;
@@ -445,7 +456,7 @@ namespace lux::rhi
 		rtGraphicsPipelineCI.enableDepthTest = VK_TRUE;
 		rtGraphicsPipelineCI.enableDepthWrite = VK_TRUE;
 		rtGraphicsPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS;
-		rtGraphicsPipelineCI.viewDescriptorSetLayoutBindings = { rtViewProjDescriptorSetLayoutBinding, lightDescriptorSetLayoutBinding, irradianceMapDescriptorSetLayoutBinding };
+		rtGraphicsPipelineCI.viewDescriptorSetLayoutBindings = { rtViewProjDescriptorSetLayoutBinding, lightDescriptorSetLayoutBinding, irradianceMapDescriptorSetLayoutBinding, prefilteredMapDescriptorSetLayoutBinding };
 		rtGraphicsPipelineCI.materialDescriptorSetLayoutBindings = { materialParametersDescriptorSetLayoutBinding, materialAlbedoDescriptorSetLayoutBinding, materialNormalDescriptorSetLayoutBinding };
 		rtGraphicsPipelineCI.pushConstants = { rtModelPushConstantRange, lightCountPushConstantRange };
 

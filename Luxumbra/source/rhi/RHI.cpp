@@ -748,7 +748,7 @@ namespace lux::rhi
 		EndSingleTimeCommandBuffer(commandBuffer);
 	}
 
-	void RHI::CommandTransitionImageLayout(VkCommandBuffer commandBuffer, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t layerCount) noexcept
+	void RHI::CommandTransitionImageLayout(VkCommandBuffer commandBuffer, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t layerCount, uint32_t levelCount) noexcept
 	{
 		VkImageMemoryBarrier imageMemoryBarrier = {};
 		imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -756,7 +756,7 @@ namespace lux::rhi
 		imageMemoryBarrier.newLayout = newLayout;
 		imageMemoryBarrier.image = image;
 		imageMemoryBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		imageMemoryBarrier.subresourceRange.levelCount = 1;
+		imageMemoryBarrier.subresourceRange.levelCount = levelCount;
 		imageMemoryBarrier.subresourceRange.baseMipLevel = 0;
 		imageMemoryBarrier.subresourceRange.layerCount = layerCount;
 		imageMemoryBarrier.subresourceRange.baseArrayLayer = 0;

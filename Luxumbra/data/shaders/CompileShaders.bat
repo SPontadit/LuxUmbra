@@ -17,4 +17,6 @@ C:/VulkanSDK/1.1.114.0/Bin32/glslangValidator.exe -V generateCubeMap/generateCub
 C:/VulkanSDK/1.1.114.0/Bin32/glslangValidator.exe -V generateCubeMap/generateCubeMap.frag -o generateCubeMap/generateCubeMap.frag.spv
 C:/VulkanSDK/1.1.114.0/Bin32/glslangValidator.exe -V generateIrradianceMap/generateIrradianceMap.vert -o generateIrradianceMap/generateIrradianceMap.vert.spv
 C:/VulkanSDK/1.1.114.0/Bin32/glslangValidator.exe -V generateIrradianceMap/generateIrradianceMap.frag -o generateIrradianceMap/generateIrradianceMap.frag.spv
+C:/VulkanSDK/1.1.114.0/Bin32/glslangValidator.exe -V generatePrefilteredMap/generatePrefilteredMap.vert -o generatePrefilteredMap/generatePrefilteredMap.vert.spv
+C:/VulkanSDK/1.1.114.0/Bin32/glslangValidator.exe -V generatePrefilteredMap/generatePrefilteredMap.frag -o generatePrefilteredMap/generatePrefilteredMap.frag.spv
 pause

@@ -63,6 +63,7 @@ namespace lux::resource
 		
 		std::shared_ptr<Texture> cubemap;
 		std::shared_ptr<Texture> irradiance;
+		std::shared_ptr<Texture> prefiltered;
 
 		std::unordered_map<std::string, std::shared_ptr<Material>> materials;
 		std::unordered_map<std::string, std::shared_ptr<Mesh>> meshes;

@@ -26,6 +26,7 @@ layout(set = 0, binding = 1) uniform LightBuffer
 };
 
 layout(set = 0, binding = 2) uniform samplerCube irradianceMap;
+layout(set = 0, binding = 3) uniform samplerCube prefilteredMap;
 
 layout(push_constant) uniform PushConsts
 {
@@ -112,6 +113,9 @@ vec4 CameraSpace()
 	vec3 normal = texture(normalMap, fsIn.textureCoordinateLS).rgb;
 	normal = normalize(normal * 2.0 - 1.0) * inv;
 	normal = normalize(fsIn.textureToViewMatrix * normal);
+
+	return textureLod(prefilteredMap, normal, 1.0);
+
 
 	float NdotV = max(dot(normal, viewDir), 0.001);
 	

@@ -214,6 +214,8 @@
     <None Include="data\shaders\generateCubeMap\generateCubeMap.vert" />
     <None Include="data\shaders\generateIrradianceMap\generateIrradianceMap.frag" />
     <None Include="data\shaders\generateIrradianceMap\generateIrradianceMap.vert" />
+    <None Include="data\shaders\generatePrefilteredMap\generatePrefilteredMap.frag" />
+    <None Include="data\shaders\generatePrefilteredMap\generatePrefilteredMap.vert" />
     <None Include="data\shaders\mesh\mesh.frag" />
     <None Include="data\shaders\mesh\mesh.vert" />
     <None Include="data\shaders\texture\triangle.frag" />

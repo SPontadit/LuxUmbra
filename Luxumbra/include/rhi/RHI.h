@@ -68,6 +68,8 @@ namespace lux::rhi
 		
 		void GenerateCubemapFromHDR(const Image& HDRSource, Image& cubemap) noexcept;
 		void GenerateIrradianceFromCubemap(const Image& cubemapSource, Image& irradiance) noexcept;
+		void GeneratePrefilteredFromCubemap(const Image& cubemapSource, Image& prefiltered) noexcept;
+		void GenerateBRDFLut(Image& BRDFLut) noexcept;
 
 
 		void SetCubeMesh(std::shared_ptr<resource::Mesh> mesh) noexcept;
@@ -148,7 +150,7 @@ namespace lux::rhi
 		VkCommandBuffer BeginSingleTimeCommandBuffer() const noexcept;
 		void EndSingleTimeCommandBuffer(VkCommandBuffer commandBuffer) const noexcept;
 
-		void CommandTransitionImageLayout(VkCommandBuffer, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t layerCount = 1) noexcept;
+		void CommandTransitionImageLayout(VkCommandBuffer, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t layerCount = 1, uint32_t levelCount = 1) noexcept;
 		void CommandTransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) noexcept;
 
 		void CreateGraphicsPipeline(const GraphicsPipelineCreateInfo& luxGraphicsPipelineCI, GraphicsPipeline& graphicsPipeline) noexcept;

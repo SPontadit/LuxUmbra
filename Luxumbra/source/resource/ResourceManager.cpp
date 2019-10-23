@@ -25,7 +25,7 @@ namespace lux::resource
 
 
 	ResourceManager::ResourceManager(rhi::RHI&  rhi) noexcept
-		: rhi(rhi), cubemap(nullptr), irradiance(nullptr), defaultWhite(nullptr)
+		: rhi(rhi), cubemap(nullptr), irradiance(nullptr), prefiltered(nullptr), defaultWhite(nullptr), defaultNormalMap(nullptr)
 	{
 	}
 
@@ -201,6 +201,7 @@ namespace lux::resource
 	{
 		cubemap = std::make_shared<Texture>();
 		irradiance = std::make_shared<Texture>();
+		prefiltered = std::make_shared<Texture>();
 
 		// Load Cubemap
 		float* textureData;
@@ -242,12 +243,21 @@ namespace lux::resource
 		// Create Irradiance Image
 		imageCI.width = IRRADIANCE_TEXTURE_SIZE;
 		imageCI.height = IRRADIANCE_TEXTURE_SIZE;
+		imageCI.mipmapCount = TO_UINT32_T(floor(log2(IRRADIANCE_TEXTURE_SIZE))) + 1;
 		rhi.CreateImage(imageCI, irradiance->image);
+
+
+		// Create Prefiltered Image
+		imageCI.width = PREFILTERED_TEXTURE_SIZE;
+		imageCI.height = PREFILTERED_TEXTURE_SIZE;
+		imageCI.mipmapCount = TO_UINT32_T(floor(log2(PREFILTERED_TEXTURE_SIZE))) + 1;
+		rhi.CreateImage(imageCI, prefiltered->image);
 
 
 		// Generate Cubemap
 		rhi.GenerateCubemapFromHDR(source, cubemap->image);
 		rhi.GenerateIrradianceFromCubemap(cubemap->image, irradiance->image);
+		rhi.GeneratePrefilteredFromCubemap(cubemap->image, prefiltered->image);
 
 		rhi.CreateEnvMapDescriptorSet(cubemap->image);
 
@@ -423,6 +433,11 @@ namespace lux::resource
 		if (irradiance != nullptr)
 		{
 			rhi.DestroyImage(irradiance->image);
+		}
+
+		if (prefiltered != nullptr)
+		{
+			rhi.DestroyImage(prefiltered->image);
 		}
 	}
 

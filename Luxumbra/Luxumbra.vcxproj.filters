@@ -76,6 +76,9 @@
     <Filter Include="Resource Files\generateCubeMap">
       <UniqueIdentifier>{417a7c2e-387a-486f-916d-a6590918944e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resource Files\generatePrefilteredMap">
+      <UniqueIdentifier>{b0a9a296-de64-45ef-bf17-4045602f2b85}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\main.cpp">
@@ -309,6 +312,12 @@
     </None>
     <None Include="data\shaders\cameraSpaceLight\cameraSpaceLightCutout.frag">
       <Filter>Resource Files\cameraSpaceLight</Filter>
+    </None>
+    <None Include="data\shaders\generatePrefilteredMap\generatePrefilteredMap.frag">
+      <Filter>Resource Files\generatePrefilteredMap</Filter>
+    </None>
+    <None Include="data\shaders\generatePrefilteredMap\generatePrefilteredMap.vert">
+      <Filter>Resource Files\generatePrefilteredMap</Filter>
     </None>
   </ItemGroup>
 </Project>
