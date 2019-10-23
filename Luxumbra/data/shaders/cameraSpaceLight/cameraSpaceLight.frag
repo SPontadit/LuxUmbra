@@ -23,7 +23,7 @@ struct Light
 layout(set = 0, binding = 1) uniform LightBuffer
 {
 	Light lights[LIGHT_MAX_COUNT];
-} lightBuffer;
+};
 
 layout(set = 0, binding = 2) uniform samplerCube irradianceMap;
 
@@ -128,20 +128,20 @@ vec4 CameraSpace()
 		vec3 radiance;
 
 		// Directional
-		if(lightBuffer.lights[i].parameter.w == 0.0)
+		if(lights[i].parameter.w == 0.0)
 		{
-			lightDir = normalize(mat3(fsIn.viewMatrix) * -lightBuffer.lights[i].parameter.xyz);
-			radiance = lightBuffer.lights[i].color;
+			lightDir = normalize(mat3(fsIn.viewMatrix) * -lights[i].parameter.xyz);
+			radiance = lights[i].color;
 
 		}
 		else
 		{
-			vec3 lightPosVS = mat3(fsIn.viewMatrix) * (lightBuffer.lights[i].parameter.xyz - fsIn.positionWS);
+			vec3 lightPosVS = mat3(fsIn.viewMatrix) * (lights[i].parameter.xyz - fsIn.positionWS);
 			lightDir = normalize(lightPosVS);
 			float distance = length(lightPosVS);
 			float attenuation = 1.0 / (distance * distance);
 			
-			radiance = lightBuffer.lights[i].color * attenuation;
+			radiance = lights[i].color * attenuation;
 		}
 
 		vec3 h = normalize(viewDir + lightDir);
