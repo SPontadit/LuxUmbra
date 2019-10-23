@@ -689,7 +689,17 @@ namespace lux::rhi
 		for (size_t i = 0; i < lightCount; i++)
 		{
 			currentNode = lights[i];
-			lightDatas[i].position = glm::vec4(currentNode->GetWorldPosition(), TO_UINT32_T(currentNode->GetType()));
+
+			if (currentNode->GetType() == scene::LightType::LIGHT_TYPE_DIRECTIONAL)
+			{
+				glm::vec3 worldRotation = glm::rotate(currentNode->GetWorldRotation(), glm::vec3(0.0f, 0.0f, -1.0f));
+				lightDatas[i].position = glm::vec4(worldRotation, 0.0f);
+			}
+			else // if (currentNode->GetType() == scene::LightType::LIGHT_TYPE_POINT)
+			{
+				lightDatas[i].position = glm::vec4(currentNode->GetWorldPosition(), 1.0f);
+			}
+			
 			lightDatas[i].color = currentNode->GetColor();
 		}
 
