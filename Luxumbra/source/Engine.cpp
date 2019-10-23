@@ -1,5 +1,7 @@
 #include "Engine.h"
 
+#include <set>
+
 #include "imgui\imgui.h"
 #include "imgui\imgui_impl_glfw.h"
 #include "imgui\imgui_impl_vulkan.h"
@@ -85,19 +87,42 @@ namespace lux
 		DisplayLightNodes(scene.GetLightNodes());
 		ImGui::NewLine();
 
-		resource::MaterialParameters& material = scene.GetMeshNodes()[0]->GetMaterial().parameter;
 
-		ImGui::ColorEdit3("Base Color", glm::value_ptr(material.baseColor));
-		bool metallic = (bool)material.metallic;
-		ImGui::Checkbox("Metallic", &metallic);
-		material.metallic = metallic;
-
-		if (material.metallic == false)
+		if (ImGui::TreeNodeEx("Materials", ImGuiTreeNodeFlags_DefaultOpen))
 		{
-			ImGui::SliderFloat("Reflectance", &material.reflectance, 0.0f, 1.0f, "%.3f");
-		}
+			std::set<std::string> materialNames;
+			const std::vector<scene::MeshNode*>& meshNodes = scene.GetMeshNodes();
+			for (size_t i = 0; i < meshNodes.size(); i++)
+			{
+				resource::Material* currentMaterial = &meshNodes[i]->GetMaterial();
+				std::set<std::string>::iterator mat = materialNames.find(currentMaterial->name);
 
-		ImGui::SliderFloat("Roughness", &material.perceptualRoughness, 0.0f, 1.0f, "%.3f");
+				if (mat == materialNames.end())
+				{
+					materialNames.insert(currentMaterial->name);
+
+					if (ImGui::TreeNode(currentMaterial->name.c_str()))
+					{
+						resource::MaterialParameters& matParameters = currentMaterial->parameter;
+
+						ImGui::ColorEdit3("Base Color", glm::value_ptr(matParameters.baseColor));
+						bool metallic = (bool)matParameters.metallic;
+						ImGui::Checkbox("Metallic", &metallic);
+						matParameters.metallic = metallic;
+
+						if (matParameters.metallic == false)
+						{
+							ImGui::SliderFloat("Reflectance", &matParameters.reflectance, 0.0f, 1.0f, "%.3f");
+						}
+
+						ImGui::SliderFloat("Roughness", &matParameters.perceptualRoughness, 0.0f, 1.0f, "%.3f");
+
+						ImGui::TreePop();
+					}
+				}
+			}
+			ImGui::TreePop();
+		}
 
 		ImGui::End();
 
@@ -125,7 +150,8 @@ namespace lux
 		{
 			for (size_t i = 0; i < meshCount; i++)
 			{
-				if (ImGui::TreeNode(("Mesh " + std::to_string(i)).c_str()))
+				std::string displayName("Mesh " + std::to_string(i) + " | " + meshes[i]->GetMaterial().name);
+				if (ImGui::TreeNode(displayName.c_str()))
 				{
 					currentMesh = meshes[i];
 					DisplayNode(currentMesh);
