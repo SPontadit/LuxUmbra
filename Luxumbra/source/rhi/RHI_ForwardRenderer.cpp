@@ -16,7 +16,8 @@ namespace lux::rhi
 		rtGraphicsPipeline(), rtViewDescriptorSets(0), rtModelDescriptorSets(0), rtColorAttachmentImages(0), rtColorAttachmentImageMemories(0), rtColorAttachmentImageViews(0),
 		rtResolveColorAttachmentImage(VK_NULL_HANDLE), rtResolveColorAttachmentMemory(VK_NULL_HANDLE), rtResolveColorAttachmentImageView(VK_NULL_HANDLE),
 		rtDepthAttachmentImage(VK_NULL_HANDLE), rtDepthAttachmentMemory(VK_NULL_HANDLE), rtDepthAttachmentImageView(VK_NULL_HANDLE),
-		envMapGraphicsPipeline(), envMapViewDescriptorSets(0), modelConstant(), viewProjUniformBuffers(0), sampler(VK_NULL_HANDLE), cubemapSampler(VK_NULL_HANDLE)
+		envMapGraphicsPipeline(), envMapViewDescriptorSets(0), modelConstant(), viewProjUniformBuffers(0), sampler(VK_NULL_HANDLE), cubemapSampler(VK_NULL_HANDLE),
+		rtCutoutGraphicsPipeline(), rtTransparentBackGraphicsPipeline(), rtTransparentFrontGraphicsPipeline()
 	{
 
 	}
@@ -451,6 +452,30 @@ namespace lux::rhi
 		CreateGraphicsPipeline(rtGraphicsPipelineCI, forward.rtGraphicsPipeline);
 
 
+		// Cutout Graphics Pipeline
+		rtGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/cameraSpaceLight/cameraSpaceLightCutout.frag.spv";
+		rtGraphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_NONE;
+		rtGraphicsPipelineCI.disableColorWriteMask = true;
+		rtGraphicsPipelineCI.enableBlend = true;
+
+		CreateGraphicsPipeline(rtGraphicsPipelineCI, forward.rtCutoutGraphicsPipeline);
+
+
+		// Front Face Transparent Graphics Pipeline
+		rtGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/cameraSpaceLight/cameraSpaceLight.frag.spv";
+		rtGraphicsPipelineCI.disableColorWriteMask = false;
+		rtGraphicsPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+		rtGraphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_BACK_BIT;
+
+		CreateGraphicsPipeline(rtGraphicsPipelineCI, forward.rtTransparentFrontGraphicsPipeline);
+
+
+		// Back Face Transparent Graphics Pipeline
+		rtGraphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_FRONT_BIT;
+
+		CreateGraphicsPipeline(rtGraphicsPipelineCI, forward.rtTransparentBackGraphicsPipeline);
+
+
 		// Env map Pipeline
 		VkDescriptorSetLayoutBinding envMapViewProjDescriptorSetLayoutBinding = {};
 		envMapViewProjDescriptorSetLayoutBinding.binding = 0;
@@ -671,8 +696,7 @@ namespace lux::rhi
 		UpdateBuffer(lightUniformBuffers[currentFrame], lightDatas.data());
 	}
 
-	// TODO: Ref sur le vecteur de meshes ?
-	void RHI::RenderForward(const scene::CameraNode* camera, const std::vector<scene::MeshNode*> meshes, const std::vector<scene::LightNode*>& lights) noexcept
+	void RHI::RenderForward(const scene::CameraNode* camera, const std::vector<scene::MeshNode*>& meshes, const std::vector<scene::LightNode*>& lights) noexcept
 	{
 		// Acquire next image
 		VkFence* fence = &fences[currentFrame];
@@ -720,6 +744,7 @@ namespace lux::rhi
 
 		// Sort mesh node by material
 		std::map<std::string, std::vector<scene::MeshNode*>> sortedMeshNodes;
+		std::map<std::string, std::vector<scene::MeshNode*>> sortedTransparentMeshNodes;
 		std::vector<resource::Material*> materials;
 		{
 			std::vector<scene::MeshNode*>::const_iterator it = meshes.cbegin();
@@ -727,13 +752,23 @@ namespace lux::rhi
 
 			for (; it != itE; ++it)
 			{
-				std::string key = (*it)->GetMaterial().name;
-				
-				std::map<std::string, std::vector<scene::MeshNode*>>::iterator firstMaterial = sortedMeshNodes.find(key);
-				if(firstMaterial == sortedMeshNodes.end())
-					materials.push_back(&(*it)->GetMaterial());
+				resource::Material* currentMaterial = &(*it)->GetMaterial();
+				std::string key = currentMaterial->name;
 
-				sortedMeshNodes[(*it)->GetMaterial().name].push_back(*it);
+				std::map<std::string, std::vector<scene::MeshNode*>>::iterator firstMaterial = sortedMeshNodes.find(key);
+				std::map<std::string, std::vector<scene::MeshNode*>>::iterator firstTransparentMaterial = sortedTransparentMeshNodes.find(key);
+				if (firstMaterial == sortedMeshNodes.end() || firstTransparentMaterial == sortedTransparentMeshNodes.end())
+				{
+					materials.push_back(currentMaterial);
+				}
+
+				if (currentMaterial->isTransparent)
+				{
+					//sortedMeshNodes[key].push_back(*it);
+					sortedTransparentMeshNodes[key].push_back(*it);
+				}
+				else
+					sortedMeshNodes[key].push_back(*it);
 			}
 		}
 
@@ -751,6 +786,7 @@ namespace lux::rhi
 		sortedMeshNodesConstIterator it = sortedMeshNodes.cbegin();
 		sortedMeshNodesConstIterator itE = sortedMeshNodes.cend();
 		
+		// Draw opaque object
 		for (; it != itE; ++it)
 		{
 			std::vector<scene::MeshNode*> meshNodes = it->second;
@@ -764,6 +800,7 @@ namespace lux::rhi
 		
 			for (; itMesh != itMeshEnd; ++itMesh)
 			{
+
 				forward.modelConstant.model = (*itMesh)->GetWorldTransform();
 				vkCmdPushConstants(commandBuffer, forward.rtGraphicsPipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(RtModelConstant), &forward.modelConstant);
 
@@ -775,6 +812,7 @@ namespace lux::rhi
 		}
 
 
+		// Environment Map
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.envMapGraphicsPipeline.pipeline);
 		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.envMapGraphicsPipeline.pipelineLayout, 0, 1, &forward.envMapViewDescriptorSets[currentFrame], 0, nullptr);
 
@@ -782,6 +820,52 @@ namespace lux::rhi
 		vkCmdBindIndexBuffer(commandBuffer, cube->indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 
 		vkCmdDrawIndexed(commandBuffer, cube->indexCount, 1, 0, 0, 0);
+
+
+
+		// Draw transparent object
+		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.rtGraphicsPipeline.pipelineLayout, ForwardRenderer::FORWARD_VIEW_DESCRIPTOR_SET_LAYOUT, 1, &forward.rtViewDescriptorSets[currentFrame], 0, nullptr);
+
+		it = sortedTransparentMeshNodes.cbegin();
+		itE = sortedTransparentMeshNodes.cend();
+
+		// TODO: Split transparent rendering into 3 loops - 1 per pipeline
+		for (; it != itE; ++it)
+		{
+			std::vector<scene::MeshNode*> meshNodes = it->second;
+			const resource::Material& material = meshNodes[0]->GetMaterial();
+
+			vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.rtGraphicsPipeline.pipelineLayout, ForwardRenderer::FORWARD_MATERIAL_DESCRIPTOR_SET_LAYOUT, 1, &material.descriptorSet[currentFrame], 0, nullptr);
+
+
+			std::vector<scene::MeshNode*>::const_iterator itMesh = meshNodes.cbegin();
+			std::vector<scene::MeshNode*>::const_iterator itMeshEnd = meshNodes.cend();
+
+			for (; itMesh != itMeshEnd; ++itMesh)
+			{
+				forward.modelConstant.model = (*itMesh)->GetWorldTransform();
+				vkCmdPushConstants(commandBuffer, forward.rtGraphicsPipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(RtModelConstant), &forward.modelConstant);
+
+				const resource::Mesh& currentMesh = (*itMesh)->GetMesh();
+
+				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.rtCutoutGraphicsPipeline.pipeline);
+				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &currentMesh.vertexBuffer.buffer, offset);
+				vkCmdBindIndexBuffer(commandBuffer, currentMesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+				vkCmdDrawIndexed(commandBuffer, currentMesh.indexCount, 1, 0, 0, 0);
+
+				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.rtTransparentBackGraphicsPipeline.pipeline);
+				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &currentMesh.vertexBuffer.buffer, offset);
+				vkCmdBindIndexBuffer(commandBuffer, currentMesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+				vkCmdDrawIndexed(commandBuffer, currentMesh.indexCount, 1, 0, 0, 0);
+
+				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.rtTransparentFrontGraphicsPipeline.pipeline);
+				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &currentMesh.vertexBuffer.buffer, offset);
+				vkCmdBindIndexBuffer(commandBuffer, currentMesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+				vkCmdDrawIndexed(commandBuffer, currentMesh.indexCount, 1, 0, 0, 0);
+
+			}
+		}
+
 
 		RenderImgui();
 
@@ -838,6 +922,9 @@ namespace lux::rhi
 	{
 		DestroyGraphicsPipeline(forward.blitGraphicsPipeline);
 		DestroyGraphicsPipeline(forward.rtGraphicsPipeline);
+		DestroyGraphicsPipeline(forward.rtCutoutGraphicsPipeline);
+		DestroyGraphicsPipeline(forward.rtTransparentBackGraphicsPipeline);
+		DestroyGraphicsPipeline(forward.rtTransparentFrontGraphicsPipeline);
 		DestroyGraphicsPipeline(forward.envMapGraphicsPipeline);
 	}
 

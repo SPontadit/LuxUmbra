@@ -55,7 +55,7 @@ layout(set = 1, binding = 2) uniform sampler2D normalMap;
 
 const float PI = 3.1415926;
 
-vec3 CameraSpace();
+vec4 CameraSpace();
 
 // PBR
 vec3 RemapDiffuseColor(vec3 baseColor, float metallic);
@@ -71,7 +71,7 @@ float Fd_Burley(float NdotV, float NdotL, float LdotH, float roughness);
 
 void main() 
 {
-	outColor = vec4(CameraSpace(), 1.0);
+	outColor = CameraSpace();
 
 	// Tonemapping
 	//outColor = outColor / (outColor + vec4(1.0));
@@ -96,24 +96,27 @@ vec3 getNormalFromMap()
     return normalize(TBN  * tangentNormal);
 }
 
-vec3 CameraSpace()
+vec4 CameraSpace()
 {
 	vec3 directColor  = vec3(0.0);
+	vec4 textureColor = texture(albedo, fsIn.textureCoordinateLS);
 
-
+	float inv = gl_FrontFacing ? 1.0 : -1.0;
 
 	vec3 viewWS = -fsIn.viewMatrix[3].xyz;
 	vec3 viewDir = normalize(viewWS - fsIn.positionWS);
 	viewDir = mat3(fsIn.viewMatrix) * viewDir;
+	viewDir = normalize(viewDir);
 
 	vec3 normal = texture(normalMap, fsIn.textureCoordinateLS).rgb;
-	normal = normalize(normal * 2.0 - 1.0);
-	normal = fsIn.textureToViewMatrix * normal;
-
+	normal = normalize(normal * 2.0 - 1.0) * inv;
+	normal = normalize(fsIn.textureToViewMatrix * normal);
 
 	float NdotV = max(dot(normal, viewDir), 0.001);
+	
+	vec3 baseColor = pow(textureColor.rgb * material.baseColor, vec3(2.2));
+	baseColor *= textureColor.a;
 
-	vec3 baseColor = pow(texture(albedo, fsIn.textureCoordinateLS).rgb * material.baseColor, vec3(2.2));
 	float roughness = material.perceptualRoughness * material.perceptualRoughness;
 	vec3 diffuseColor = RemapDiffuseColor(baseColor, material.metallic);
 	vec3 F0 = GetF0(material.reflectance, material.metallic, baseColor);
@@ -143,7 +146,7 @@ vec3 CameraSpace()
 	vec3 Kdiff = 1.0 - F_SchlickRoughness(NdotV, F0, roughness);
 	vec3 indirectDiffuseColor = irradiance * diffuseColor * Kdiff;
 
-	return directColor + indirectDiffuseColor;
+	return vec4(directColor + indirectDiffuseColor, textureColor.a);
 }
 
 float Fd_Lambert()

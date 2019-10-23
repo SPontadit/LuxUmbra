@@ -22,6 +22,7 @@ namespace lux::resource
 		float metallic;
 		float perceptualRoughness;
 		float reflectance;
+		bool isTransparent;
 	};
 
 	struct MaterialParameters
@@ -46,10 +47,11 @@ namespace lux::resource
 		Material& operator=(Material&&) = delete;
 	
 
-		// TODO: Add texture albedo, metallic, normal
+		// TODO: Add texture metallic
 		// Texture metalness
-		// Texture normal
 		std::string name;
+
+		bool isTransparent;
 		MaterialParameters parameter;
 		std::shared_ptr<Texture> albedo;
 		std::shared_ptr<Texture> normal;

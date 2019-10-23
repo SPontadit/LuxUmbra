@@ -46,6 +46,5 @@ void main()
 	vec3 B = normalize(modelToView * inBitangent);
 	vec3 N = normalize(modelToView * inNormal);
 
-
 	vsOut.textureToViewMatrix = mat3(T, B, N);
 }

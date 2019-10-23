@@ -43,6 +43,9 @@ namespace lux::rhi
 		std::vector<VkDescriptorSet> blitDescriptorSets;
 
 		GraphicsPipeline rtGraphicsPipeline;
+		GraphicsPipeline rtCutoutGraphicsPipeline;
+		GraphicsPipeline rtTransparentBackGraphicsPipeline;
+		GraphicsPipeline rtTransparentFrontGraphicsPipeline;
 		std::vector<VkDescriptorSet> rtViewDescriptorSets;
 		std::vector<VkDescriptorSet> rtModelDescriptorSets;
 
