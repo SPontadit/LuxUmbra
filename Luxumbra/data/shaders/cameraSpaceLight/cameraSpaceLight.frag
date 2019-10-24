@@ -27,6 +27,7 @@ layout(set = 0, binding = 1) uniform LightBuffer
 
 layout(set = 0, binding = 2) uniform samplerCube irradianceMap;
 layout(set = 0, binding = 3) uniform samplerCube prefilteredMap;
+layout(set = 0, binding = 4) uniform sampler2D BRDFLut;
 
 layout(push_constant) uniform PushConsts
 {
@@ -68,6 +69,7 @@ float F_Schlick(float NdotH, float f0, float f90);
 vec3 F_SchlickRoughness(float VdotH, vec3 f0, float roughness);
 float Fd_Lambert();
 float Fd_Burley(float NdotV, float NdotL, float LdotH, float roughness);
+vec3 PrefilteredReflection(vec3 R, float roughness);
 
 
 void main() 
@@ -113,9 +115,6 @@ vec4 CameraSpace()
 	vec3 normal = texture(normalMap, fsIn.textureCoordinateLS).rgb;
 	normal = normalize(normal * 2.0 - 1.0) * inv;
 	normal = normalize(fsIn.textureToViewMatrix * normal);
-
-	return textureLod(prefilteredMap, normal, 1.0);
-
 
 	float NdotV = max(dot(normal, viewDir), 0.001);
 	
@@ -166,12 +165,42 @@ vec4 CameraSpace()
 		directColor += (directDiffuseColor + specular) * radiance * NdotL;
 	}
 
-	vec3 irradiance = texture(irradianceMap, fsIn.normalWS).xyz;
+	viewDir = -fsIn.viewMatrix[3].xyz  * mat3(fsIn.viewMatrix);
+	viewDir = normalize(viewDir - fsIn.positionWS);
 
-	vec3 Kdiff = 1.0 - F_SchlickRoughness(NdotV, F0, roughness);
+	normal = transpose(mat3(fsIn.viewMatrix)) * normal;
+	normal = normalize(normal);
+
+	vec3 R = reflect(-viewDir, normal);
+
+	NdotV = max(dot(normal, viewDir), 0.001);
+
+	vec2 BRDF = texture(BRDFLut, vec2(NdotV, roughness)).rg;
+	vec3 reflection = PrefilteredReflection(R, roughness).rgb;
+	vec3 irradiance = texture(irradianceMap, normal).xyz;
+	
+	vec3 F = F_SchlickRoughness(NdotV, F0, roughness);
+	vec3 indirectSpecularColor = reflection * (F * BRDF.x + BRDF.y);
+
+	vec3 Kdiff = 1.0 - F;
 	vec3 indirectDiffuseColor = irradiance * diffuseColor * Kdiff;
 
-	return vec4(directColor + indirectDiffuseColor, textureColor.a);
+	vec3 indirectColor = indirectDiffuseColor + indirectSpecularColor;
+
+	return vec4(directColor + indirectColor, textureColor.a);
+}
+
+vec3 PrefilteredReflection(vec3 R, float roughness)
+{
+	const float MAX_REFLECTION_LOD = 10.0;
+	float lod = roughness * MAX_REFLECTION_LOD;
+	float lodf = floor(lod);
+	float lodc = ceil(lod);
+
+	vec3 a = textureLod(prefilteredMap, R, lodf).rgb;
+	vec3 b = textureLod(prefilteredMap, R, lodc).rgb;
+
+	return mix(a, b, lod - lodf);
 }
 
 float Fd_Lambert()

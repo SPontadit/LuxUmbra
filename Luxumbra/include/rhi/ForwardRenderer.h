@@ -69,6 +69,8 @@ namespace lux::rhi
 
 		VkSampler sampler;
 		VkSampler cubemapSampler;
+		VkSampler irradianceSampler;
+		VkSampler prefilteredSampler;
 
 		enum ForwardAttachmentBindPoints : uint32_t
 		{

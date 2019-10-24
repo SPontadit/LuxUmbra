@@ -25,7 +25,7 @@ namespace lux::resource
 
 
 	ResourceManager::ResourceManager(rhi::RHI&  rhi) noexcept
-		: rhi(rhi), cubemap(nullptr), irradiance(nullptr), prefiltered(nullptr), defaultWhite(nullptr), defaultNormalMap(nullptr)
+		: rhi(rhi), cubemap(nullptr), irradiance(nullptr), prefiltered(nullptr), BRDFLut(nullptr), defaultWhite(nullptr), defaultNormalMap(nullptr)
 	{
 	}
 
@@ -174,7 +174,7 @@ namespace lux::resource
 
 	void ResourceManager::LoadPrimitiveMehes() noexcept
 	{
-		primitiveMeshes[TO_UINT32_T(MeshPrimitive::MESH_SPHERE_PRIMITIVE)] = LoadMesh("data/models/Sphere.fbx", 0.5f, true);
+		primitiveMeshes[TO_UINT32_T(MeshPrimitive::MESH_SPHERE_PRIMITIVE)] = LoadMesh("data/models/Sphere.fbx", 0.75f, true);
 		primitiveMeshes[TO_UINT32_T(MeshPrimitive::MESH_CUBE_PRIMITIVE)] = LoadMesh("data/models/Cube.fbx", 0.5f, true);
 
 		rhi.SetCubeMesh(primitiveMeshes[TO_UINT32_T(MeshPrimitive::MESH_CUBE_PRIMITIVE)]);
@@ -202,6 +202,7 @@ namespace lux::resource
 		cubemap = std::make_shared<Texture>();
 		irradiance = std::make_shared<Texture>();
 		prefiltered = std::make_shared<Texture>();
+		BRDFLut = std::make_shared<Texture>();
 
 		// Load Cubemap
 		float* textureData;
@@ -234,8 +235,9 @@ namespace lux::resource
 		imageCI.imageViewType = VK_IMAGE_VIEW_TYPE_CUBE;
 		imageCI.imageData = nullptr;
 		imageCI.imageSize = 0;
-		imageCI.width = 1024;
-		imageCI.height = 1024;
+		imageCI.width = CUBEMAP_TEXTURE_SIZE;
+		imageCI.height = CUBEMAP_TEXTURE_SIZE;
+		imageCI.mipmapCount = TO_UINT32_T(floor(log2(CUBEMAP_TEXTURE_SIZE))) + 1;
 
 		rhi.CreateImage(imageCI, cubemap->image);
 
@@ -254,10 +256,12 @@ namespace lux::resource
 		rhi.CreateImage(imageCI, prefiltered->image);
 
 
+
 		// Generate Cubemap
 		rhi.GenerateCubemapFromHDR(source, cubemap->image);
 		rhi.GenerateIrradianceFromCubemap(cubemap->image, irradiance->image);
 		rhi.GeneratePrefilteredFromCubemap(cubemap->image, prefiltered->image);
+		rhi.GenerateBRDFLut(VK_FORMAT_R32G32B32A32_SFLOAT, BRDF_LUT_TEXTURE_SIZE, BRDFLut->image);
 
 		rhi.CreateEnvMapDescriptorSet(cubemap->image);
 
@@ -438,6 +442,11 @@ namespace lux::resource
 		if (prefiltered != nullptr)
 		{
 			rhi.DestroyImage(prefiltered->image);
+		}
+
+		if (BRDFLut != nullptr)
+		{
+			rhi.DestroyImage(BRDFLut->image);
 		}
 	}
 

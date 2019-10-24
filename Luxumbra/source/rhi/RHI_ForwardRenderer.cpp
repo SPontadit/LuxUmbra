@@ -16,7 +16,8 @@ namespace lux::rhi
 		rtGraphicsPipeline(), rtViewDescriptorSets(0), rtModelDescriptorSets(0), rtColorAttachmentImages(0), rtColorAttachmentImageMemories(0), rtColorAttachmentImageViews(0),
 		rtResolveColorAttachmentImage(VK_NULL_HANDLE), rtResolveColorAttachmentMemory(VK_NULL_HANDLE), rtResolveColorAttachmentImageView(VK_NULL_HANDLE),
 		rtDepthAttachmentImage(VK_NULL_HANDLE), rtDepthAttachmentMemory(VK_NULL_HANDLE), rtDepthAttachmentImageView(VK_NULL_HANDLE),
-		envMapGraphicsPipeline(), envMapViewDescriptorSets(0), modelConstant(), viewProjUniformBuffers(0), sampler(VK_NULL_HANDLE), cubemapSampler(VK_NULL_HANDLE),
+		envMapGraphicsPipeline(), envMapViewDescriptorSets(0), modelConstant(), viewProjUniformBuffers(0), 
+		sampler(VK_NULL_HANDLE), cubemapSampler(VK_NULL_HANDLE), irradianceSampler(VK_NULL_HANDLE), prefilteredSampler(VK_NULL_HANDLE),
 		rtCutoutGraphicsPipeline(), rtTransparentBackGraphicsPipeline(), rtTransparentFrontGraphicsPipeline()
 	{
 
@@ -324,6 +325,10 @@ namespace lux::rhi
 		prefilteredMapDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		prefilteredMapDescriptorPoolSize.descriptorCount = swapchainImageCount;
 
+		VkDescriptorPoolSize BRDFLutMapDescriptorPoolSize = {};
+		BRDFLutMapDescriptorPoolSize .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		BRDFLutMapDescriptorPoolSize .descriptorCount = swapchainImageCount;
+
 		VkDescriptorPoolSize envMapSamplerDescriptorPoolSize = {};
 		envMapSamplerDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		envMapSamplerDescriptorPoolSize.descriptorCount = swapchainImageCount;
@@ -332,13 +337,14 @@ namespace lux::rhi
 		envMapUniformDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		envMapUniformDescriptorPoolSize.descriptorCount = swapchainImageCount;
 
-		std::array<VkDescriptorPoolSize, 7> descriptorPoolSizes = 
+		std::array<VkDescriptorPoolSize, 8> descriptorPoolSizes = 
 		{ 
 			blitInputDescriptorPoolSize, 
 			rtViewProjUniformDescriptorPoolSize, 
 			lightsUniformDescriptorPoolSize, 
 			irradianceMapDescriptorPoolSize,
 			prefilteredMapDescriptorPoolSize,
+			BRDFLutMapDescriptorPoolSize,
 			envMapSamplerDescriptorPoolSize,
 			envMapUniformDescriptorPoolSize
 		};
@@ -408,6 +414,12 @@ namespace lux::rhi
 		prefilteredMapDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		prefilteredMapDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
+		VkDescriptorSetLayoutBinding BRDFLutDescriptorSetLayoutBinding = {};
+		BRDFLutDescriptorSetLayoutBinding.binding = 4;
+		BRDFLutDescriptorSetLayoutBinding.descriptorCount = 1;
+		BRDFLutDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		BRDFLutDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
 		// Material Layout
 		VkDescriptorSetLayoutBinding materialParametersDescriptorSetLayoutBinding = {};
 		materialParametersDescriptorSetLayoutBinding.binding = 0;
@@ -456,7 +468,15 @@ namespace lux::rhi
 		rtGraphicsPipelineCI.enableDepthTest = VK_TRUE;
 		rtGraphicsPipelineCI.enableDepthWrite = VK_TRUE;
 		rtGraphicsPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS;
-		rtGraphicsPipelineCI.viewDescriptorSetLayoutBindings = { rtViewProjDescriptorSetLayoutBinding, lightDescriptorSetLayoutBinding, irradianceMapDescriptorSetLayoutBinding, prefilteredMapDescriptorSetLayoutBinding };
+		rtGraphicsPipelineCI.viewDescriptorSetLayoutBindings = 
+		{ 
+			rtViewProjDescriptorSetLayoutBinding, 
+			lightDescriptorSetLayoutBinding, 
+			irradianceMapDescriptorSetLayoutBinding, 
+			prefilteredMapDescriptorSetLayoutBinding,
+			BRDFLutDescriptorSetLayoutBinding
+		};
+
 		rtGraphicsPipelineCI.materialDescriptorSetLayoutBindings = { materialParametersDescriptorSetLayoutBinding, materialAlbedoDescriptorSetLayoutBinding, materialNormalDescriptorSetLayoutBinding };
 		rtGraphicsPipelineCI.pushConstants = { rtModelPushConstantRange, lightCountPushConstantRange };
 
@@ -546,8 +566,19 @@ namespace lux::rhi
 		samplerCI.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 		samplerCI.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 		samplerCI.borderColor = VK_BORDER_COLOR_INT_OPAQUE_WHITE;
+		samplerCI.maxLod = TO_FLOAT(floor(log2(CUBEMAP_TEXTURE_SIZE))) + 1.0f;
 
 		CHECK_VK(vkCreateSampler(device, &samplerCI, nullptr, &forward.cubemapSampler));
+
+
+		samplerCI.maxLod = TO_FLOAT(floor(log2(IRRADIANCE_TEXTURE_SIZE))) + 1.0f;
+
+		CHECK_VK(vkCreateSampler(device, &samplerCI, nullptr, &forward.irradianceSampler));
+
+
+		samplerCI.maxLod = TO_FLOAT(floor(log2(PREFILTERED_TEXTURE_SIZE))) + 1.0f;
+		CHECK_VK(vkCreateSampler(device, &samplerCI, nullptr, &forward.prefilteredSampler));
+
 	}
 
 	void RHI::InitForwardDescriptorSets() noexcept
@@ -967,6 +998,8 @@ namespace lux::rhi
 		
 		vkDestroySampler(device, forward.sampler, nullptr);
 		vkDestroySampler(device, forward.cubemapSampler, nullptr);
+		vkDestroySampler(device, forward.irradianceSampler, nullptr);
+		vkDestroySampler(device, forward.prefilteredSampler, nullptr);
 
 		vkDestroyImage(device, forward.rtResolveColorAttachmentImage, nullptr);
 		vkDestroyImageView(device, forward.rtResolveColorAttachmentImageView, nullptr);

@@ -20,7 +20,7 @@
 namespace lux::rhi
 {
 #define LIGHT_MAX_COUNT 64
-#define MATERIAL_MAX_SET 64
+#define MATERIAL_MAX_SET 128
 
 	using namespace lux;
 
@@ -69,7 +69,7 @@ namespace lux::rhi
 		void GenerateCubemapFromHDR(const Image& HDRSource, Image& cubemap) noexcept;
 		void GenerateIrradianceFromCubemap(const Image& cubemapSource, Image& irradiance) noexcept;
 		void GeneratePrefilteredFromCubemap(const Image& cubemapSource, Image& prefiltered) noexcept;
-		void GenerateBRDFLut(Image& BRDFLut) noexcept;
+		void GenerateBRDFLut(VkFormat format, uint32_t size, Image& BRDFLut) noexcept;
 
 
 		void SetCubeMesh(std::shared_ptr<resource::Mesh> mesh) noexcept;

@@ -79,6 +79,9 @@
     <Filter Include="Resource Files\generatePrefilteredMap">
       <UniqueIdentifier>{b0a9a296-de64-45ef-bf17-4045602f2b85}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resource Files\generateBRDFLut">
+      <UniqueIdentifier>{de1ea4f4-5462-430f-9bd1-6b6782e19e72}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\main.cpp">
@@ -318,6 +321,12 @@
     </None>
     <None Include="data\shaders\generatePrefilteredMap\generatePrefilteredMap.vert">
       <Filter>Resource Files\generatePrefilteredMap</Filter>
+    </None>
+    <None Include="data\shaders\generateBRDFLut\generateBRDFLut.frag">
+      <Filter>Resource Files\generateBRDFLut</Filter>
+    </None>
+    <None Include="data\shaders\generateBRDFLut\generateBRDFLut.vert">
+      <Filter>Resource Files\generateBRDFLut</Filter>
     </None>
   </ItemGroup>
 </Project>

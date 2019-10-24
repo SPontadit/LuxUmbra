@@ -109,10 +109,11 @@ namespace lux::rhi
 	{
 		rhi::CubeMapCreateInfo cubemapCI = {};
 		cubemapCI.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-		cubemapCI.size = 1024;
+		cubemapCI.size = CUBEMAP_TEXTURE_SIZE;
 		cubemapCI.binaryVertexFilePath = "data/shaders/generateCubeMap/generateCubeMap.vert.spv";
 		cubemapCI.binaryFragmentFilePath = "data/shaders/generateCubeMap/generateCubeMap.frag.spv";
 		cubemapCI.sampler = forward.sampler;
+		cubemapCI.mipmapCount = TO_UINT32_T(floor(log2(CUBEMAP_TEXTURE_SIZE))) + 1;
 
 		GenerateCubemap(cubemapCI, HDRSource, cubemap);
 	}
@@ -133,7 +134,7 @@ namespace lux::rhi
 		// Update Descriptor Set
 		VkDescriptorImageInfo irradianceMapDescriptorImageInfo = {};
 		irradianceMapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		irradianceMapDescriptorImageInfo.sampler = forward.cubemapSampler;
+		irradianceMapDescriptorImageInfo.sampler = forward.irradianceSampler;
 		irradianceMapDescriptorImageInfo.imageView = irradiance.imageView;
 
 		VkWriteDescriptorSet writeIrradianceMapDescriptorSet = {};
@@ -167,7 +168,7 @@ namespace lux::rhi
 		// Update Descriptor Set
 		VkDescriptorImageInfo prefilteredMapDescriptorImageInfo = {};
 		prefilteredMapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		prefilteredMapDescriptorImageInfo.sampler = forward.cubemapSampler;
+		prefilteredMapDescriptorImageInfo.sampler = forward.prefilteredSampler;
 		prefilteredMapDescriptorImageInfo.imageView = prefiltered.imageView;
 
 		VkWriteDescriptorSet writePrefilteredMapDescriptorSet = {};
@@ -310,7 +311,6 @@ namespace lux::rhi
 		descriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		descriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-		VkDynamicState viewportDynamicState = {};
 
 		GraphicsPipelineCreateInfo graphicsPipelineCI = {};
 		graphicsPipelineCI.renderPass = offscreen.renderPass;
@@ -469,15 +469,177 @@ namespace lux::rhi
 
 		DestroyGraphicsPipeline(offscreen.pipeline);
 		vkDestroyDescriptorPool(device, offscreen.descriptorPool, nullptr);
-		vkDestroyFramebuffer(device, offscreen.framebuffer,
- nullptr);
+		vkDestroyFramebuffer(device, offscreen.framebuffer, nullptr);
 		DestroyImage(offscreen.image);
 		vkDestroyRenderPass(device, offscreen.renderPass, nullptr);
 	}
 
-	void RHI::GenerateBRDFLut(Image& BRDFLut) noexcept
+	void RHI::GenerateBRDFLut(VkFormat format, uint32_t size, Image& BRDFLut) noexcept
 	{
+		ImageCreateInfo imageCI = {};
+		imageCI.arrayLayers = 1;
+		imageCI.format = format;
+		imageCI.width = size;
+		imageCI.height = size;
+		imageCI.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
+		imageCI.subresourceRangeLayerCount = 1;
+		imageCI.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		imageCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
+		CreateImage(imageCI, BRDFLut);
+
+
+		struct OffscreenResource
+		{
+			VkRenderPass renderPass;
+			VkFramebuffer framebuffer;
+			GraphicsPipeline pipeline;
+		} offscreen;
+
+		// Attachment
+		VkAttachmentDescription attachmentDescription = {};
+		attachmentDescription.format = format;
+		attachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT;
+		attachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		attachmentDescription.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		attachmentDescription.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		attachmentDescription.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		attachmentDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		attachmentDescription.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		VkAttachmentReference colorAttachmentReference = {};
+		colorAttachmentReference.attachment = 0;
+		colorAttachmentReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+
+		// Subpass
+		VkSubpassDescription subpassDescription = {};
+		subpassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+		subpassDescription.colorAttachmentCount = 1;
+		subpassDescription.pColorAttachments = &colorAttachmentReference;
+
+		VkSubpassDependency subpassDependency_0 = {};
+		subpassDependency_0.srcSubpass = VK_SUBPASS_EXTERNAL;
+		subpassDependency_0.dstSubpass = 0;
+		subpassDependency_0.srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+		subpassDependency_0.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		subpassDependency_0.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+		subpassDependency_0.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		subpassDependency_0.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+		VkSubpassDependency subpassDependency_1 = {};
+		subpassDependency_1.srcSubpass = 0;
+		subpassDependency_1.dstSubpass = VK_SUBPASS_EXTERNAL;
+		subpassDependency_1.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		subpassDependency_1.dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+		subpassDependency_1.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		subpassDependency_1.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+		subpassDependency_1.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+		std::array<VkSubpassDependency, 2> subpassDependencies{ subpassDependency_0, subpassDependency_1 };
+
+		VkRenderPassCreateInfo renderPassCI = {};
+		renderPassCI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+		renderPassCI.attachmentCount = 1;
+		renderPassCI.pAttachments = &attachmentDescription;
+		renderPassCI.dependencyCount = TO_UINT32_T(subpassDependencies.size());
+		renderPassCI.pDependencies = subpassDependencies.data();
+		renderPassCI.subpassCount = 1;
+		renderPassCI.pSubpasses = &subpassDescription;
+
+		CHECK_VK(vkCreateRenderPass(device, &renderPassCI, nullptr, &offscreen.renderPass));
+
+		VkFramebufferCreateInfo framebufferCI = {};
+		framebufferCI.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferCI.renderPass = offscreen.renderPass;
+		framebufferCI.attachmentCount = 1;
+		framebufferCI.pAttachments = &BRDFLut.imageView;
+		framebufferCI.width = size;
+		framebufferCI.height = size;
+		framebufferCI.layers = 1;
+
+		CHECK_VK(vkCreateFramebuffer(device, &framebufferCI, nullptr, &offscreen.framebuffer));
+
+		struct PushConstant
+		{
+			int sampleCount = 1024;
+		} pushConstant;
+
+		VkPushConstantRange pushConstantRange = {};
+		pushConstantRange.size = sizeof(PushConstant);
+		pushConstantRange.stageFlags =  VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		GraphicsPipelineCreateInfo graphicsPipelineCI = {};
+		graphicsPipelineCI.renderPass = offscreen.renderPass;
+		graphicsPipelineCI.subpassIndex = 0;
+		graphicsPipelineCI.binaryVertexFilePath = "data/shaders/generateBRDFLut/generateBRDFLut.vert.spv";
+		graphicsPipelineCI.binaryFragmentFilePath = "data/shaders/generateBRDFLut/generateBRDFLut.frag.spv";
+		graphicsPipelineCI.vertexLayout = lux::VertexLayout::NO_VERTEX_LAYOUT;
+		graphicsPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		graphicsPipelineCI.viewportWidth = TO_FLOAT(size); // TODO: Change if issue -> swapchain extent
+		graphicsPipelineCI.viewportHeight = TO_FLOAT(size);
+		graphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_NONE;
+		graphicsPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_CLOCKWISE;
+		graphicsPipelineCI.disableMSAA = true;
+		graphicsPipelineCI.enableDepthTest = false;
+		graphicsPipelineCI.enableDepthWrite = false;
+		graphicsPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+		graphicsPipelineCI.pushConstants = { pushConstantRange };
+
+		CreateGraphicsPipeline(graphicsPipelineCI, offscreen.pipeline);
+
+		VkClearValue clearValue;
+		clearValue.color = { 0.0f, 0.0f, 0.0f };
+
+		VkCommandBuffer commandBuffer = BeginSingleTimeCommandBuffer();
+
+		VkRenderPassBeginInfo renderPassBI = {};
+		renderPassBI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassBI.framebuffer = offscreen.framebuffer;
+		renderPassBI.clearValueCount = 1;
+		renderPassBI.pClearValues = &clearValue;
+		renderPassBI.renderArea.extent.width = size;
+		renderPassBI.renderArea.extent.height = size;
+		renderPassBI.renderPass = offscreen.renderPass;
+
+		vkCmdBeginRenderPass(commandBuffer, &renderPassBI, VK_SUBPASS_CONTENTS_INLINE);
+
+		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, offscreen.pipeline.pipeline);
+
+		pushConstant.sampleCount = 1024;
+
+		vkCmdPushConstants(commandBuffer, offscreen.pipeline.pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &pushConstant);
+
+		vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+
+		vkCmdEndRenderPass(commandBuffer);
+
+		EndSingleTimeCommandBuffer(commandBuffer);
+
+		DestroyGraphicsPipeline(offscreen.pipeline);
+		vkDestroyFramebuffer(device, offscreen.framebuffer, nullptr);
+		vkDestroyRenderPass(device, offscreen.renderPass, nullptr);
+
+		// Update Descriptor Set
+		VkDescriptorImageInfo BRDFLutDescriptorImageInfo = {};
+		BRDFLutDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		BRDFLutDescriptorImageInfo.sampler = forward.prefilteredSampler;
+		BRDFLutDescriptorImageInfo.imageView = BRDFLut.imageView;
+
+		VkWriteDescriptorSet writeBRDFLutDescriptorSet = {};
+		writeBRDFLutDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeBRDFLutDescriptorSet.descriptorCount = 1;
+		writeBRDFLutDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		writeBRDFLutDescriptorSet.dstBinding = 4;
+		writeBRDFLutDescriptorSet.dstArrayElement = 0;
+		writeBRDFLutDescriptorSet.pImageInfo = &BRDFLutDescriptorImageInfo;
+
+		for (size_t i = 0; i < swapchainImageCount; i++)
+		{
+			writeBRDFLutDescriptorSet.dstSet = forward.rtViewDescriptorSets[i];
+
+			vkUpdateDescriptorSets(device, 1, &writeBRDFLutDescriptorSet, 0, nullptr);
+		}
 	}
 
 	void RHI::DestroyImage(Image& image) noexcept
