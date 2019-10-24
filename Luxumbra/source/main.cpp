@@ -12,6 +12,7 @@ int main(int ac, char* av[])
 	std::shared_ptr<lux::resource::Texture> albedo = resourceManager.GetTexture("data/textures/Brick_Diffuse.jpg");
 	std::shared_ptr<lux::resource::Texture> mask = resourceManager.GetTexture("data/textures/Vulkan_Logo.png");
 	std::shared_ptr<lux::resource::Texture> normal = resourceManager.GetTexture("data/textures/Brick_Normal.jpg");
+	std::shared_ptr<lux::resource::Texture> box = resourceManager.GetTexture("data/textures/box.png");
 
 	auto ironmanDif = resourceManager.GetTexture("data/textures/ironman.dff.png");
 	auto ironmanNrm = resourceManager.GetTexture("data/textures/ironman.norm.png");
@@ -37,7 +38,14 @@ int main(int ac, char* av[])
 	defaultMaterialCI.normal = ironmanNrm;
 	resourceManager.CreateMaterial("ironman", defaultMaterialCI);
 
+	defaultMaterialCI.normal = nullptr;
+	defaultMaterialCI.isTransparent = true;
+	defaultMaterialCI.albedo = box;
+	resourceManager.CreateMaterial("debug_box", defaultMaterialCI);
+
 	scene.AddCameraNode(nullptr, { 2.5f, 5.f, 20.f }, { 0.f, 0.f, 0.f }, false, 45.f, 0.01f, 1000.f, true);
+
+	scene.AddMeshNode(nullptr, { 0.f, 0.f, 0.f }, { 0.f, 0.f, 0.f }, false, lux::resource::MeshPrimitive::MESH_CUBE_PRIMITIVE, "debug_box");
 
 	for (size_t i = 0; i < 5; i++)
 	{

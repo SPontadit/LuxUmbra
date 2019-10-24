@@ -25,6 +25,7 @@ namespace lux::scene
 
 		glm::vec3 GetLocalPosition() const noexcept;
 		glm::vec3 GetLocalRotation() const noexcept;
+		glm::vec3 GetLocalScale() const noexcept;
 		glm::mat4 GetLocalTransform() const noexcept;
 
 		glm::vec3 GetWorldPosition() const noexcept;
@@ -33,6 +34,7 @@ namespace lux::scene
 
 		void SetLocalPosition(glm::vec3 newPosition) noexcept;
 		void SetLocalRotation(glm::vec3 newRotation) noexcept;
+		void SetLocalScale(glm::vec3 newScale) noexcept;
 
 		void SetWorldPosition(glm::vec3 newPosition) noexcept;
 		void SetWorldRotation(glm::quat newRotation) noexcept;
@@ -42,6 +44,7 @@ namespace lux::scene
 
 		glm::vec3 position;
 		glm::vec3 rotation;
+		glm::vec3 scale;
 	};
 
 } // namespace lux::scene

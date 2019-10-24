@@ -315,20 +315,17 @@ namespace lux::resource
 			}
 			else
 				mesh->aabb.MakeFit(aabbMin, aabbMax);
-		}
 
-		for (size_t i = 0; i < scene->mNumMeshes; i++)
-		{
 			uint32_t indexBase = TO_UINT32_T(indices.size());
-			for (size_t j = 0; j < scene->mMeshes[i]->mNumFaces; j++)
+			for (size_t j = 0; j < meshPart->mNumFaces; j++)
 			{
 				for (size_t k = 0; k < 3; k++)
 				{
-					indices.push_back(scene->mMeshes[i]->mFaces[j].mIndices[k] + indexBase);
+					indices.push_back(meshPart->mFaces[j].mIndices[k] + indexBase);
 				}
 			}
 		}
-		
+
 		rhi::BufferCreateInfo vertexBufferCI = {};
 		vertexBufferCI.usageFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 		vertexBufferCI.size = sizeof(Vertex) * vertices.size();

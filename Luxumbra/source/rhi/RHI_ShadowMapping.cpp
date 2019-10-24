@@ -187,35 +187,45 @@ namespace lux::rhi
 
 		ShadowMappingViewProjUniform shadowMappingViewProjUniform = {};
 
-		shadowMappingViewProjUniform.view = glm::lookAt(glm::vec3{ 0.f, 10.f, 10.f }, glm::vec3{ 0.f, 10.f, 9.f }, glm::vec3{ 0.f, 1.f, 0.f });
+		AABB lightAABB;
 
-		AABB meshAABB;
-		AABB sceneAABB;
+		glm::mat4 lightTransform = glm::toMat4(shadowCastingDirectional->GetWorldRotation());
+		glm::mat4 inverseLightTransform = glm::inverse(lightTransform);
 
-		glm::mat4 lightTransform = glm::inverse(shadowCastingDirectional->GetWorldTransform());
-
-		for (uint32_t i = 0; i < meshCount; i++)
+		for (uint32_t i = 1; i < meshCount; i++)
 		{
 			scene::MeshNode* meshNode = meshes[i];
 
-			meshAABB = meshNode->GetMesh().aabb;
-			meshAABB.Transform(meshNode->GetWorldTransform());
+			AABB meshAABB = meshNode->GetMesh().aabb;
 
-			if (i == 0)
-				sceneAABB = meshAABB;
+			glm::mat4 localToLightTransform = inverseLightTransform * meshNode->GetWorldTransform();
+
+			meshAABB.Transform(localToLightTransform);
+
+			if (i == 1)
+				lightAABB = meshAABB;
 			else
-				sceneAABB.MakeFit(meshAABB);
+				lightAABB.MakeFit(meshAABB);
 		}
 
-		glm::vec3 lightPos = (sceneAABB.min + sceneAABB.max) * 0.5f;
-		glm::vec3 lightDir = glm::rotate(shadowCastingDirectional->GetWorldRotation(), glm::vec3(0.f, 0.f, -1.f));
+		float aabbx = lightAABB.max.x - lightAABB.min.x;
+		float aabby = lightAABB.max.y - lightAABB.min.y;
+		float aabbz = lightAABB.max.z - lightAABB.min.z;
+		float scaleFactor = 1.0f / 1.28f;
 
-		shadowMappingViewProjUniform.view = glm::lookAt(lightPos, lightPos + lightDir, glm::vec3(0.f, 1.f, 0.f));
+		scene::MeshNode* aabbMesh = meshes[0];
+		aabbMesh->SetLocalScale(glm::vec3(aabbx * scaleFactor, aabby * scaleFactor, aabbz * scaleFactor));
 
-		sceneAABB.Transform(lightTransform);
-		shadowMappingViewProjUniform.proj = glm::ortho(sceneAABB.min.x, sceneAABB.max.x, sceneAABB.min.y, sceneAABB.max.y, sceneAABB.min.z, sceneAABB.max.y);
+		shadowMappingViewProjUniform.proj = glm::ortho(-aabbx, aabbx, -aabby, aabby, -aabbz, aabbz);
 		shadowMappingViewProjUniform.proj[1][1] *= -1.f;
 
+		glm::vec3 lightPos = (lightTransform * glm::vec4((lightAABB.min + lightAABB.max) * 0.5f, 1.0f)).xyz;
+		glm::vec3 lightDir = (lightTransform * glm::vec4(0.f, 0.f, -1.f, 1.f)).xyz;
+
+		aabbMesh->SetLocalPosition(lightPos);
+		aabbMesh->SetLocalRotation(shadowCastingDirectional->GetLocalRotation());
+
+		shadowMappingViewProjUniform.view = glm::lookAt(lightPos, lightPos + lightDir, glm::vec3(0.f, 1.f, 0.f));
 
 		UpdateBuffer(shadowMapper.viewProjUniformBuffer, &shadowMappingViewProjUniform);
 
@@ -238,7 +248,7 @@ namespace lux::rhi
 
 		ShadowMappingModelConstant shadowMappingModelConstant = {};
 
-		for (uint32_t i = 0; i < meshCount; i++)
+		for (uint32_t i = 1; i < meshCount; i++)
 		{
 			scene::MeshNode* meshNode = meshes[i];
 

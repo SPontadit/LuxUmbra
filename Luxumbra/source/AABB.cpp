@@ -9,10 +9,32 @@ namespace lux
 
 	}
 
-	AABB& AABB::Transform(glm::mat4 transform) noexcept
+	AABB& AABB::Transform(const glm::mat4& transform) noexcept
 	{
-		min = (transform * glm::vec4(min, 1.0f)).xyz;
-		max = (transform * glm::vec4(max, 1.0f)).xyz;
+		glm::vec3 oldMin = min, oldMax = max;
+		glm::vec3 translation = transform[3].xyz;
+
+		for (int i = 0; i < 3; i++)
+		{
+			min[i] = max[i] = translation[i];
+
+			for (int j = 0; j < 3; j++)
+			{
+				float e = transform[i][j] * oldMin[j];
+				float f = transform[i][j] * oldMax[j];
+
+				if (e < f)
+				{
+					min[i] += e;
+					max[i] += f;
+				}
+				else
+				{
+					min[i] += f;
+					max[i] += e;
+				}
+			}
+		}
 
 		return *this;
 	}
@@ -24,19 +46,8 @@ namespace lux
 
 	void AABB::MakeFit(const glm::vec3& newMin, const glm::vec3& newMax) noexcept
 	{
-		if (newMin.x < min.x)
-			min.x = newMin.x;
-		if (newMin.y < min.y)
-			min.y = newMin.y;
-		if (newMin.z < min.z)
-			min.z = newMin.z;
-
-		if (newMax.x > max.x)
-			max.x = newMax.x;
-		if (newMax.y > max.y)
-			max.y = newMax.y;
-		if (newMax.z > max.z)
-			max.z = newMax.z;
+		min = glm::min(min, newMin);
+		max = glm::max(max, newMax);
 	}
 
 }
