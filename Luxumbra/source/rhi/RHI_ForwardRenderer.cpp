@@ -367,6 +367,11 @@ namespace lux::rhi
 		blitDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
 		blitDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
+		VkPushConstantRange blitPostProcessParameterPushConstantRange = {};
+		blitPostProcessParameterPushConstantRange.offset = 0;
+		blitPostProcessParameterPushConstantRange.size = sizeof(PostProcessParameters);
+		blitPostProcessParameterPushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
 		GraphicsPipelineCreateInfo blitGraphicsPipelineCI = {};
 		blitGraphicsPipelineCI.renderPass = forward.renderPass;
 		blitGraphicsPipelineCI.subpassIndex = ForwardRenderer::FORWARD_SUBPASS_COPY;
@@ -383,6 +388,7 @@ namespace lux::rhi
 		blitGraphicsPipelineCI.enableDepthWrite = VK_TRUE;
 		blitGraphicsPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS;
 		blitGraphicsPipelineCI.viewDescriptorSetLayoutBindings = { blitDescriptorSetLayoutBinding };
+		blitGraphicsPipelineCI.pushConstants = { blitPostProcessParameterPushConstantRange };
 
 		CreateGraphicsPipeline(blitGraphicsPipelineCI, forward.blitGraphicsPipeline);
 
@@ -925,6 +931,8 @@ namespace lux::rhi
 		vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.blitGraphicsPipeline.pipeline);
 		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.blitGraphicsPipeline.pipelineLayout, 0, 1, &forward.blitDescriptorSets[currentFrame], 0, nullptr);
+
+		vkCmdPushConstants(commandBuffer, forward.blitGraphicsPipeline.pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PostProcessParameters), &forward.postProcessParameters);
 
 		vkCmdDraw(commandBuffer, 4, 1, 0, 0);
 

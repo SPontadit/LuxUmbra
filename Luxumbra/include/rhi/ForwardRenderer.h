@@ -24,6 +24,11 @@ namespace lux::rhi
 		glm::mat4 model;
 	};
 
+	struct PostProcessParameters
+	{
+		float exposure = 2.0f;
+	};
+
 	struct ForwardRenderer
 	{
 		ForwardRenderer() noexcept;
@@ -73,6 +78,8 @@ namespace lux::rhi
 		VkSampler cubemapSampler;
 		VkSampler irradianceSampler;
 		VkSampler prefilteredSampler;
+
+		PostProcessParameters postProcessParameters;
 
 		enum ForwardAttachmentBindPoints : uint32_t
 		{

@@ -65,18 +65,33 @@ namespace lux
 
 	void Engine::DrawImgui() noexcept
 	{
+		ImGuiStyle& style = ImGui::GetStyle();
+		style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
 		ImGui::Begin("Luxumbra Engine");
 		
+
+
 		if (ImGui::Button("Reload Shader"))
 		{
 			rhi.RebuildForwardGraphicsPipeline();
 		}
 
 		ImGui::NewLine();
+
+		// PostProcess
+		float exposure = rhi.forward.postProcessParameters.exposure;
+		float newExposure = exposure;
+		ImGui::SliderFloat("Exposure", &newExposure, 0.0f, 15.0f, "%.2f");
+
+		if (newExposure != exposure)
+		{
+			rhi.forward.postProcessParameters.exposure = newExposure;
+		}
 
 		scene::CameraNode* camera = scene.GetCurrentCamera();
 		DisplayCameraNode(camera);
