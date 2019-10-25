@@ -35,6 +35,7 @@ namespace lux
 		void DisplayCameraNode(scene::CameraNode* node) noexcept;
 		void DisplayMeshNodes(const std::vector<scene::MeshNode*>& meshes) noexcept;
 		void DisplayLightNodes(const std::vector<scene::LightNode*>& lights) noexcept;
+		void DisplayMaterials() noexcept;
 		void DisplayNode(scene::Node* node) noexcept;
 
 		bool isInitialized;
