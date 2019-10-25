@@ -24,5 +24,5 @@ void main()
 	vec3 direction = normalize(inPositionLS);
 	vec2 uv = RadialToTexCoords(direction);
 
-	outColor = pow(texture(envMap, uv), vec4(1.0/2.2));
+	outColor = texture(envMap, uv);
 }

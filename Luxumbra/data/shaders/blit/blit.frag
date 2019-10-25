@@ -7,26 +7,30 @@ layout(input_attachment_index = 0, set = 0, binding = 0) uniform subpassInput in
 
 vec3 ACESFilm(vec3 x);
 vec3 Uncharted2Tonemap(vec3 x);
+vec3 Reinhard(vec3 x);
 
 void main() 
 {
 	vec3 color = subpassLoad(inputColor).rgb;
-	outColor = vec4(color, 1.0);
 	
-	return;
-
 //	color = ACESFilm(color);
-	color *= 16;
+//	outColor = Reinhard(color);
 
-	float exposureBias = 2.0;
-	float w = 11.2;
+//	outColor = vec4(color, 1.0);
 
-	vec3 curr = Uncharted2Tonemap(exposureBias * color);
-	vec3 whiteScale = 1.0 / Uncharted2Tonemap(vec3(w));
 	
-	vec3 c = curr * whiteScale;
+//	outColor = pow(outColor, vec4(2.2));
 
-	outColor = pow(vec4(c, 1.0), vec4(1.0/2.2));
+	float exposure = 4.5;
+	color = Uncharted2Tonemap(color * exposure);
+	color = color * (1.0 / Uncharted2Tonemap(vec3(11.2)));
+
+	outColor = pow(vec4(color, 1.0), vec4(1.0));
+}
+
+vec3 Reinhard(vec3 x)
+{
+	return x / (x + vec3(1.0));
 }
 
 vec3 ACESFilm(vec3 x)
