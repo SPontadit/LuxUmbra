@@ -20,6 +20,7 @@ namespace lux::resource
 	{
 		MESH_SPHERE_PRIMITIVE = 0,
 		MESH_CUBE_PRIMITIVE = 1,
+		MESH_PLANE_PRIMITIVE = 2,
 		MESH_PRIMITIVE_COUNT
 	};
 

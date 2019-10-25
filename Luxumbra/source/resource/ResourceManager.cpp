@@ -176,6 +176,7 @@ namespace lux::resource
 	{
 		primitiveMeshes[TO_UINT32_T(MeshPrimitive::MESH_SPHERE_PRIMITIVE)] = LoadMesh("data/models/Sphere.fbx", 0.75f, true);
 		primitiveMeshes[TO_UINT32_T(MeshPrimitive::MESH_CUBE_PRIMITIVE)] = LoadMesh("data/models/Cube.fbx", 0.5f, true);
+		primitiveMeshes[TO_UINT32_T(MeshPrimitive::MESH_PLANE_PRIMITIVE)] = LoadMesh("data/models/Plane.fbx", 1.0f, true);
 
 		rhi.SetCubeMesh(primitiveMeshes[TO_UINT32_T(MeshPrimitive::MESH_CUBE_PRIMITIVE)]);
 	}
@@ -276,7 +277,9 @@ namespace lux::resource
 		importer.SetPropertyFloat(AI_CONFIG_GLOBAL_SCALE_FACTOR_KEY, scale);
 
 		unsigned int postProcessFlags = aiProcess_GenBoundingBoxes | aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals | aiProcess_PreTransformVertices | aiProcess_CalcTangentSpace;
-		postProcessFlags |= scale == 1.0f ? 0 : aiProcess_GlobalScale;
+		
+		if (isPrimitive)
+			postProcessFlags |= aiProcess_GlobalScale;
 		
 		const aiScene* scene = importer.ReadFile(filename, postProcessFlags);
 
