@@ -199,8 +199,8 @@ vec4 CameraSpace()
 	vec3 irradiance = texture(irradianceMap, normal).xyz;
 	
 	vec3 F = F_SchlickRoughness(NdotV, F0, roughness);
-	vec3 indirectSpecularColor = reflection * mix(BRDF.xxx, BRDF.yyy, F0);
 	//vec3 indirectSpecularColor = reflection * (F * BRDF.x + BRDF.y);
+	vec3 indirectSpecularColor = reflection * mix(BRDF.xxx, BRDF.yyy, F0);
 
 	vec3 Kdiff = 1.0 - F;
 	vec3 indirectDiffuseColor = irradiance * diffuseColor * Kdiff;

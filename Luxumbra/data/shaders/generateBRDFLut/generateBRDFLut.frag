@@ -41,18 +41,18 @@ vec2 BRDF(float NdotV, float roughness)
 		vec3 L = 2.0 * dot(V, H) * H - V;
 
 		float NdotL = max(dot(normal, L), 0.001);
-		float NdotV = max(dot(normal, V), 0.001);
+		float NdoV = max(dot(normal, V), 0.001);
 		float VdotH = max(dot(V, H), 0.001);
 		float NdotH = max(dot(normal, H), 0.001);
 	
 		if (NdotL > 0.0)
 		{
-			float G = G_SchlickSmithGGX(NdotV, NdotL, roughness);
-			float G_Vis = (G * VdotH) / (NdotH * NdotV);
+			float G = G_SchlickSmithGGX(NdoV, NdotL, roughness);
+			float G_Vis = (G * VdotH) / (NdotH * NdoV);
 			float Fc = pow(1.0 - VdotH, 5.0);
 
-			LUT += vec2(Fc * G_Vis, G_Vis);
 			//LUT += vec2((1.0 - Fc) * G_Vis, Fc * G_Vis);
+			LUT += vec2(Fc * G_Vis, G_Vis);
 
 		}
 	}

@@ -27,7 +27,7 @@ namespace lux::rhi
 
 	struct PostProcessParameters
 	{
-		float exposure = 2.0f;
+		float exposure = 1.0f;
 	};
 
 	struct ForwardRenderer
