@@ -12,7 +12,7 @@ namespace lux::rhi
 	using sortedMeshNodesConstIterator = std::map<std::string, std::vector<scene::MeshNode*>>::const_iterator;
 	
 	ForwardRenderer::ForwardRenderer() noexcept
-		: renderPass(VK_NULL_HANDLE), frameBuffers(0), descriptorPool(VK_NULL_HANDLE), blitGraphicsPipeline(), blitDescriptorSets(0),
+		: rtImageFormat(VK_FORMAT_R32G32B32A32_SFLOAT), renderPass(VK_NULL_HANDLE), frameBuffers(0), descriptorPool(VK_NULL_HANDLE), blitGraphicsPipeline(), blitDescriptorSets(0),
 		rtGraphicsPipeline(), rtViewDescriptorSets(0), rtModelDescriptorSets(0), rtColorAttachmentImages(0), rtColorAttachmentImageMemories(0), rtColorAttachmentImageViews(0),
 		rtResolveColorAttachmentImage(VK_NULL_HANDLE), rtResolveColorAttachmentMemory(VK_NULL_HANDLE), rtResolveColorAttachmentImageView(VK_NULL_HANDLE),
 		rtDepthAttachmentImage(VK_NULL_HANDLE), rtDepthAttachmentMemory(VK_NULL_HANDLE), rtDepthAttachmentImageView(VK_NULL_HANDLE),
@@ -36,7 +36,7 @@ namespace lux::rhi
 		swapchainAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
 		VkAttachmentDescription rtColorAttachment = {};
-		rtColorAttachment.format = swapchainImageFormat;
+		rtColorAttachment.format = forward.rtImageFormat;
 		rtColorAttachment.samples = msaaSamples;
 		rtColorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		rtColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -61,7 +61,7 @@ namespace lux::rhi
 
 
 		VkAttachmentDescription rtResolveColorAttachment = {};
-		rtResolveColorAttachment.format = swapchainImageFormat;
+		rtResolveColorAttachment.format = forward.rtImageFormat;
 		rtResolveColorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
 		rtResolveColorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		rtResolveColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -151,7 +151,7 @@ namespace lux::rhi
 		VkImageCreateInfo rtColorAttachmentImageCI = {};
 		rtColorAttachmentImageCI.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 		rtColorAttachmentImageCI.imageType = VK_IMAGE_TYPE_2D;
-		rtColorAttachmentImageCI.format = swapchainImageFormat;
+		rtColorAttachmentImageCI.format = forward.rtImageFormat;
 		rtColorAttachmentImageCI.extent = { swapchainExtent.width, swapchainExtent.height, 1 };
 		rtColorAttachmentImageCI.mipLevels = 1;
 		rtColorAttachmentImageCI.arrayLayers = 1;
@@ -166,7 +166,7 @@ namespace lux::rhi
 		VkImageViewCreateInfo rtColorAttachmentImageViewCI = {};
 		rtColorAttachmentImageViewCI.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		rtColorAttachmentImageViewCI.components = { VK_COMPONENT_SWIZZLE_IDENTITY };
-		rtColorAttachmentImageViewCI.format = swapchainImageFormat;
+		rtColorAttachmentImageViewCI.format = forward.rtImageFormat;
 		rtColorAttachmentImageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
 		rtColorAttachmentImageViewCI.subresourceRange = swapchainImageSubresourceRange;
 
@@ -243,7 +243,7 @@ namespace lux::rhi
 		VkImageCreateInfo rtResolveColorAttachmentImageCI = {};
 		rtResolveColorAttachmentImageCI.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 		rtResolveColorAttachmentImageCI.imageType = VK_IMAGE_TYPE_2D;
-		rtResolveColorAttachmentImageCI.format = swapchainImageFormat;
+		rtResolveColorAttachmentImageCI.format = forward.rtImageFormat;
 		rtResolveColorAttachmentImageCI.extent = { swapchainExtent.width, swapchainExtent.height, 1 };
 		rtResolveColorAttachmentImageCI.mipLevels = 1;
 		rtResolveColorAttachmentImageCI.arrayLayers = 1;
@@ -268,7 +268,7 @@ namespace lux::rhi
 		rtResolveColorAttachmentImageViewCI.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		rtResolveColorAttachmentImageViewCI.image = forward.rtResolveColorAttachmentImage;
 		rtResolveColorAttachmentImageViewCI.components = { VK_COMPONENT_SWIZZLE_IDENTITY };
-		rtResolveColorAttachmentImageViewCI.format = swapchainImageFormat;
+		rtResolveColorAttachmentImageViewCI.format = forward.rtImageFormat;
 		rtResolveColorAttachmentImageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
 		rtResolveColorAttachmentImageViewCI.subresourceRange = swapchainImageSubresourceRange;
 

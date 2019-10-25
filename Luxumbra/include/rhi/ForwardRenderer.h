@@ -35,6 +35,8 @@ namespace lux::rhi
 		const ForwardRenderer& operator=(const ForwardRenderer&) = delete;
 		const ForwardRenderer& operator=(ForwardRenderer&&) = delete;
 
+		VkFormat rtImageFormat;
+
 		VkRenderPass renderPass;
 		std::vector<VkFramebuffer> frameBuffers;
 		VkDescriptorPool descriptorPool;
