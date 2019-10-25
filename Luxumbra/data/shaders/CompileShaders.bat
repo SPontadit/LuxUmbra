@@ -21,4 +21,5 @@ C:/VulkanSDK/1.1.114.0/Bin32/glslangValidator.exe -V generatePrefilteredMap/gene
 C:/VulkanSDK/1.1.114.0/Bin32/glslangValidator.exe -V generatePrefilteredMap/generatePrefilteredMap.frag -o generatePrefilteredMap/generatePrefilteredMap.frag.spv
 C:/VulkanSDK/1.1.114.0/Bin32/glslangValidator.exe -V generateBRDFLut/generateBRDFLut.vert -o generateBRDFLut/generateBRDFLut.vert.spv
 C:/VulkanSDK/1.1.114.0/Bin32/glslangValidator.exe -V generateBRDFLut/generateBRDFLut.frag -o generateBRDFLut/generateBRDFLut.frag.spv
+C:/VulkanSDK/1.1.114.0/Bin32/glslangValidator.exe -V shadowMapping/directionalShadowMapping.vert -o shadowMapping/directionalShadowMapping.vert.spv
 pause

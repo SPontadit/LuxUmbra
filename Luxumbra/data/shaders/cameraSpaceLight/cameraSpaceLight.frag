@@ -10,6 +10,7 @@ layout(location = 0) in FsIn
 	vec3 normalWS;
 	mat4 viewMatrix;
 	mat3 textureToViewMatrix;
+	vec4 shadowCoord;
 } fsIn;
 
 layout(location = 0) out vec4 outColor;
@@ -28,6 +29,7 @@ layout(set = 0, binding = 1) uniform LightBuffer
 layout(set = 0, binding = 2) uniform samplerCube irradianceMap;
 layout(set = 0, binding = 3) uniform samplerCube prefilteredMap;
 layout(set = 0, binding = 4) uniform sampler2D BRDFLut;
+layout(set = 0, binding = 5) uniform sampler2D shadowMap;
 
 layout(push_constant) uniform PushConsts
 {
@@ -57,6 +59,7 @@ layout(set = 1, binding = 2) uniform sampler2D normalMap;
 
 const float PI = 3.1415926;
 
+float Shadow(vec4 shadowCoord);
 vec4 CameraSpace();
 
 // PBR
@@ -97,6 +100,18 @@ vec3 getNormalFromMap()
     mat3 TBN = mat3(T, B, N);
 
     return normalize(TBN  * tangentNormal);
+}
+
+float Shadow(vec4 shadowCoord)
+{
+	if (abs(shadowCoord.x) > 1.0 || abs(shadowCoord.y) > 1.0 || abs(shadowCoord.z) > 1.0)
+		return 0.0;
+
+	vec2 shadowUV = shadowCoord.xy * 0.5 + 0.5;
+	if (shadowCoord.z > texture(shadowMap, shadowUV).x)
+		return 0.0;
+
+	return 1.0;
 }
 
 vec4 CameraSpace()
@@ -166,6 +181,9 @@ vec4 CameraSpace()
 		directColor += (directDiffuseColor + specular) * radiance * NdotL;
 	}
 
+	float shadow = Shadow(fsIn.shadowCoord / fsIn.shadowCoord.w);
+
+
 	viewDir = -fsIn.viewMatrix[3].xyz  * mat3(fsIn.viewMatrix);
 	viewDir = normalize(viewDir - fsIn.positionWS);
 
@@ -189,9 +207,7 @@ vec4 CameraSpace()
 
 	vec3 indirectColor = indirectDiffuseColor + indirectSpecularColor;
 
-	return vec4(indirectSpecularColor, 1.0);
-
-	return vec4(directColor + indirectColor, textureColor.a);
+	return vec4(directColor * shadow + indirectColor, textureColor.a);
 }
 
 vec3 PrefilteredReflection(vec3 R, float roughness)

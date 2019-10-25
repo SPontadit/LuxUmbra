@@ -30,6 +30,7 @@ namespace lux::scene
 		void Initialize(const Window& window, resource::ResourceManager& resourceManager) noexcept;
 
 		CameraNode* GetCurrentCamera() const noexcept;
+		LightNode* GetShadowCastingDirectional() const noexcept;
 		const std::vector<MeshNode*>& GetMeshNodes() const noexcept;
 		const std::vector<LightNode*>& GetLightNodes() const noexcept;
 
@@ -47,6 +48,7 @@ namespace lux::scene
 		std::vector<MeshNode*> meshNodes;
 		std::vector<LightNode*> lightNodes;
 		CameraNode* currentCamera;
+		LightNode* shadowCastingDirectional;
 	};
 
 } // namespace lux::scene

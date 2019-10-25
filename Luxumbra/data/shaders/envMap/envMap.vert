@@ -10,8 +10,8 @@ layout(location = 0) out vec3 outPositionLS;
 
 layout(binding = 0) uniform ViewProj
 {
-	mat4 proj;
 	mat4 view;
+	mat4 proj;
 } vp;
 
 

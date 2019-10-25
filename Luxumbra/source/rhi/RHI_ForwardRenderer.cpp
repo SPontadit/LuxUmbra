@@ -46,11 +46,7 @@ namespace lux::rhi
 		rtColorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 		VkAttachmentDescription rtDepthAttachment = {};
-
-		std::vector<VkFormat> depthAttachmentFormats{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT };
-		rtDepthAttachment.format = FindSupportedImageFormat(depthAttachmentFormats, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
-		ASSERT(rtDepthAttachment.format != VK_FORMAT_MAX_ENUM);
-
+		rtDepthAttachment.format = depthImageFormat;
 		rtDepthAttachment.samples = msaaSamples;
 		rtDepthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		rtDepthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -197,10 +193,6 @@ namespace lux::rhi
 
 		// Depth attachment
 
-		std::vector<VkFormat> depthAttachmentFormats{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT };
-		VkFormat depthImageFormat = FindSupportedImageFormat(depthAttachmentFormats, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
-		ASSERT(depthImageFormat != VK_FORMAT_MAX_ENUM);
-
 		VkImageCreateInfo rtDepthAttachmentImageCI = {};
 		rtDepthAttachmentImageCI.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 		rtDepthAttachmentImageCI.imageType = VK_IMAGE_TYPE_2D;
@@ -317,6 +309,10 @@ namespace lux::rhi
 		lightsUniformDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		lightsUniformDescriptorPoolSize.descriptorCount = swapchainImageCount;
 
+		VkDescriptorPoolSize shadowMapsDescriptorPoolSize = {};
+		shadowMapsDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		shadowMapsDescriptorPoolSize.descriptorCount = swapchainImageCount;
+
 		VkDescriptorPoolSize irradianceMapDescriptorPoolSize = {};
 		irradianceMapDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		irradianceMapDescriptorPoolSize.descriptorCount = swapchainImageCount;
@@ -337,11 +333,12 @@ namespace lux::rhi
 		envMapUniformDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		envMapUniformDescriptorPoolSize.descriptorCount = swapchainImageCount;
 
-		std::array<VkDescriptorPoolSize, 8> descriptorPoolSizes = 
+		std::array<VkDescriptorPoolSize, 9> descriptorPoolSizes = 
 		{ 
 			blitInputDescriptorPoolSize, 
 			rtViewProjUniformDescriptorPoolSize, 
 			lightsUniformDescriptorPoolSize, 
+			shadowMapsDescriptorPoolSize,
 			irradianceMapDescriptorPoolSize,
 			prefilteredMapDescriptorPoolSize,
 			BRDFLutMapDescriptorPoolSize,
@@ -386,6 +383,9 @@ namespace lux::rhi
 		blitGraphicsPipelineCI.disableMSAA = true;
 		blitGraphicsPipelineCI.enableDepthTest = VK_TRUE;
 		blitGraphicsPipelineCI.enableDepthWrite = VK_TRUE;
+		blitGraphicsPipelineCI.enableDepthBias = VK_FALSE;
+		blitGraphicsPipelineCI.depthBiasConstantFactor = 0.f;
+		blitGraphicsPipelineCI.depthBiasSlopeFactor = 0.f;
 		blitGraphicsPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS;
 		blitGraphicsPipelineCI.viewDescriptorSetLayoutBindings = { blitDescriptorSetLayoutBinding };
 		blitGraphicsPipelineCI.pushConstants = { blitPostProcessParameterPushConstantRange };
@@ -425,6 +425,12 @@ namespace lux::rhi
 		BRDFLutDescriptorSetLayoutBinding.descriptorCount = 1;
 		BRDFLutDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		BRDFLutDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		VkDescriptorSetLayoutBinding shadowMapDescriptorSetLayoutBinding = {};
+		shadowMapDescriptorSetLayoutBinding.binding = 5;
+		shadowMapDescriptorSetLayoutBinding.descriptorCount = 1;
+		shadowMapDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		shadowMapDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 		// Material Layout
 		VkDescriptorSetLayoutBinding materialParametersDescriptorSetLayoutBinding = {};
@@ -473,14 +479,19 @@ namespace lux::rhi
 		rtGraphicsPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		rtGraphicsPipelineCI.enableDepthTest = VK_TRUE;
 		rtGraphicsPipelineCI.enableDepthWrite = VK_TRUE;
+		rtGraphicsPipelineCI.enableDepthBias = VK_FALSE;
+		rtGraphicsPipelineCI.depthBiasConstantFactor = 0.f;
+		rtGraphicsPipelineCI.depthBiasSlopeFactor = 0.f;
 		rtGraphicsPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS;
+		
 		rtGraphicsPipelineCI.viewDescriptorSetLayoutBindings = 
 		{ 
 			rtViewProjDescriptorSetLayoutBinding, 
 			lightDescriptorSetLayoutBinding, 
 			irradianceMapDescriptorSetLayoutBinding, 
 			prefilteredMapDescriptorSetLayoutBinding,
-			BRDFLutDescriptorSetLayoutBinding
+			BRDFLutDescriptorSetLayoutBinding,
+			shadowMapDescriptorSetLayoutBinding
 		};
 
 		rtGraphicsPipelineCI.materialDescriptorSetLayoutBindings = { materialParametersDescriptorSetLayoutBinding, materialAlbedoDescriptorSetLayoutBinding, materialNormalDescriptorSetLayoutBinding };
@@ -539,6 +550,9 @@ namespace lux::rhi
 		envMapGraphicsPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_CLOCKWISE;
 		envMapGraphicsPipelineCI.enableDepthTest = VK_TRUE;
 		envMapGraphicsPipelineCI.enableDepthWrite = VK_FALSE;
+		envMapGraphicsPipelineCI.enableDepthBias = VK_FALSE;
+		envMapGraphicsPipelineCI.depthBiasConstantFactor = 0.f;
+		envMapGraphicsPipelineCI.depthBiasSlopeFactor = 0.f;
 		envMapGraphicsPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
 		envMapGraphicsPipelineCI.viewDescriptorSetLayoutBindings = { envMapViewProjDescriptorSetLayoutBinding, envMapSamplerDescriptorSetLayoutBinding};
 	
@@ -648,45 +662,57 @@ namespace lux::rhi
 		// Update Render Target Descriptor Sets
 
 		// ViewProj UBO
+		VkDescriptorBufferInfo rtViewProjDescriptorBufferInfo = {};
+		rtViewProjDescriptorBufferInfo.offset = 0;
+		rtViewProjDescriptorBufferInfo.range = sizeof(RtViewProjUniform);
+
 		VkWriteDescriptorSet rtWriteViewProjDescriptorSet = {};
 		rtWriteViewProjDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		rtWriteViewProjDescriptorSet.descriptorCount = 1;
 		rtWriteViewProjDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		rtWriteViewProjDescriptorSet.dstBinding = 0;
 		rtWriteViewProjDescriptorSet.dstArrayElement = 0;
-
-		VkDescriptorBufferInfo rtViewProjDescriptorBufferInfo = {};
-		rtViewProjDescriptorBufferInfo.offset = 0;
-		rtViewProjDescriptorBufferInfo.range = sizeof(RtViewProjUniform);
+		rtWriteViewProjDescriptorSet.pBufferInfo = &rtViewProjDescriptorBufferInfo;
 
 		// Light UBO
+		VkDescriptorBufferInfo lightDescriptorBufferInfo = {};
+		lightDescriptorBufferInfo.offset = 0;
+		lightDescriptorBufferInfo.range = sizeof(LightBuffer) * LIGHT_MAX_COUNT;
+
 		VkWriteDescriptorSet writeLightDescriptorSet = {};
 		writeLightDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		writeLightDescriptorSet.descriptorCount = 1;
 		writeLightDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		writeLightDescriptorSet.dstBinding = 1;
 		writeLightDescriptorSet.dstArrayElement = 0;
+		writeLightDescriptorSet.pBufferInfo = &lightDescriptorBufferInfo;
 
-		VkDescriptorBufferInfo lightDescriptorBufferInfo = {};
-		lightDescriptorBufferInfo.offset = 0;
-		lightDescriptorBufferInfo.range = sizeof(LightBuffer) * LIGHT_MAX_COUNT;
+		// Shadow map sampler
+		VkDescriptorImageInfo shadowMapImageDescriptorInfo = {};
+		shadowMapImageDescriptorInfo.imageView = shadowMapper.shadowMap.imageView;
+		shadowMapImageDescriptorInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+		shadowMapImageDescriptorInfo.sampler = forward.sampler;
+
+		VkWriteDescriptorSet writeShadowMapDescriptorSet = {};
+		writeShadowMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeShadowMapDescriptorSet.descriptorCount = 1;
+		writeShadowMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		writeShadowMapDescriptorSet.dstBinding = 5;
+		writeShadowMapDescriptorSet.dstArrayElement = 0;
+		writeShadowMapDescriptorSet.pImageInfo = &shadowMapImageDescriptorInfo;
 
 
 		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
 			rtViewProjDescriptorBufferInfo.buffer = forward.viewProjUniformBuffers[i].buffer;
-
-			rtWriteViewProjDescriptorSet.pBufferInfo = &rtViewProjDescriptorBufferInfo;
 			rtWriteViewProjDescriptorSet.dstSet = forward.rtViewDescriptorSets[i];
 
-
 			lightDescriptorBufferInfo.buffer = lightUniformBuffers[i].buffer;
-			
-			writeLightDescriptorSet.pBufferInfo = &lightDescriptorBufferInfo;
 			writeLightDescriptorSet.dstSet = forward.rtViewDescriptorSets[i];
 
+			writeShadowMapDescriptorSet.dstSet = forward.rtViewDescriptorSets[i];
 
-			std::array<VkWriteDescriptorSet, 2> writeDescriptorSets = { rtWriteViewProjDescriptorSet, writeLightDescriptorSet };
+			std::array<VkWriteDescriptorSet, 3> writeDescriptorSets = { rtWriteViewProjDescriptorSet, writeLightDescriptorSet, writeShadowMapDescriptorSet };
 			vkUpdateDescriptorSets(device, TO_UINT32_T(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
 		}
 	}
@@ -716,12 +742,10 @@ namespace lux::rhi
 		}
 
 
-		RtViewProjUniform viewProj;
+		forward.rtViewProjUniform.view = camera->GetViewTransform();
+		forward.rtViewProjUniform.projection = camera->GetPerspectiveProjectionTransform();
 
-		viewProj.view = camera->GetViewTransform();
-		viewProj.projection = camera->GetPerspectiveProjectionTransform();
-
-		UpdateBuffer(forward.viewProjUniformBuffers[currentFrame], &viewProj);
+		UpdateBuffer(forward.viewProjUniformBuffers[currentFrame], &forward.rtViewProjUniform);
 
 
 
@@ -754,32 +778,9 @@ namespace lux::rhi
 		UpdateBuffer(lightUniformBuffers[currentFrame], lightDatas.data());
 	}
 
-	void RHI::RenderForward(const scene::CameraNode* camera, const std::vector<scene::MeshNode*>& meshes, const std::vector<scene::LightNode*>& lights) noexcept
+	void RHI::RenderForward(VkCommandBuffer commandBuffer, int imageIndex, const scene::CameraNode* camera, const std::vector<scene::MeshNode*>& meshes, const std::vector<scene::LightNode*>& lights) noexcept
 	{
-		// Acquire next image
-		VkFence* fence = &fences[currentFrame];
-		VkCommandBuffer commandBuffer = commandBuffers[currentFrame];
-
-		vkWaitForFences(device, 1, fence, false, UINT64_MAX);
-		vkResetFences(device, 1, fence);
-		vkResetCommandBuffer(commandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
-
-		VkSemaphore* acquireSemaphore = &acquireSemaphores[currentFrame];
-		VkSemaphore* presentSemaphore = &presentSemaphores[currentFrame];
-
-		uint32_t imageIndex;
-		uint64_t timeout = UINT64_MAX;
-
-		CHECK_VK(vkAcquireNextImageKHR(device, swapchain, timeout, *acquireSemaphore, VK_NULL_HANDLE, &imageIndex));
-
-
-		// Begin Command Buffer
-		VkCommandBufferBeginInfo commandBufferBI = {};
-		commandBufferBI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		commandBufferBI.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-		CHECK_VK(vkBeginCommandBuffer(commandBuffer, &commandBufferBI));
-
+		VkDeviceSize vertexBufferOffsets[] = { 0 };
 
 		VkClearColorValue clearColor{ 0.5f, 0.5703125f, 0.6171875f, 1.0F };
 
@@ -838,9 +839,6 @@ namespace lux::rhi
 
 		vkCmdPushConstants(commandBuffer, forward.rtGraphicsPipeline.pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(RtModelConstant), sizeof(LightCountPushConstant), &lightCountPushConstant);
 
-		VkDeviceSize offset[] = { 0 };
-
-
 		sortedMeshNodesConstIterator it = sortedMeshNodes.cbegin();
 		sortedMeshNodesConstIterator itE = sortedMeshNodes.cend();
 		
@@ -863,7 +861,7 @@ namespace lux::rhi
 				vkCmdPushConstants(commandBuffer, forward.rtGraphicsPipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(RtModelConstant), &forward.modelConstant);
 
 				const resource::Mesh& currentMesh = (*itMesh)->GetMesh();
-				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &currentMesh.vertexBuffer.buffer, offset);
+				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &currentMesh.vertexBuffer.buffer, vertexBufferOffsets);
 				vkCmdBindIndexBuffer(commandBuffer, currentMesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 				vkCmdDrawIndexed(commandBuffer, currentMesh.indexCount, 1, 0, 0, 0);
 			}
@@ -874,7 +872,7 @@ namespace lux::rhi
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.envMapGraphicsPipeline.pipeline);
 		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.envMapGraphicsPipeline.pipelineLayout, 0, 1, &forward.envMapViewDescriptorSets[currentFrame], 0, nullptr);
 
-		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &cube->vertexBuffer.buffer, offset);
+		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &cube->vertexBuffer.buffer, vertexBufferOffsets);
 		vkCmdBindIndexBuffer(commandBuffer, cube->indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 
 		vkCmdDrawIndexed(commandBuffer, cube->indexCount, 1, 0, 0, 0);
@@ -907,20 +905,19 @@ namespace lux::rhi
 				const resource::Mesh& currentMesh = (*itMesh)->GetMesh();
 
 				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.rtCutoutGraphicsPipeline.pipeline);
-				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &currentMesh.vertexBuffer.buffer, offset);
+				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &currentMesh.vertexBuffer.buffer, vertexBufferOffsets);
 				vkCmdBindIndexBuffer(commandBuffer, currentMesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 				vkCmdDrawIndexed(commandBuffer, currentMesh.indexCount, 1, 0, 0, 0);
 
 				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.rtTransparentBackGraphicsPipeline.pipeline);
-				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &currentMesh.vertexBuffer.buffer, offset);
+				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &currentMesh.vertexBuffer.buffer, vertexBufferOffsets);
 				vkCmdBindIndexBuffer(commandBuffer, currentMesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 				vkCmdDrawIndexed(commandBuffer, currentMesh.indexCount, 1, 0, 0, 0);
 
 				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.rtTransparentFrontGraphicsPipeline.pipeline);
-				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &currentMesh.vertexBuffer.buffer, offset);
+				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &currentMesh.vertexBuffer.buffer, vertexBufferOffsets);
 				vkCmdBindIndexBuffer(commandBuffer, currentMesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 				vkCmdDrawIndexed(commandBuffer, currentMesh.indexCount, 1, 0, 0, 0);
-
 			}
 		}
 
@@ -937,38 +934,6 @@ namespace lux::rhi
 		vkCmdDraw(commandBuffer, 4, 1, 0, 0);
 
 		vkCmdEndRenderPass(commandBuffer);
-
-		CHECK_VK(vkEndCommandBuffer(commandBuffer));
-
-		// Submit Command Buffer
-		VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-		VkSubmitInfo submitInfo = {};
-		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &commandBuffer;
-		submitInfo.pWaitDstStageMask = &stageMask;
-		submitInfo.waitSemaphoreCount = 1;
-		submitInfo.pWaitSemaphores = acquireSemaphore;
-		submitInfo.signalSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = presentSemaphore;
-
-		CHECK_VK(vkQueueSubmit(presentQueue, 1, &submitInfo, *fence));
-
-
-		// Present
-		VkPresentInfoKHR presentInfo = {};
-		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-		presentInfo.waitSemaphoreCount = 1;
-		presentInfo.pWaitSemaphores = presentSemaphore;
-		presentInfo.swapchainCount = 1;
-		presentInfo.pSwapchains = &swapchain;
-		presentInfo.pImageIndices = &imageIndex;
-
-		CHECK_VK(vkQueuePresentKHR(graphicsQueue, &presentInfo));
-
-		frameCount++;
-		currentFrame = frameCount % swapchainImageCount;
 	}
 
 	void RHI::RebuildForwardGraphicsPipeline() noexcept

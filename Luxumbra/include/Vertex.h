@@ -19,6 +19,7 @@ namespace lux
 		glm::vec3 bitangent;
 
 		static VkVertexInputBindingDescription GetBindingDescription() noexcept;
+		static VkVertexInputAttributeDescription GetPositionOnlyAttributeDescription() noexcept;
 		static std::array<VkVertexInputAttributeDescription, 3> GetBasicAttributeDescriptions() noexcept;
 		static std::array<VkVertexInputAttributeDescription, 5> GetFullAttributeDescriptions() noexcept;
 
@@ -27,7 +28,8 @@ namespace lux
 
 	enum class VertexLayout : uint32_t
 	{
-		VERTEX_BASIC_LAYOUT = 0,
+		VERTEX_POSITION_ONLY_LAYOUT = 0,
+		VERTEX_BASIC_LAYOUT,
 		VERTEX_FULL_LAYOUT,
 		NO_VERTEX_LAYOUT,
 		VERTEX_LAYOUT_COUNT

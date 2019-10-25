@@ -82,6 +82,9 @@
     <Filter Include="Resource Files\generateBRDFLut">
       <UniqueIdentifier>{de1ea4f4-5462-430f-9bd1-6b6782e19e72}</UniqueIdentifier>
     </Filter>
+	<Filter Include="Resource Files\shadowMapping">
+      <UniqueIdentifier>{bb890761-e6c5-4237-b3ca-3f80d71c6424}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\main.cpp">
@@ -161,6 +164,12 @@
     </ClCompile>
     <ClCompile Include="source\utility\Utility.cpp">
       <Filter>Source Files\Utility</Filter>
+    </ClCompile>
+    <ClCompile Include="source\rhi\RHI_ShadowMapping.cpp">
+      <Filter>Source Files\RHI</Filter>
+    </ClCompile>
+    <ClCompile Include="source\AABB.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -254,6 +263,15 @@
     <ClInclude Include="include\utility\Utility.h">
       <Filter>Header Files\Utility</Filter>
     </ClInclude>
+    <ClInclude Include="include\rhi\ShadowMapper.h">
+      <Filter>Header Files\RHI</Filter>
+    </ClInclude>
+    <ClInclude Include="include\rhi\ShadowMappingPipeline.h">
+      <Filter>Header Files\RHI</Filter>
+    </ClInclude>
+    <ClInclude Include="include\AABB.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="include\Logger.inl">
@@ -327,6 +345,12 @@
     </None>
     <None Include="data\shaders\generateBRDFLut\generateBRDFLut.vert">
       <Filter>Resource Files\generateBRDFLut</Filter>
+    </None>
+    <None Include="data\shaders\shadowMapping\directionalShadowMapping.vert">
+      <Filter>Resource Files\shadowMapping</Filter>
+    </None>
+    <None Include="data\shaders\CompileShaders.bat">
+      <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>
 </Project>

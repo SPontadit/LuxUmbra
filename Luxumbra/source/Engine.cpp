@@ -47,7 +47,7 @@ namespace lux
 		{
 			DrawImgui();
 
-			rhi.RenderForward(scene.GetCurrentCamera(), scene.GetMeshNodes(), scene.GetLightNodes());
+			rhi.Render(scene.GetCurrentCamera(), scene.GetShadowCastingDirectional(), scene.GetMeshNodes(), scene.GetLightNodes());
 
 			window.PollEvents();
 		}
@@ -228,7 +228,7 @@ namespace lux
 		//Position
 		glm::vec3 position = node->GetLocalPosition();
 
-		ImGui::DragFloat3("Pos", glm::value_ptr(position));
+		ImGui::DragFloat3("Pos", glm::value_ptr(position), 0.01f);
 
 		if (position != node->GetLocalPosition())
 		{
@@ -243,6 +243,16 @@ namespace lux
 		if (rotation != node->GetLocalRotation())
 		{
 			node->SetLocalRotation(glm::radians(rotation));
+		}
+
+		// Rotation
+		glm::vec3 scale = node->GetLocalScale();
+
+		ImGui::DragFloat3("Scale", glm::value_ptr(scale));
+
+		if (scale != node->GetLocalScale())
+		{
+			node->SetLocalScale(scale);
 		}
 	}
 
