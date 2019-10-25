@@ -283,9 +283,12 @@ namespace lux::rhi
 		graphicsPipelineCI.viewportHeight = TO_FLOAT(luxCubemapCI.size);
 		graphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_NONE;
 		graphicsPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_CLOCKWISE;
-		graphicsPipelineCI.disableMSAA = true;
-		graphicsPipelineCI.enableDepthTest = false;
-		graphicsPipelineCI.enableDepthWrite = false;
+		graphicsPipelineCI.disableMSAA = VK_TRUE;
+		graphicsPipelineCI.enableDepthTest = VK_FALSE;
+		graphicsPipelineCI.enableDepthWrite = VK_FALSE;
+		graphicsPipelineCI.enableDepthBias = VK_FALSE;
+		graphicsPipelineCI.depthBiasConstantFactor = 0.f;
+		graphicsPipelineCI.depthBiasSlopeFactor = 0.f;
 		graphicsPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
 		graphicsPipelineCI.viewDescriptorSetLayoutBindings = { descriptorSetLayoutBinding };
 		graphicsPipelineCI.pushConstants = { pushConstantRange };

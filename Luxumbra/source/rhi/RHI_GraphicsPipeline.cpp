@@ -141,10 +141,10 @@ namespace lux::rhi
 		rasterizerStateCI.lineWidth = 1.0f;
 		rasterizerStateCI.cullMode = luxGraphicsPipelineCI.rasterizerCullMode;
 		rasterizerStateCI.frontFace = luxGraphicsPipelineCI.rasterizerFrontFace;
-		rasterizerStateCI.depthBiasEnable = VK_FALSE;
-		rasterizerStateCI.depthBiasConstantFactor = 0.0f;
+		rasterizerStateCI.depthBiasEnable = luxGraphicsPipelineCI.enableDepthBias;
+		rasterizerStateCI.depthBiasConstantFactor = luxGraphicsPipelineCI.depthBiasConstantFactor;
 		rasterizerStateCI.depthBiasClamp = 0.0f;
-		rasterizerStateCI.depthBiasSlopeFactor = 0.0f;
+		rasterizerStateCI.depthBiasSlopeFactor = luxGraphicsPipelineCI.depthBiasSlopeFactor;
 
 
 		VkPipelineMultisampleStateCreateInfo multisampleStateCI = {};

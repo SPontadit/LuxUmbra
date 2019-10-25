@@ -15,8 +15,9 @@ namespace lux::rhi
 {
 	struct RtViewProjUniform
 	{
-		glm::mat4 projection;
 		glm::mat4 view;
+		glm::mat4 projection;
+		glm::mat4 lightViewProj;
 	};
 
 	struct RtModelConstant
@@ -53,6 +54,7 @@ namespace lux::rhi
 		std::vector<VkDescriptorSet> envMapViewDescriptorSets;
 
 		RtModelConstant modelConstant;
+		RtViewProjUniform rtViewProjUniform;
 		std::vector<Buffer> viewProjUniformBuffers;
 
 		std::vector<VkImage> rtColorAttachmentImages;

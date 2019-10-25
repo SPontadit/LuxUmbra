@@ -64,6 +64,20 @@ namespace lux::rhi
 
 		InitCommandBuffer();
 
+		// Shadow mapper
+
+		InitShadowMapperRenderPass();
+
+		InitShadowMapperFramebuffer();
+
+		InitShadowMapperPipelines();
+
+		InitShadowMapperViewProjUniformBuffer();
+
+		InitShadowMapperDescriptorPool();
+
+		InitShadowMapperDescriptorSets();
+
 		// Forward renderer
 
 		InitForwardRenderPass();
@@ -81,20 +95,6 @@ namespace lux::rhi
 		BuildLightUniformBuffers(2);
 
 		InitForwardDescriptorSets();
-
-		// Shadow mapper
-
-		InitShadowMapperRenderPass();
-
-		InitShadowMapperFramebuffer();
-
-		InitShadowMapperPipelines();
-
-		InitShadowMapperViewProjUniformBuffer();
-
-		InitShadowMapperDescriptorPool();
-
-		InitShadowMapperDescriptorSets();
 
 		// End
 

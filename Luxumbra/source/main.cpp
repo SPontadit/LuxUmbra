@@ -16,7 +16,7 @@ int main(int ac, char* av[])
 
 	auto ironmanDif = resourceManager.GetTexture("data/textures/ironman.dff.png");
 	auto ironmanNrm = resourceManager.GetTexture("data/textures/ironman.norm.png");
-	
+
 	resourceManager.UseCubemap("data/envmaps/Ridgecrest_Road_Ref.hdr");
 
 	lux::resource::MaterialCreateInfo defaultMaterialCI;
@@ -43,20 +43,26 @@ int main(int ac, char* av[])
 	defaultMaterialCI.albedo = box;
 	resourceManager.CreateMaterial("debug_box", defaultMaterialCI);
 
-	scene.AddCameraNode(nullptr, { 2.5f, 5.f, 20.f }, { 0.f, 0.f, 0.f }, false, 45.f, 0.01f, 1000.f, true);
+	scene.AddCameraNode(nullptr, { 0.f, 1.f, 5.f }, { 0.f, 0.f, 0.f }, false, 45.f, 0.01f, 1000.f, true);
 
-	scene.AddMeshNode(nullptr, { 0.f, 0.f, 0.f }, { 0.f, 0.f, 0.f }, false, lux::resource::MeshPrimitive::MESH_CUBE_PRIMITIVE, "debug_box");
+	//scene.AddMeshNode(nullptr, { 0.f, 0.f, 0.f }, { 0.f, 0.f, 0.f }, false, lux::resource::MeshPrimitive::MESH_CUBE_PRIMITIVE, "debug_box");
 
-	for (size_t i = 0; i < 5; i++)
-	{
-		scene.AddMeshNode(nullptr, { i * 3.0f - 2.0f, 5.f, 0.f }, glm::radians(glm::vec3( 90.0f / 5.0f * i, 0.0f, 0.0f)), false, lux::resource::MeshPrimitive::MESH_SPHERE_PRIMITIVE, "White");
-		scene.AddMeshNode(nullptr, { i * 3.0f - 2.0f, 10.f, 0.f }, glm::radians(glm::vec3(90.0f / 5.0f * i, 0.0f, 0.0f)), false, lux::resource::MeshPrimitive::MESH_CUBE_PRIMITIVE, "Transparent");
-		scene.AddMeshNode(nullptr, { i * 3.0f - 2.0f, 0.f, 0.f }, glm::radians(glm::vec3(90.0f / 5.0f * i, 0.0f, 0.0f)), false, "data/models/ironman.fbx", "ironman");
-	}
+	lux::scene::MeshNode* plane = scene.AddMeshNode(nullptr, glm::vec3(0.f, 1.f, -2.f), glm::radians(glm::vec3(0.f, 90.f, 0.f)), false, "data/models/Plane.fbx", "White");
+	plane->SetLocalScale(glm::vec3(0.01f, 0.01f, 0.01f));
+	//scene.AddMeshNode(nullptr, { 0.f, 0.f, 0.f }, { 0.f, 0.f, 0.f }, false, lux::resource::MeshPrimitive::MESH_CUBE_PRIMITIVE, "debug_box");
 
-	scene.AddLightNode(nullptr, { 0.0f, 0.0f, -1.0f }, { 0.f, 0.f, 0.f }, false, lux::scene::LightType::LIGHT_TYPE_DIRECTIONAL, { 1.0f, 1.0f, 1.0f});
-	scene.AddLightNode(nullptr, { 0.0f, 1.0f, -1.0f }, { 0.f, 0.f, 0.f }, false, lux::scene::LightType::LIGHT_TYPE_POINT, { 0.0f, 0.0f, 0.0f});
-	scene.AddLightNode(nullptr, { 0.0f, 0.0f, 1.0f }, { 0.f, 0.f, 0.f }, false, lux::scene::LightType::LIGHT_TYPE_DIRECTIONAL, { 0.0f, 0.0f, 0.0f });
+	plane = scene.AddMeshNode(nullptr, glm::vec3(-2.f, 1.f, 0.f), glm::radians(glm::vec3(0.f, 180.f, 0.f)), false, "data/models/Plane.fbx", "White");
+	plane->SetLocalScale(glm::vec3(0.01f, 0.01f, 0.01f));
+	//scene.AddMeshNode(nullptr, { 0.f, 0.f, 0.f }, { 0.f, 0.f, 0.f }, false, lux::resource::MeshPrimitive::MESH_CUBE_PRIMITIVE, "debug_box");
+
+	plane = scene.AddMeshNode(nullptr, glm::vec3(2.f, 1.f, 0.f), glm::radians(glm::vec3(0.f, 0.f, 0.f)), false, "data/models/Plane.fbx", "White");
+	plane->SetLocalScale(glm::vec3(0.01f, 0.01f, 0.01f));
+	//scene.AddMeshNode(nullptr, { 0.f, 0.f, 0.f }, { 0.f, 0.f, 0.f }, false, lux::resource::MeshPrimitive::MESH_CUBE_PRIMITIVE, "debug_box");
+
+	scene.AddMeshNode(nullptr, glm::vec3(0.f), glm::vec3(0.f), false, "data/models/ironman.fbx", "ironman");
+	//scene.AddMeshNode(nullptr, { 0.f, 0.f, 0.f }, { 0.f, 0.f, 0.f }, false, lux::resource::MeshPrimitive::MESH_CUBE_PRIMITIVE, "debug_box");
+
+	scene.AddLightNode(nullptr, { 0.0f, 0.0f, -1.0f }, { 0.f, 0.f, 0.f }, false, lux::scene::LightType::LIGHT_TYPE_DIRECTIONAL, { 1.0f, 1.0f, 1.0f });
 
 	luxUmbra.Run();
 

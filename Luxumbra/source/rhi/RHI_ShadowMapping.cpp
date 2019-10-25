@@ -102,6 +102,9 @@ namespace lux::rhi
 		directionalShadowMappingPipelineCI.disableMSAA = VK_TRUE;
 		directionalShadowMappingPipelineCI.enableDepthTest = VK_TRUE;
 		directionalShadowMappingPipelineCI.enableDepthWrite = VK_TRUE;
+		directionalShadowMappingPipelineCI.enableDepthBias = VK_TRUE;
+		directionalShadowMappingPipelineCI.depthBiasConstantFactor = 4.f;
+		directionalShadowMappingPipelineCI.depthBiasSlopeFactor = 1.5f;
 		directionalShadowMappingPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS;
 		directionalShadowMappingPipelineCI.viewDescriptorSetLayoutBindings = { viewProjUniformBufferDescriptorSetLayoutBinding };
 		directionalShadowMappingPipelineCI.pushConstants = { modelPushConstantRange };
@@ -192,11 +195,34 @@ namespace lux::rhi
 		glm::mat4 lightTransform = glm::toMat4(shadowCastingDirectional->GetWorldRotation());
 		glm::mat4 inverseLightTransform = glm::inverse(lightTransform);
 
-		for (uint32_t i = 1; i < meshCount; i++)
+		float aabbDebugBoxScaleFactor = 1.0f / 1.28f;
+
+		for (uint32_t i = 0; i < meshCount; i++)
+		//for (uint32_t i = 1; i < meshCount; i += 2)
 		{
-			scene::MeshNode* meshNode = meshes[i];
+			scene::MeshNode* meshNode = meshes[TO_SIZE_T(i)];
 
 			AABB meshAABB = meshNode->GetMesh().aabb;
+
+
+
+
+			/*scene::MeshNode* meshAABBDebugBox = meshes[TO_SIZE_T(i + 1)];
+
+			glm::vec3 aabbCenter = (meshAABB.min + meshAABB.max) * 0.5f;
+			meshAABBDebugBox->SetLocalPosition(meshNode->GetLocalPosition() + glm::rotate(glm::quat(meshNode->GetLocalRotation()), aabbCenter));
+			meshAABBDebugBox->SetLocalRotation(meshNode->GetLocalRotation());
+
+			float aabbx = meshAABB.max.x - meshAABB.min.x;
+			float aabby = meshAABB.max.y - meshAABB.min.y;
+			float aabbz = meshAABB.max.z - meshAABB.min.z;
+			meshAABBDebugBox->SetLocalScale(glm::vec3(aabbx * aabbDebugBoxScaleFactor, aabby * aabbDebugBoxScaleFactor, aabbz * aabbDebugBoxScaleFactor));*/
+
+
+
+
+
+
 
 			glm::mat4 localToLightTransform = inverseLightTransform * meshNode->GetWorldTransform();
 
@@ -208,26 +234,29 @@ namespace lux::rhi
 				lightAABB.MakeFit(meshAABB);
 		}
 
-		float aabbx = lightAABB.max.x - lightAABB.min.x;
-		float aabby = lightAABB.max.y - lightAABB.min.y;
-		float aabbz = lightAABB.max.z - lightAABB.min.z;
-		float scaleFactor = 1.0f / 1.28f;
+		float aabbx = (lightAABB.max.x - lightAABB.min.x) * 0.5f + 1.f;
+		float aabby = (lightAABB.max.y - lightAABB.min.y) * 0.5f + 1.f;
+		float aabbz = (lightAABB.max.z - lightAABB.min.z) * 0.5f + 1.f;
 
-		scene::MeshNode* aabbMesh = meshes[0];
-		aabbMesh->SetLocalScale(glm::vec3(aabbx * scaleFactor, aabby * scaleFactor, aabbz * scaleFactor));
+		//scene::MeshNode* lightAABBDebugBox = meshes[0];
+		//lightAABBDebugBox->SetLocalScale(glm::vec3(aabbx * aabbDebugBoxScaleFactor, aabby * aabbDebugBoxScaleFactor, aabbz * aabbDebugBoxScaleFactor) * 2.f);
 
-		shadowMappingViewProjUniform.proj = glm::ortho(-aabbx, aabbx, -aabby, aabby, -aabbz, aabbz);
-		shadowMappingViewProjUniform.proj[1][1] *= -1.f;
+		glm::mat4 proj = glm::ortho(-aabbx, aabbx, -aabby, aabby, -aabbz, aabbz);
+		proj[1][1] *= -1.f;
 
 		glm::vec3 lightPos = (lightTransform * glm::vec4((lightAABB.min + lightAABB.max) * 0.5f, 1.0f)).xyz;
 		glm::vec3 lightDir = (lightTransform * glm::vec4(0.f, 0.f, -1.f, 1.f)).xyz;
 
-		aabbMesh->SetLocalPosition(lightPos);
-		aabbMesh->SetLocalRotation(shadowCastingDirectional->GetLocalRotation());
+		//lightAABBDebugBox->SetLocalPosition(lightPos);
+		//lightAABBDebugBox->SetLocalRotation(shadowCastingDirectional->GetLocalRotation());
 
-		shadowMappingViewProjUniform.view = glm::lookAt(lightPos, lightPos + lightDir, glm::vec3(0.f, 1.f, 0.f));
+		glm::mat4 view = glm::lookAt(lightPos, lightPos + lightDir, glm::vec3(0.f, 1.f, 0.f));
+
+		shadowMappingViewProjUniform.viewProj = proj * view;
 
 		UpdateBuffer(shadowMapper.viewProjUniformBuffer, &shadowMappingViewProjUniform);
+
+		forward.rtViewProjUniform.lightViewProj = shadowMappingViewProjUniform.viewProj;
 
 		VkClearValue depthClearValue = {};
 		depthClearValue.depthStencil.depth = 1.f;
@@ -248,7 +277,8 @@ namespace lux::rhi
 
 		ShadowMappingModelConstant shadowMappingModelConstant = {};
 
-		for (uint32_t i = 1; i < meshCount; i++)
+		for (uint32_t i = 0; i < meshCount; i++)
+		//for (uint32_t i = 1; i < meshCount; i += 2)
 		{
 			scene::MeshNode* meshNode = meshes[i];
 

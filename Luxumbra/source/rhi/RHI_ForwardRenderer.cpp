@@ -308,6 +308,10 @@ namespace lux::rhi
 		lightsUniformDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		lightsUniformDescriptorPoolSize.descriptorCount = swapchainImageCount;
 
+		VkDescriptorPoolSize shadowMapsDescriptorPoolSize = {};
+		shadowMapsDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		shadowMapsDescriptorPoolSize.descriptorCount = swapchainImageCount;
+
 		VkDescriptorPoolSize irradianceMapDescriptorPoolSize = {};
 		irradianceMapDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		irradianceMapDescriptorPoolSize.descriptorCount = swapchainImageCount;
@@ -320,11 +324,12 @@ namespace lux::rhi
 		envMapUniformDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		envMapUniformDescriptorPoolSize.descriptorCount = swapchainImageCount;
 
-		std::array<VkDescriptorPoolSize, 6> descriptorPoolSizes = 
+		std::array<VkDescriptorPoolSize, 7> descriptorPoolSizes = 
 		{ 
 			blitInputDescriptorPoolSize, 
 			rtViewProjUniformDescriptorPoolSize, 
 			lightsUniformDescriptorPoolSize, 
+			shadowMapsDescriptorPoolSize,
 			irradianceMapDescriptorPoolSize,
 			envMapSamplerDescriptorPoolSize,
 			envMapUniformDescriptorPoolSize
@@ -362,6 +367,9 @@ namespace lux::rhi
 		blitGraphicsPipelineCI.disableMSAA = true;
 		blitGraphicsPipelineCI.enableDepthTest = VK_TRUE;
 		blitGraphicsPipelineCI.enableDepthWrite = VK_TRUE;
+		blitGraphicsPipelineCI.enableDepthBias = VK_FALSE;
+		blitGraphicsPipelineCI.depthBiasConstantFactor = 0.f;
+		blitGraphicsPipelineCI.depthBiasSlopeFactor = 0.f;
 		blitGraphicsPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS;
 		blitGraphicsPipelineCI.viewDescriptorSetLayoutBindings = { blitDescriptorSetLayoutBinding };
 
@@ -388,6 +396,12 @@ namespace lux::rhi
 		irradianceMapDescriptorSetLayoutBinding.descriptorCount = 1;
 		irradianceMapDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		irradianceMapDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		VkDescriptorSetLayoutBinding shadowMapDescriptorSetLayoutBinding = {};
+		shadowMapDescriptorSetLayoutBinding.binding = 3;
+		shadowMapDescriptorSetLayoutBinding.descriptorCount = 1;
+		shadowMapDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		shadowMapDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 		// Material Layout
 		VkDescriptorSetLayoutBinding materialParametersDescriptorSetLayoutBinding = {};
@@ -436,8 +450,11 @@ namespace lux::rhi
 		rtGraphicsPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		rtGraphicsPipelineCI.enableDepthTest = VK_TRUE;
 		rtGraphicsPipelineCI.enableDepthWrite = VK_TRUE;
+		rtGraphicsPipelineCI.enableDepthBias = VK_FALSE;
+		rtGraphicsPipelineCI.depthBiasConstantFactor = 0.f;
+		rtGraphicsPipelineCI.depthBiasSlopeFactor = 0.f;
 		rtGraphicsPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS;
-		rtGraphicsPipelineCI.viewDescriptorSetLayoutBindings = { rtViewProjDescriptorSetLayoutBinding, lightDescriptorSetLayoutBinding, irradianceMapDescriptorSetLayoutBinding };
+		rtGraphicsPipelineCI.viewDescriptorSetLayoutBindings = { rtViewProjDescriptorSetLayoutBinding, lightDescriptorSetLayoutBinding, irradianceMapDescriptorSetLayoutBinding, shadowMapDescriptorSetLayoutBinding };
 		rtGraphicsPipelineCI.materialDescriptorSetLayoutBindings = { materialParametersDescriptorSetLayoutBinding, materialAlbedoDescriptorSetLayoutBinding, materialNormalDescriptorSetLayoutBinding };
 		rtGraphicsPipelineCI.pushConstants = { rtModelPushConstantRange, lightCountPushConstantRange };
 
@@ -494,6 +511,9 @@ namespace lux::rhi
 		envMapGraphicsPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_CLOCKWISE;
 		envMapGraphicsPipelineCI.enableDepthTest = VK_TRUE;
 		envMapGraphicsPipelineCI.enableDepthWrite = VK_FALSE;
+		envMapGraphicsPipelineCI.enableDepthBias = VK_FALSE;
+		envMapGraphicsPipelineCI.depthBiasConstantFactor = 0.f;
+		envMapGraphicsPipelineCI.depthBiasSlopeFactor = 0.f;
 		envMapGraphicsPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
 		envMapGraphicsPipelineCI.viewDescriptorSetLayoutBindings = { envMapViewProjDescriptorSetLayoutBinding, envMapSamplerDescriptorSetLayoutBinding};
 	
@@ -592,45 +612,57 @@ namespace lux::rhi
 		// Update Render Target Descriptor Sets
 
 		// ViewProj UBO
+		VkDescriptorBufferInfo rtViewProjDescriptorBufferInfo = {};
+		rtViewProjDescriptorBufferInfo.offset = 0;
+		rtViewProjDescriptorBufferInfo.range = sizeof(RtViewProjUniform);
+
 		VkWriteDescriptorSet rtWriteViewProjDescriptorSet = {};
 		rtWriteViewProjDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		rtWriteViewProjDescriptorSet.descriptorCount = 1;
 		rtWriteViewProjDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		rtWriteViewProjDescriptorSet.dstBinding = 0;
 		rtWriteViewProjDescriptorSet.dstArrayElement = 0;
-
-		VkDescriptorBufferInfo rtViewProjDescriptorBufferInfo = {};
-		rtViewProjDescriptorBufferInfo.offset = 0;
-		rtViewProjDescriptorBufferInfo.range = sizeof(RtViewProjUniform);
+		rtWriteViewProjDescriptorSet.pBufferInfo = &rtViewProjDescriptorBufferInfo;
 
 		// Light UBO
+		VkDescriptorBufferInfo lightDescriptorBufferInfo = {};
+		lightDescriptorBufferInfo.offset = 0;
+		lightDescriptorBufferInfo.range = sizeof(LightBuffer) * LIGHT_MAX_COUNT;
+
 		VkWriteDescriptorSet writeLightDescriptorSet = {};
 		writeLightDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		writeLightDescriptorSet.descriptorCount = 1;
 		writeLightDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		writeLightDescriptorSet.dstBinding = 1;
 		writeLightDescriptorSet.dstArrayElement = 0;
+		writeLightDescriptorSet.pBufferInfo = &lightDescriptorBufferInfo;
 
-		VkDescriptorBufferInfo lightDescriptorBufferInfo = {};
-		lightDescriptorBufferInfo.offset = 0;
-		lightDescriptorBufferInfo.range = sizeof(LightBuffer) * LIGHT_MAX_COUNT;
+		// Shadow map sampler
+		VkDescriptorImageInfo shadowMapImageDescriptorInfo = {};
+		shadowMapImageDescriptorInfo.imageView = shadowMapper.shadowMap.imageView;
+		shadowMapImageDescriptorInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+		shadowMapImageDescriptorInfo.sampler = forward.sampler;
+
+		VkWriteDescriptorSet writeShadowMapDescriptorSet = {};
+		writeShadowMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeShadowMapDescriptorSet.descriptorCount = 1;
+		writeShadowMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		writeShadowMapDescriptorSet.dstBinding = 3;
+		writeShadowMapDescriptorSet.dstArrayElement = 0;
+		writeShadowMapDescriptorSet.pImageInfo = &shadowMapImageDescriptorInfo;
 
 
 		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
 			rtViewProjDescriptorBufferInfo.buffer = forward.viewProjUniformBuffers[i].buffer;
-
-			rtWriteViewProjDescriptorSet.pBufferInfo = &rtViewProjDescriptorBufferInfo;
 			rtWriteViewProjDescriptorSet.dstSet = forward.rtViewDescriptorSets[i];
 
-
 			lightDescriptorBufferInfo.buffer = lightUniformBuffers[i].buffer;
-			
-			writeLightDescriptorSet.pBufferInfo = &lightDescriptorBufferInfo;
 			writeLightDescriptorSet.dstSet = forward.rtViewDescriptorSets[i];
 
+			writeShadowMapDescriptorSet.dstSet = forward.rtViewDescriptorSets[i];
 
-			std::array<VkWriteDescriptorSet, 2> writeDescriptorSets = { rtWriteViewProjDescriptorSet, writeLightDescriptorSet };
+			std::array<VkWriteDescriptorSet, 3> writeDescriptorSets = { rtWriteViewProjDescriptorSet, writeLightDescriptorSet, writeShadowMapDescriptorSet };
 			vkUpdateDescriptorSets(device, TO_UINT32_T(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
 		}
 	}
@@ -660,12 +692,10 @@ namespace lux::rhi
 		}
 
 
-		RtViewProjUniform viewProj;
+		forward.rtViewProjUniform.view = camera->GetViewTransform();
+		forward.rtViewProjUniform.projection = camera->GetPerspectiveProjectionTransform();
 
-		viewProj.view = camera->GetViewTransform();
-		viewProj.projection = camera->GetPerspectiveProjectionTransform();
-
-		UpdateBuffer(forward.viewProjUniformBuffers[currentFrame], &viewProj);
+		UpdateBuffer(forward.viewProjUniformBuffers[currentFrame], &forward.rtViewProjUniform);
 
 
 

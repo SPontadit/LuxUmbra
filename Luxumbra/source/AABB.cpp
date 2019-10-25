@@ -14,14 +14,17 @@ namespace lux
 		glm::vec3 oldMin = min, oldMax = max;
 		glm::vec3 translation = transform[3].xyz;
 
+		glm::mat3 rot = glm::mat3(transform);
+		rot[2] *= -1.f;
+
 		for (int i = 0; i < 3; i++)
 		{
 			min[i] = max[i] = translation[i];
 
 			for (int j = 0; j < 3; j++)
 			{
-				float e = transform[i][j] * oldMin[j];
-				float f = transform[i][j] * oldMax[j];
+				float e = rot[i][j] * oldMin[j];
+				float f = rot[i][j] * oldMax[j];
 
 				if (e < f)
 				{

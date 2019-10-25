@@ -5,8 +5,7 @@ layout(location = 0) in vec3 inPosition;
 
 layout(set = 0, binding = 0) uniform ViewProj
 {
-	mat4 view;
-	mat4 proj;
+	mat4 viewProj;
 } vp;
 
 layout(push_constant) uniform Model
@@ -16,5 +15,5 @@ layout(push_constant) uniform Model
 
 void main()
 {
-	gl_Position = vp.proj * vp.view * m.model * vec4(inPosition, 1.0);
+	gl_Position = vp.viewProj * m.model * vec4(inPosition, 1.0);
 }

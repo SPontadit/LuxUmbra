@@ -14,8 +14,7 @@ namespace lux::rhi
 
 	struct ShadowMappingViewProjUniform
 	{
-		glm::mat4 view;
-		glm::mat4 proj;
+		glm::mat4 viewProj;
 	};
 
 	struct ShadowMappingModelConstant
