@@ -160,7 +160,8 @@ vec4 CameraSpace()
 		vec3 specular = (D * V) * F;
 		vec3 Kdiff = vec3(1.0) - (F0 + (vec3(1.0) - F0) * pow(1.0 - NdotL, 5.0));
 
-		vec3 directDiffuseColor = diffuseColor * Kdiff * Fd_Burley(NdotV, NdotL, LdotH, roughness);
+		//vec3 directDiffuseColor = diffuseColor * Kdiff * Fd_Burley(NdotV, NdotL, LdotH, roughness);
+		vec3 directDiffuseColor = diffuseColor * Kdiff * Fd_Lambert();
 
 		directColor += (directDiffuseColor + specular) * radiance * NdotL;
 	}
@@ -181,11 +182,14 @@ vec4 CameraSpace()
 	
 	vec3 F = F_SchlickRoughness(NdotV, F0, roughness);
 	vec3 indirectSpecularColor = reflection * mix(BRDF.xxx, BRDF.yyy, F0);
+	//vec3 indirectSpecularColor = reflection * (F * BRDF.x + BRDF.y);
 
 	vec3 Kdiff = 1.0 - F;
 	vec3 indirectDiffuseColor = irradiance * diffuseColor * Kdiff;
 
 	vec3 indirectColor = indirectDiffuseColor + indirectSpecularColor;
+
+	return vec4(indirectSpecularColor, 1.0);
 
 	return vec4(directColor + indirectColor, textureColor.a);
 }

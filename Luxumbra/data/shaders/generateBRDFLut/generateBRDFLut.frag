@@ -52,6 +52,8 @@ vec2 BRDF(float NdotV, float roughness)
 			float Fc = pow(1.0 - VdotH, 5.0);
 
 			LUT += vec2(Fc * G_Vis, G_Vis);
+			//LUT += vec2((1.0 - Fc) * G_Vis, Fc * G_Vis);
+
 		}
 	}
 
