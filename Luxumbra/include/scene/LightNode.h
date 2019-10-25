@@ -32,7 +32,6 @@ namespace lux::scene
 		const LightNode& operator=(const LightNode&) = delete;
 		const LightNode& operator=(LightNode&&) = delete;
 
-		void SetType(LightType newType) noexcept;
 		LightType GetType() const noexcept;
 
 		void SetColor(glm::vec3 newColor) noexcept;

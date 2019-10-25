@@ -167,15 +167,6 @@ namespace lux
 						currentLight->SetColor(color);
 					}
 
-					int lightType = static_cast<int>((currentLight->GetType()));
-					int newLightType = lightType;
-					ImGui::Combo("Light Type", &newLightType, "Directional\0Point");
-					
-					if (newLightType != lightType)
-					{
-						currentLight->SetType(static_cast<scene::LightType>(newLightType));
-					}
-
 					ImGui::TreePop();
 				}
 			}
