@@ -21,6 +21,7 @@
 namespace lux::rhi
 {
 #define LIGHT_MAX_COUNT 64
+#define DIRECTIONAL_LIGHT_MAX_COUNT 4;
 #define MATERIAL_MAX_SET 128
 
 	using namespace lux;
@@ -72,6 +73,7 @@ namespace lux::rhi
 		void GeneratePrefilteredFromCubemap(const Image& cubemapSource, Image& prefiltered) noexcept;
 		void GenerateBRDFLut(VkFormat format, uint32_t size, Image& BRDFLut) noexcept;
 
+		int16_t CreateLightShadowMappingResources(scene::LightType lightType) noexcept;
 
 		void SetCubeMesh(std::shared_ptr<resource::Mesh> mesh) noexcept;
 
@@ -130,6 +132,13 @@ namespace lux::rhi
 		void InitSwapchain() noexcept;
 		void InitCommandBuffer() noexcept;
 
+		void InitShadowMapperRenderPass() noexcept;
+		void InitShadowMapperFramebuffer() noexcept;
+		void InitShadowMapperPipelines() noexcept;
+		void InitShadowMapperViewProjUniformBuffer() noexcept;
+		void InitShadowMapperDescriptorPool() noexcept;
+		void InitShadowMapperDescriptorSets() noexcept;
+
 		void InitForwardRenderPass() noexcept;
 		void InitForwardFramebuffers() noexcept;
 		void InitForwardGraphicsPipelines() noexcept;
@@ -137,13 +146,6 @@ namespace lux::rhi
 		void InitForwardDescriptorPool() noexcept;
 		void InitForwardDescriptorSets() noexcept;
 		void InitForwardUniformBuffers() noexcept;
-
-		void InitShadowMapperRenderPass() noexcept;
-		void InitShadowMapperFramebuffer() noexcept;
-		void InitShadowMapperPipelines() noexcept;
-		void InitShadowMapperViewProjUniformBuffer() noexcept;
-		void InitShadowMapperDescriptorPool() noexcept;
-		void InitShadowMapperDescriptorSets() noexcept;
 
 		void RenderShadowMaps(VkCommandBuffer commandBuffer, int imageIndex, scene::LightNode* shadowCastingDirectional, const std::vector<scene::MeshNode*>& meshes) noexcept;
 		void RenderForward(VkCommandBuffer commandBuffer, int imageIndex, const scene::CameraNode* camera, const std::vector<scene::MeshNode*>& meshes, const std::vector<scene::LightNode*>& lights) noexcept;

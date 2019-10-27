@@ -10,7 +10,7 @@ namespace lux::rhi
 
 	ShadowMapper::ShadowMapper() noexcept
 		: renderPass(VK_NULL_HANDLE),
-		shadowMap(), framebuffer(VK_NULL_HANDLE),
+		shadowMaps(0), framebuffers(0),
 		directionalShadowMappingPipeline(),
 		viewProjUniformBuffer(),
 		descriptorPool(VK_NULL_HANDLE), viewProjUniformBufferDescriptorSet(VK_NULL_HANDLE)
@@ -48,36 +48,11 @@ namespace lux::rhi
 		CHECK_VK(vkCreateRenderPass(device, &renderPassCI, nullptr, &shadowMapper.renderPass));
 	}
 
-	void RHI::InitShadowMapperFramebuffer() noexcept
-	{
-		ImageCreateInfo imageCI = {};
-		imageCI.format = depthImageFormat;
-		imageCI.width = SHADOW_MAP_TEXTURE_SIZE;
-		imageCI.height = SHADOW_MAP_TEXTURE_SIZE;
-		imageCI.arrayLayers = 1;
-		imageCI.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-		imageCI.subresourceRangeLayerCount = 1;
-		imageCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-		imageCI.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
-
-		CreateImage(imageCI, shadowMapper.shadowMap);
-
-		CommandTransitionImageLayout(shadowMapper.shadowMap.image, depthImageFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-
-		VkFramebufferCreateInfo framebufferCI = {};
-		framebufferCI.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferCI.renderPass = shadowMapper.renderPass;
-		framebufferCI.width = SHADOW_MAP_TEXTURE_SIZE;
-		framebufferCI.height = SHADOW_MAP_TEXTURE_SIZE;
-		framebufferCI.layers = 1;
-		framebufferCI.attachmentCount = 1;
-		framebufferCI.pAttachments = &shadowMapper.shadowMap.imageView;
-
-		CHECK_VK(vkCreateFramebuffer(device, &framebufferCI, nullptr, &shadowMapper.framebuffer));
-	}
-
 	void RHI::InitShadowMapperPipelines() noexcept
 	{
+		shadowMapper.shadowMaps.reserve(LIGHT_MAX_COUNT);
+		shadowMapper.framebuffers.reserve(LIGHT_MAX_COUNT);
+
 		VkDescriptorSetLayoutBinding viewProjUniformBufferDescriptorSetLayoutBinding = {};
 		viewProjUniformBufferDescriptorSetLayoutBinding.binding = 0;
 		viewProjUniformBufferDescriptorSetLayoutBinding.descriptorCount = 1;
@@ -175,15 +150,19 @@ namespace lux::rhi
 
 		DestroyGraphicsPipeline(shadowMapper.directionalShadowMappingPipeline);
 
-		vkDestroyFramebuffer(device, shadowMapper.framebuffer, nullptr);
-		DestroyImage(shadowMapper.shadowMap);
+		size_t shadowMappingResourceCount = shadowMapper.shadowMaps.size();
+		for (size_t i = 0; i < shadowMappingResourceCount; i++)
+		{
+			vkDestroyFramebuffer(device, shadowMapper.framebuffers[i], nullptr);
+			DestroyImage(shadowMapper.shadowMaps[i]);
+		}
 
 		vkDestroyRenderPass(device, shadowMapper.renderPass, nullptr);
 	}
 
 	void RHI::RenderShadowMaps(VkCommandBuffer commandBuffer, int imageIndex, scene::LightNode* shadowCastingDirectional, const std::vector<scene::MeshNode*>& meshes) noexcept
 	{
-		VkDeviceSize vertexBufferOffsets[] = { 0 };
+		/*VkDeviceSize vertexBufferOffsets[] = { 0 };
 		uint32_t meshCount = TO_UINT32_T(meshes.size());
 
 		// Shadow mapping
@@ -262,7 +241,51 @@ namespace lux::rhi
 			vkCmdDrawIndexed(commandBuffer, mesh.indexCount, 1, 0, 0, 0);
 		}
 
-		vkCmdEndRenderPass(commandBuffer);
+		vkCmdEndRenderPass(commandBuffer);*/
+	}
+
+	int16_t RHI::CreateLightShadowMappingResources(scene::LightType lightType) noexcept
+	{
+		switch (lightType)
+		{
+		case scene::LightType::LIGHT_TYPE_DIRECTIONAL:
+		{
+			size_t newResourceIndex = shadowMapper.shadowMaps.size() + 1;
+
+			shadowMapper.shadowMaps.resize(newResourceIndex + 1);
+			shadowMapper.framebuffers.resize(newResourceIndex + 1);
+
+			ImageCreateInfo imageCI = {};
+			imageCI.format = depthImageFormat;
+			imageCI.width = SHADOW_MAP_TEXTURE_SIZE;
+			imageCI.height = SHADOW_MAP_TEXTURE_SIZE;
+			imageCI.arrayLayers = 1;
+			imageCI.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+			imageCI.subresourceRangeLayerCount = 1;
+			imageCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+			imageCI.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
+
+			CreateImage(imageCI, shadowMapper.shadowMaps[newResourceIndex]);
+
+			CommandTransitionImageLayout(shadowMapper.shadowMaps[newResourceIndex].image, depthImageFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+
+			VkFramebufferCreateInfo framebufferCI = {};
+			framebufferCI.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+			framebufferCI.renderPass = shadowMapper.renderPass;
+			framebufferCI.width = SHADOW_MAP_TEXTURE_SIZE;
+			framebufferCI.height = SHADOW_MAP_TEXTURE_SIZE;
+			framebufferCI.layers = 1;
+			framebufferCI.attachmentCount = 1;
+			framebufferCI.pAttachments = &shadowMapper.shadowMaps[newResourceIndex].imageView;
+
+			CHECK_VK(vkCreateFramebuffer(device, &framebufferCI, nullptr, &shadowMapper.framebuffers[newResourceIndex]));
+
+			return TO_INT16_T(newResourceIndex);
+		}
+
+		default:
+			return -1;
+		}
 	}
 
 } // namespace lux::rhi

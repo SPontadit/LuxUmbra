@@ -35,8 +35,8 @@ namespace lux::rhi
 
 		VkRenderPass renderPass;
 
-		Image shadowMap;
-		VkFramebuffer framebuffer;
+		std::vector<Image> shadowMaps;
+		std::vector<VkFramebuffer> framebuffers;
 
 		GraphicsPipeline directionalShadowMappingPipeline;
 

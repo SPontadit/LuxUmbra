@@ -27,7 +27,7 @@ namespace lux::scene
 		const Scene& operator=(const Scene&) = delete;
 		const Scene& operator=(Scene&&) = delete;
 
-		void Initialize(const Window& window, resource::ResourceManager& resourceManager) noexcept;
+		void Initialize(const Window& window, rhi::RHI& rhi, resource::ResourceManager& resourceManager) noexcept;
 
 		CameraNode* GetCurrentCamera() const noexcept;
 		LightNode* GetShadowCastingDirectional() const noexcept;
@@ -42,6 +42,7 @@ namespace lux::scene
 
 	private:
 		const Window* window;
+		rhi::RHI* rhi;
 		resource::ResourceManager* resourceManager;
 
 		std::vector<Node*> nodes;

@@ -33,7 +33,7 @@ namespace lux
 
 		resourceManager.Initialize();
 
-		scene.Initialize(window, resourceManager);
+		scene.Initialize(window, rhi, resourceManager);
 
 		isInitialized = true;
 
