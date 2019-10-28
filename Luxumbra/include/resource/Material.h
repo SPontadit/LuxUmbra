@@ -16,8 +16,8 @@ namespace lux::resource
 
 	enum TextureMask
 	{
-		ROUGHNESS_TEXTURE = 1,
-		METALLIC_TEXTURE = 2
+		ROUGHNESS_TEXTURE_MASK = 1,
+		METALLIC_TEXTURE_MASK = 2
 	};
 
 	struct MaterialCreateInfo
