@@ -147,6 +147,7 @@ namespace lux::rhi
 
 		void RenderShadowMaps(VkCommandBuffer commandBuffer, int imageIndex, scene::LightNode* shadowCastingDirectional, const std::vector<scene::MeshNode*>& meshes) noexcept;
 		void RenderForward(VkCommandBuffer commandBuffer, int imageIndex, const scene::CameraNode* camera, const std::vector<scene::MeshNode*>& meshes, const std::vector<scene::LightNode*>& lights) noexcept;
+		void RenderPostProcess(VkCommandBuffer commandBuffer, int imageIndex) noexcept;
 
 		void BuildLightUniformBuffers(size_t lightCount) noexcept;
 

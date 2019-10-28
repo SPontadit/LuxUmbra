@@ -60,8 +60,8 @@ layout(set = 1, binding = 4) uniform sampler2D ambientOcclusionMap;
 //	vec4 parameter;
 //} material;
 
-#define ROUGHNESS_MASK = 0x01
-#define METALLIC_MASK = 0x02
+#define ROUGHNESS_MASK 0x01
+#define METALLIC_MASK 0x02
 
 const float PI = 3.1415926;
 
@@ -84,11 +84,6 @@ vec3 PrefilteredReflection(vec3 R, float roughness);
 void main() 
 {
 	outColor = CameraSpace();
-
-	// Tonemapping
-	//outColor = outColor / (outColor + vec4(1.0));
-
-	//outColor = pow(outColor, vec4(1.0/2.2));
 }
 
 vec3 getNormalFromMap()
@@ -142,11 +137,8 @@ vec4 CameraSpace()
 	vec3 baseColor = pow(textureColor.rgb * material.baseColor, vec3(2.2));
 	baseColor *= textureColor.a;
 
-//	float roughness = material.perceptualRoughness * material.perceptualRoughness;
-
-	// Perceptual dans la texture ?
-
-	float roughness = (material.useTextureMask & ROUGHNESS_MASK) == ROUGHNESS_MASK ? texture(metallicRoughnessMap, fsIn.textureCoordinateLS).g : material.perceptualRoughness * material.perceptualRoughness;
+	float perceptualRoughness = (material.useTextureMask & ROUGHNESS_MASK) == ROUGHNESS_MASK ? texture(metallicRoughnessMap, fsIn.textureCoordinateLS).g : material.perceptualRoughness;
+	float roughness = perceptualRoughness * perceptualRoughness;
 	float metallic = (material.useTextureMask & METALLIC_MASK) == METALLIC_MASK ? texture(metallicRoughnessMap, fsIn.textureCoordinateLS).b : material.metallic;
 	vec3 diffuseColor = RemapDiffuseColor(baseColor, metallic);
 	vec3 F0 = GetF0(material.reflectance, metallic, baseColor);

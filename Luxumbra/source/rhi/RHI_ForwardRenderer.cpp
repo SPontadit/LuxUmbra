@@ -12,7 +12,8 @@ namespace lux::rhi
 	using sortedMeshNodesConstIterator = std::map<std::string, std::vector<scene::MeshNode*>>::const_iterator;
 	
 	ForwardRenderer::ForwardRenderer() noexcept
-		: rtImageFormat(VK_FORMAT_R32G32B32A32_SFLOAT), renderPass(VK_NULL_HANDLE), frameBuffers(0), descriptorPool(VK_NULL_HANDLE), blitGraphicsPipeline(), blitDescriptorSets(0),
+		: rtImageFormat(VK_FORMAT_R32G32B32A32_SFLOAT), rtRenderPass(VK_NULL_HANDLE), rtFrameBuffers(0), descriptorPool(VK_NULL_HANDLE), 
+		blitRenderPass(VK_NULL_HANDLE), blitFrameBuffers(0), blitGraphicsPipeline(), blitDescriptorSets(0),
 		rtGraphicsPipeline(), rtViewDescriptorSets(0), rtModelDescriptorSets(0), rtColorAttachmentImages(0), rtColorAttachmentImageMemories(0), rtColorAttachmentImageViews(0),
 		rtResolveColorAttachmentImage(VK_NULL_HANDLE), rtResolveColorAttachmentMemory(VK_NULL_HANDLE), rtResolveColorAttachmentImageView(VK_NULL_HANDLE),
 		rtDepthAttachmentImage(VK_NULL_HANDLE), rtDepthAttachmentMemory(VK_NULL_HANDLE), rtDepthAttachmentImageView(VK_NULL_HANDLE),
@@ -25,16 +26,6 @@ namespace lux::rhi
 
 	void RHI::InitForwardRenderPass() noexcept
 	{
-		VkAttachmentDescription swapchainAttachment = {};
-		swapchainAttachment.format = swapchainImageFormat;
-		swapchainAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-		swapchainAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		swapchainAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		swapchainAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		swapchainAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		swapchainAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		swapchainAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
 		VkAttachmentDescription rtColorAttachment = {};
 		rtColorAttachment.format = forward.rtImageFormat;
 		rtColorAttachment.samples = msaaSamples;
@@ -64,12 +55,7 @@ namespace lux::rhi
 		rtResolveColorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		rtResolveColorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		rtResolveColorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		rtResolveColorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-
-		VkAttachmentReference swapchainAttachmentRef = {};
-		swapchainAttachmentRef.attachment = ForwardRenderer::FORWARD_SWAPCHAIN_ATTACHMENT_BIND_POINT;
-		swapchainAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		rtResolveColorAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;;
 
 		VkAttachmentReference rtColorAttachmentRef = {};
 		rtColorAttachmentRef.attachment = ForwardRenderer::FORWARD_RT_COLOR_ATTACHMENT_BIND_POINT;
@@ -78,10 +64,6 @@ namespace lux::rhi
 		VkAttachmentReference rtResolveColorAttachmentRef = {};
 		rtResolveColorAttachmentRef.attachment = ForwardRenderer::FORWARD_RT_RESOLVE_COLOR_ATTACHMENT_BIND_POINT;
 		rtResolveColorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-		VkAttachmentReference swapchainInputAttachmentRef = {};
-		swapchainInputAttachmentRef.attachment = ForwardRenderer::FORWARD_RT_RESOLVE_COLOR_ATTACHMENT_BIND_POINT;
-		swapchainInputAttachmentRef.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 		VkAttachmentReference rtDepthAttachmentRef = {};
 		rtDepthAttachmentRef.attachment = ForwardRenderer::FORWARD_RT_DEPTH_ATTACHMENT_BIND_POINT;
@@ -94,44 +76,75 @@ namespace lux::rhi
 		renderToTargetSubpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 		renderToTargetSubpass.pResolveAttachments = &rtResolveColorAttachmentRef;
 
-		VkSubpassDescription copySubpass = {};
-		copySubpass.colorAttachmentCount = 1;
-		copySubpass.pColorAttachments = &swapchainAttachmentRef;
-		copySubpass.inputAttachmentCount = 1;
-		copySubpass.pInputAttachments = &swapchainInputAttachmentRef;
-		copySubpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 
-		std::array<VkAttachmentDescription, TO_SIZE_T(ForwardRenderer::FORWARD_ATTACHMENT_BIND_POINT_COUNT)> attachments{
-			swapchainAttachment,
+
+		std::array<VkAttachmentDescription, TO_SIZE_T(ForwardRenderer::FORWARD_RT_ATTACHMENT_BIND_POINT_COUNT)> attachments{
 			rtColorAttachment,
 			rtDepthAttachment,
 			rtResolveColorAttachment
 		};
 
-		std::array<VkSubpassDescription, TO_SIZE_T(ForwardRenderer::FORWARD_SUBPASS_COUNT)> subpasses{
-			renderToTargetSubpass,
-			copySubpass
-		};
+		//std::array<VkSubpassDescription, TO_SIZE_T(ForwardRenderer::FORWARD_SUBPASS_COUNT)> subpasses{
+		//	renderToTargetSubpass,
+		//};
 
-		VkSubpassDependency subpassDependency = {};
-		subpassDependency.dependencyFlags = 0;
-		subpassDependency.srcSubpass = ForwardRenderer::FORWARD_SUBPASS_RENDER_TO_TARGET;
-		subpassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		subpassDependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-		subpassDependency.dstSubpass = ForwardRenderer::FORWARD_SUBPASS_COPY;
-		subpassDependency.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-		subpassDependency.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+		std::array<VkSubpassDependency, 2> subpassDependencies;
+		subpassDependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+		subpassDependencies[0].dstSubpass = ForwardRenderer::FORWARD_SUBPASS_RENDER_TO_TARGET;
+		subpassDependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+		subpassDependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		subpassDependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+		subpassDependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		subpassDependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
-		VkRenderPassCreateInfo renderPassCI = {};
-		renderPassCI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		renderPassCI.attachmentCount = ForwardRenderer::FORWARD_ATTACHMENT_BIND_POINT_COUNT;
-		renderPassCI.pAttachments = attachments.data();
-		renderPassCI.subpassCount = ForwardRenderer::FORWARD_SUBPASS_COUNT;
-		renderPassCI.pSubpasses = subpasses.data();
-		renderPassCI.dependencyCount = 1;
-		renderPassCI.pDependencies = &subpassDependency;
+		subpassDependencies[1].srcSubpass = ForwardRenderer::FORWARD_SUBPASS_RENDER_TO_TARGET;
+		subpassDependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+		subpassDependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		subpassDependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+		subpassDependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		subpassDependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+		subpassDependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
-		CHECK_VK(vkCreateRenderPass(device, &renderPassCI, nullptr, &forward.renderPass));
+
+		VkRenderPassCreateInfo rtRenderPassCI = {};
+		rtRenderPassCI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+		rtRenderPassCI.attachmentCount = ForwardRenderer::FORWARD_RT_ATTACHMENT_BIND_POINT_COUNT;
+		rtRenderPassCI.pAttachments = attachments.data();
+		rtRenderPassCI.subpassCount = 1;
+		rtRenderPassCI.pSubpasses = &renderToTargetSubpass;
+		rtRenderPassCI.dependencyCount = TO_UINT32_T(subpassDependencies.size());
+		rtRenderPassCI.pDependencies = subpassDependencies.data();
+
+		CHECK_VK(vkCreateRenderPass(device, &rtRenderPassCI, nullptr, &forward.rtRenderPass));
+
+
+		VkAttachmentDescription swapchainAttachment = {};
+		swapchainAttachment.format = swapchainImageFormat;
+		swapchainAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		swapchainAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		swapchainAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		swapchainAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		swapchainAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		swapchainAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		swapchainAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+		VkAttachmentReference swapchainAttachmentRef = {};
+		swapchainAttachmentRef.attachment = ForwardRenderer::FORWARD_SWAPCHAIN_COLOR_ATTACHMENT_BIND_POINT;
+		swapchainAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+		VkSubpassDescription copySubpass = {};
+		copySubpass.colorAttachmentCount = 1;
+		copySubpass.pColorAttachments = &swapchainAttachmentRef;
+		copySubpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+
+		VkRenderPassCreateInfo blitRenderPassCI = {};
+		blitRenderPassCI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+		blitRenderPassCI.attachmentCount = 1;
+		blitRenderPassCI.pAttachments = &swapchainAttachment;
+		blitRenderPassCI.subpassCount = 1;
+		blitRenderPassCI.pSubpasses = &copySubpass;
+
+		CHECK_VK(vkCreateRenderPass(device, &blitRenderPassCI, nullptr, &forward.blitRenderPass));
 	}
 
 	void RHI::InitForwardFramebuffers() noexcept
@@ -241,7 +254,7 @@ namespace lux::rhi
 		rtResolveColorAttachmentImageCI.arrayLayers = 1;
 		rtResolveColorAttachmentImageCI.samples = VK_SAMPLE_COUNT_1_BIT;
 		rtResolveColorAttachmentImageCI.tiling = VK_IMAGE_TILING_OPTIMAL;
-		rtResolveColorAttachmentImageCI.usage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
+		rtResolveColorAttachmentImageCI.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 		rtResolveColorAttachmentImageCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		rtResolveColorAttachmentImageCI.queueFamilyIndexCount = 1;
 		rtResolveColorAttachmentImageCI.pQueueFamilyIndices = &graphicsQueueIndex;
@@ -271,35 +284,45 @@ namespace lux::rhi
 
 		// Framebuffers
 
-		std::array<VkImageView, TO_SIZE_T(ForwardRenderer::FORWARD_ATTACHMENT_BIND_POINT_COUNT)> attachments { VK_NULL_HANDLE };
+		std::array<VkImageView, TO_SIZE_T(ForwardRenderer::FORWARD_RT_ATTACHMENT_BIND_POINT_COUNT)> attachments { VK_NULL_HANDLE };
 
-		VkFramebufferCreateInfo framebufferCI = {};
-		framebufferCI.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferCI.renderPass = forward.renderPass;
-		framebufferCI.width = swapchainExtent.width;
-		framebufferCI.height = swapchainExtent.height;
-		framebufferCI.layers = 1;
-		framebufferCI.attachmentCount = ForwardRenderer::FORWARD_ATTACHMENT_BIND_POINT_COUNT;
-		framebufferCI.pAttachments = attachments.data();
+		VkFramebufferCreateInfo rtFramebufferCI = {};
+		rtFramebufferCI.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		rtFramebufferCI.renderPass = forward.rtRenderPass;
+		rtFramebufferCI.width = swapchainExtent.width;
+		rtFramebufferCI.height = swapchainExtent.height;
+		rtFramebufferCI.layers = 1;
+		rtFramebufferCI.attachmentCount = ForwardRenderer::FORWARD_RT_ATTACHMENT_BIND_POINT_COUNT;
+		rtFramebufferCI.pAttachments = attachments.data();
 
-		forward.frameBuffers.resize(TO_SIZE_T(swapchainImageCount));
+		VkFramebufferCreateInfo blitFramebufferCI = {};
+		blitFramebufferCI.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		blitFramebufferCI.renderPass = forward.blitRenderPass;
+		blitFramebufferCI.width = swapchainExtent.width;
+		blitFramebufferCI.height = swapchainExtent.height;
+		blitFramebufferCI.layers = 1;
+		blitFramebufferCI.attachmentCount = 1;
+
+		forward.rtFrameBuffers.resize(TO_SIZE_T(swapchainImageCount));
+		forward.blitFrameBuffers.resize(TO_SIZE_T(swapchainImageCount));
 
 		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
-			attachments[TO_SIZE_T(ForwardRenderer::FORWARD_SWAPCHAIN_ATTACHMENT_BIND_POINT)] = swapchainImageViews[i];
+			blitFramebufferCI.pAttachments = &swapchainImageViews[i];
 			attachments[TO_SIZE_T(ForwardRenderer::FORWARD_RT_COLOR_ATTACHMENT_BIND_POINT)] = forward.rtColorAttachmentImageViews[i];
 			attachments[TO_SIZE_T(ForwardRenderer::FORWARD_RT_DEPTH_ATTACHMENT_BIND_POINT)] = forward.rtDepthAttachmentImageView;
 			attachments[TO_SIZE_T(ForwardRenderer::FORWARD_RT_RESOLVE_COLOR_ATTACHMENT_BIND_POINT)] = forward.rtResolveColorAttachmentImageView;
 
-			CHECK_VK(vkCreateFramebuffer(device, &framebufferCI, nullptr, &forward.frameBuffers[i]));
+			CHECK_VK(vkCreateFramebuffer(device, &rtFramebufferCI, nullptr, &forward.rtFrameBuffers[i]));
+			CHECK_VK(vkCreateFramebuffer(device, &blitFramebufferCI, nullptr, &forward.blitFrameBuffers[i]));
 		}
 	}
 
 	void RHI::InitForwardDescriptorPool() noexcept
 	{
-		VkDescriptorPoolSize blitInputDescriptorPoolSize = {};
-		blitInputDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
-		blitInputDescriptorPoolSize.descriptorCount = swapchainImageCount;
+		VkDescriptorPoolSize blitDescriptorPoolSize = {};
+		blitDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		blitDescriptorPoolSize.descriptorCount = swapchainImageCount;
 
 		VkDescriptorPoolSize rtViewProjUniformDescriptorPoolSize = {};
 		rtViewProjUniformDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -335,7 +358,7 @@ namespace lux::rhi
 
 		std::array<VkDescriptorPoolSize, 9> descriptorPoolSizes = 
 		{ 
-			blitInputDescriptorPoolSize, 
+			blitDescriptorPoolSize,
 			rtViewProjUniformDescriptorPoolSize, 
 			lightsUniformDescriptorPoolSize, 
 			shadowMapsDescriptorPoolSize,
@@ -361,7 +384,7 @@ namespace lux::rhi
 		VkDescriptorSetLayoutBinding blitDescriptorSetLayoutBinding = {};
 		blitDescriptorSetLayoutBinding.binding = 0;
 		blitDescriptorSetLayoutBinding.descriptorCount = 1;
-		blitDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+		blitDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		blitDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 		VkPushConstantRange blitPostProcessParameterPushConstantRange = {};
@@ -370,8 +393,8 @@ namespace lux::rhi
 		blitPostProcessParameterPushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 		GraphicsPipelineCreateInfo blitGraphicsPipelineCI = {};
-		blitGraphicsPipelineCI.renderPass = forward.renderPass;
-		blitGraphicsPipelineCI.subpassIndex = ForwardRenderer::FORWARD_SUBPASS_COPY;
+		blitGraphicsPipelineCI.renderPass = forward.blitRenderPass;
+		blitGraphicsPipelineCI.subpassIndex = 0;
 		blitGraphicsPipelineCI.binaryVertexFilePath = "data/shaders/blit/blit.vert.spv";
 		blitGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/blit/blit.frag.spv";
 		blitGraphicsPipelineCI.vertexLayout = lux::VertexLayout::NO_VERTEX_LAYOUT;
@@ -478,7 +501,7 @@ namespace lux::rhi
 
 		// Graphics Pipeline
 		GraphicsPipelineCreateInfo rtGraphicsPipelineCI = {};
-		rtGraphicsPipelineCI.renderPass = forward.renderPass;
+		rtGraphicsPipelineCI.renderPass = forward.rtRenderPass;
 		rtGraphicsPipelineCI.subpassIndex = ForwardRenderer::FORWARD_SUBPASS_RENDER_TO_TARGET;
 		rtGraphicsPipelineCI.binaryVertexFilePath = "data/shaders/cameraSpaceLight/cameraSpaceLight.vert.spv";
 		rtGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/cameraSpaceLight/cameraSpaceLight.frag.spv";
@@ -557,7 +580,7 @@ namespace lux::rhi
 		envMapSamplerDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 		GraphicsPipelineCreateInfo envMapGraphicsPipelineCI = {};
-		envMapGraphicsPipelineCI.renderPass = forward.renderPass;
+		envMapGraphicsPipelineCI.renderPass = forward.rtRenderPass;
 		envMapGraphicsPipelineCI.subpassIndex = ForwardRenderer::FORWARD_SUBPASS_RENDER_TO_TARGET;
 		envMapGraphicsPipelineCI.binaryVertexFilePath = "data/shaders/envMap/envMap.vert.spv";
 		envMapGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/envMap/envMap.frag.spv";
@@ -637,12 +660,12 @@ namespace lux::rhi
 		// Update Blit Descriptor Sets
 		VkDescriptorImageInfo blitDescriptorImageInfo = {};
 		blitDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		blitDescriptorImageInfo.sampler = VK_NULL_HANDLE;
+		blitDescriptorImageInfo.sampler = forward.sampler;
 
 		VkWriteDescriptorSet blitWriteDescriptorSet = {};
 		blitWriteDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		blitWriteDescriptorSet.descriptorCount = 1;
-		blitWriteDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+		blitWriteDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		blitWriteDescriptorSet.dstBinding = 0;
 		blitWriteDescriptorSet.pImageInfo = &blitDescriptorImageInfo;
 		
@@ -803,8 +826,7 @@ namespace lux::rhi
 
 		VkClearColorValue clearColor{ 0.5f, 0.5703125f, 0.6171875f, 1.0F };
 
-		std::array<VkClearValue, 3> clearValues = {};
-		clearValues[ForwardRenderer::FORWARD_SWAPCHAIN_ATTACHMENT_BIND_POINT].color = clearColor;
+		std::array<VkClearValue, 2> clearValues = {};
 		clearValues[ForwardRenderer::FORWARD_RT_COLOR_ATTACHMENT_BIND_POINT].color = clearColor;
 		clearValues[ForwardRenderer::FORWARD_RT_DEPTH_ATTACHMENT_BIND_POINT].depthStencil = { 1.0f, 0 };
 
@@ -812,8 +834,8 @@ namespace lux::rhi
 		// Begin Render Pass
 		VkRenderPassBeginInfo renderPassBI = {};
 		renderPassBI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassBI.renderPass = forward.renderPass;
-		renderPassBI.framebuffer = forward.frameBuffers[imageIndex];
+		renderPassBI.renderPass = forward.rtRenderPass;
+		renderPassBI.framebuffer = forward.rtFrameBuffers[imageIndex];
 		renderPassBI.renderArea.extent = swapchainExtent;
 		renderPassBI.clearValueCount = TO_UINT32_T(clearValues.size());
 		renderPassBI.pClearValues = clearValues.data();
@@ -940,17 +962,37 @@ namespace lux::rhi
 			}
 		}
 
+		vkCmdEndRenderPass(commandBuffer);
+	}
 
-		RenderImgui();
+	void RHI::RenderPostProcess(VkCommandBuffer commandBuffer, int imageIndex) noexcept
+	{
+		VkDeviceSize vertexBufferOffsets[] = { 0 };
 
-		// Blit Subpass
-		vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
+		VkClearColorValue clearColor{ 0.5f, 0.5703125f, 0.6171875f, 1.0F };
+
+		std::array<VkClearValue, 1> clearValues = {};
+		clearValues[ForwardRenderer::FORWARD_RT_COLOR_ATTACHMENT_BIND_POINT].color = clearColor;
+
+		// Begin Render Pass
+		VkRenderPassBeginInfo renderPassBI = {};
+		renderPassBI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassBI.renderPass = forward.blitRenderPass;
+		renderPassBI.framebuffer = forward.blitFrameBuffers[imageIndex];
+		renderPassBI.renderArea.extent = swapchainExtent;
+		renderPassBI.clearValueCount = TO_UINT32_T(clearValues.size());
+		renderPassBI.pClearValues = clearValues.data();
+
+		vkCmdBeginRenderPass(commandBuffer, &renderPassBI, VK_SUBPASS_CONTENTS_INLINE);
+
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.blitGraphicsPipeline.pipeline);
 		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.blitGraphicsPipeline.pipelineLayout, 0, 1, &forward.blitDescriptorSets[currentFrame], 0, nullptr);
 
 		vkCmdPushConstants(commandBuffer, forward.blitGraphicsPipeline.pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PostProcessParameters), &forward.postProcessParameters);
 
 		vkCmdDraw(commandBuffer, 4, 1, 0, 0);
+
+		RenderImgui();
 
 		vkCmdEndRenderPass(commandBuffer);
 	}
@@ -981,7 +1023,8 @@ namespace lux::rhi
 		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
 			DestroyBuffer(forward.viewProjUniformBuffers[i]);
-			vkDestroyFramebuffer(device, forward.frameBuffers[i], nullptr);
+			vkDestroyFramebuffer(device, forward.rtFrameBuffers[i], nullptr);
+			vkDestroyFramebuffer(device, forward.blitFrameBuffers[i], nullptr);
 
 			vkDestroyImage(device, forward.rtColorAttachmentImages[i], nullptr);
 			vkDestroyImageView(device, forward.rtColorAttachmentImageViews[i], nullptr);
@@ -1001,7 +1044,8 @@ namespace lux::rhi
 		vkDestroyImageView(device, forward.rtDepthAttachmentImageView, nullptr);
 		vkFreeMemory(device, forward.rtDepthAttachmentMemory, nullptr);
 
-		vkDestroyRenderPass(device, forward.renderPass, nullptr);
+		vkDestroyRenderPass(device, forward.rtRenderPass, nullptr);
+		vkDestroyRenderPass(device, forward.blitRenderPass, nullptr);
 	}
 
 } // namespace lux::rhi

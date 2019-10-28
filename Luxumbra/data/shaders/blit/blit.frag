@@ -1,9 +1,11 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
+layout(location = 0) in vec2 textureCoordinate;
+
 layout(location = 0) out vec4 outColor;
 
-layout(input_attachment_index = 0, set = 0, binding = 0) uniform subpassInput inputColor;
+layout(set = 0, binding = 0) uniform sampler2D renderTarget;
 
 layout(push_constant) uniform PushConstants
 {
@@ -16,11 +18,9 @@ vec3 Reinhard(vec3 x);
 
 void main() 
 {
-	vec3 color = subpassLoad(inputColor).rgb;
+	vec3 color = texture(renderTarget, textureCoordinate).rgb;
 	color = ACESFilm(0.6 * color * exposure);
 	//color = Reinhard(color);
-
-	
 	
 //	outColor = pow(outColor, vec4(2.2));
 
