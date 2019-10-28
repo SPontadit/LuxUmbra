@@ -65,8 +65,8 @@ namespace lux
 
 	void Engine::DrawImgui() noexcept
 	{
-		ImGuiStyle& style = ImGui::GetStyle();
-		style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+		//ImGuiStyle& style = ImGui::GetStyle();
+		//style.Colors[ImGuiCol_WindowBg].w = 1.0f;
 
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplGlfw_NewFrame();

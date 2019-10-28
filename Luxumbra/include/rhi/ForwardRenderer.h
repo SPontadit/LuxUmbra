@@ -41,14 +41,17 @@ namespace lux::rhi
 		const ForwardRenderer& operator=(const ForwardRenderer&) = delete;
 		const ForwardRenderer& operator=(ForwardRenderer&&) = delete;
 
-		VkFormat rtImageFormat;
-
-		VkRenderPass renderPass;
-		std::vector<VkFramebuffer> frameBuffers;
-		VkDescriptorPool descriptorPool;
+		VkRenderPass blitRenderPass;
+		std::vector<VkFramebuffer> blitFrameBuffers;
 
 		GraphicsPipeline blitGraphicsPipeline;
 		std::vector<VkDescriptorSet> blitDescriptorSets;
+
+		VkFormat rtImageFormat;
+
+		VkRenderPass rtRenderPass;
+		std::vector<VkFramebuffer> rtFrameBuffers;
+		VkDescriptorPool descriptorPool;
 
 		GraphicsPipeline rtGraphicsPipeline;
 		GraphicsPipeline rtCutoutGraphicsPipeline;
@@ -83,19 +86,23 @@ namespace lux::rhi
 
 		PostProcessParameters postProcessParameters;
 
-		enum ForwardAttachmentBindPoints : uint32_t
+		enum ForwardRtAttachmentBindPoints : uint32_t
 		{
-			FORWARD_SWAPCHAIN_ATTACHMENT_BIND_POINT = 0,
-			FORWARD_RT_COLOR_ATTACHMENT_BIND_POINT,
+			FORWARD_RT_COLOR_ATTACHMENT_BIND_POINT = 0,
 			FORWARD_RT_DEPTH_ATTACHMENT_BIND_POINT,
 			FORWARD_RT_RESOLVE_COLOR_ATTACHMENT_BIND_POINT,
-			FORWARD_ATTACHMENT_BIND_POINT_COUNT
+			FORWARD_RT_ATTACHMENT_BIND_POINT_COUNT
+		};
+
+		enum ForwardSwapchainAttachmentBindPoints : uint32_t
+		{
+			FORWARD_SWAPCHAIN_COLOR_ATTACHMENT_BIND_POINT = 0,
+			FORWARD_SWAPCHAIN_ATTACHMENT_BIND_POINT_COUNT
 		};
 
 		enum ForwardSubpassess : uint32_t
 		{
 			FORWARD_SUBPASS_RENDER_TO_TARGET = 0,
-			FORWARD_SUBPASS_COPY,
 			FORWARD_SUBPASS_COUNT
 		};
 

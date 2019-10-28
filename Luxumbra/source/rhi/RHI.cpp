@@ -518,6 +518,8 @@ namespace lux::rhi
 
 		RenderForward(commandBuffer, imageIndex, camera, meshes, lights);
 
+		RenderPostProcess(commandBuffer, imageIndex);
+
 		CHECK_VK(vkEndCommandBuffer(commandBuffer));
 
 		// Submit Command Buffer
@@ -588,9 +590,9 @@ namespace lux::rhi
 		imguiInitInfo.Allocator = VK_NULL_HANDLE;
 		imguiInitInfo.MinImageCount = SWAPCHAIN_MIN_IMAGE_COUNT;
 		imguiInitInfo.ImageCount = swapchainImageCount;
-		imguiInitInfo.MSAASamples = msaaSamples;
+		imguiInitInfo.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
-		ImGui_ImplVulkan_Init(&imguiInitInfo, forward.renderPass);
+		ImGui_ImplVulkan_Init(&imguiInitInfo, forward.blitRenderPass);
 
 		ImGui::StyleColorsDark();
 
