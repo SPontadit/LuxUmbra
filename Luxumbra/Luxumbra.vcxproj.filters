@@ -361,5 +361,8 @@
     <None Include="data\shaders\generateIrradianceMap\generateIrradianceMap.comp">
       <Filter>Resource Files\generateIrradianceMap</Filter>
     </None>
+    <None Include="data\shaders\generatePrefilteredMap\generatePrefilteredMap.comp">
+      <Filter>Resource Files\generatePrefilteredMap</Filter>
+    </None>
   </ItemGroup>
 </Project>

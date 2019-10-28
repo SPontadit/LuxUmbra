@@ -130,52 +130,67 @@ namespace lux::rhi
 
 		//GenerateCubemap(irradianceCI, cubemapSource, irradiance);
 
-
-		VkDescriptorSetLayout generateIrradianceMapSetLayout = computePipeline.descriptorSetLayout;
-		VkDescriptorSetAllocateInfo generateIrradianceDescriptorSetAI = {};
-		generateIrradianceDescriptorSetAI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		generateIrradianceDescriptorSetAI.descriptorPool = computeDescriptorPool;
-		generateIrradianceDescriptorSetAI.descriptorSetCount = 1;
-		generateIrradianceDescriptorSetAI.pSetLayouts = &generateIrradianceMapSetLayout;
-
-		CHECK_VK(vkAllocateDescriptorSets(device, &generateIrradianceDescriptorSetAI, &generateIrradianceDescriptorSet));
-
-
-		VkDescriptorImageInfo computeEnvMapMapDescriptorImageInfo = {};
-		computeEnvMapMapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		computeEnvMapMapDescriptorImageInfo.imageView = cubemapSource.imageView;
-		computeEnvMapMapDescriptorImageInfo.sampler = forward.cubemapSampler;
-
-		VkWriteDescriptorSet writeComputeEnvMapDescriptorSet = {};
-		writeComputeEnvMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writeComputeEnvMapDescriptorSet.descriptorCount = 1;
-		writeComputeEnvMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		writeComputeEnvMapDescriptorSet.dstBinding = 0;
-		writeComputeEnvMapDescriptorSet.dstArrayElement = 0;
-		writeComputeEnvMapDescriptorSet.pImageInfo = &computeEnvMapMapDescriptorImageInfo;
-		writeComputeEnvMapDescriptorSet.dstSet = generateIrradianceDescriptorSet;
-
-
-		VkDescriptorImageInfo computeIrradianceMapDescriptorImageInfo = {};
-		computeIrradianceMapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-		computeIrradianceMapDescriptorImageInfo.imageView = irradiance.imageView;
-
-		VkWriteDescriptorSet writeComputeIrradianceMapDescriptorSet = {};
-		writeComputeIrradianceMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writeComputeIrradianceMapDescriptorSet.descriptorCount = 1;
-		writeComputeIrradianceMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-		writeComputeIrradianceMapDescriptorSet.dstBinding = 1;
-		writeComputeIrradianceMapDescriptorSet.dstArrayElement = 0;
-		writeComputeIrradianceMapDescriptorSet.pImageInfo = &computeIrradianceMapDescriptorImageInfo;
-		writeComputeIrradianceMapDescriptorSet.dstSet = generateIrradianceDescriptorSet;
-
-		std::array<VkWriteDescriptorSet, 2> writeDescriptorSets =
+		struct ComputeResources
 		{
-			writeComputeEnvMapDescriptorSet,
-			writeComputeIrradianceMapDescriptorSet
-		};
+			ComputePipeline pipeline;
+			VkDescriptorPool descriptorPool;
+			VkCommandBuffer commandBuffer;
+			std::vector<VkImageView> imageViews;
+			std::vector<VkDescriptorSet> descriptorSets;
+		} compute;
 
-		vkUpdateDescriptorSets(device, TO_UINT32_T(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
+		uint32_t mipmapCount = TO_UINT32_T(floor(log2(IRRADIANCE_TEXTURE_SIZE))) + 1;
+
+		// Pipeline
+		VkDescriptorSetLayoutBinding cubemapInputDescriptorSetLayoutBinding = {};
+		cubemapInputDescriptorSetLayoutBinding.binding = 0;
+		cubemapInputDescriptorSetLayoutBinding.descriptorCount = 1;
+		cubemapInputDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		cubemapInputDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+		VkDescriptorSetLayoutBinding irradianceOutputDescriptorSetLayoutBinding = {};
+		irradianceOutputDescriptorSetLayoutBinding.binding = 1;
+		irradianceOutputDescriptorSetLayoutBinding.descriptorCount = 1;
+		irradianceOutputDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		irradianceOutputDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+		VkPushConstantRange generateIrradiancePushConstantRange = {};
+		generateIrradiancePushConstantRange.offset = 0;
+		generateIrradiancePushConstantRange.size = sizeof(GenerateIrradianceParameters);
+		generateIrradiancePushConstantRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+		ComputePipelineCreateInfo computePipelineCI = {};
+		computePipelineCI.binaryComputeFilePath = "data/shaders/generateIrradianceMap/generateIrradianceMap.comp.spv";
+		computePipelineCI.descriptorSetLayoutBindings = { cubemapInputDescriptorSetLayoutBinding, irradianceOutputDescriptorSetLayoutBinding };
+		computePipelineCI.pushConstants = { generateIrradiancePushConstantRange };
+
+		CreateComputePipeline(computePipelineCI, compute.pipeline);
+
+
+		VkCommandBufferAllocateInfo commandBufferAI = {};
+		commandBufferAI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		commandBufferAI.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		commandBufferAI.commandBufferCount = 1;
+		commandBufferAI.commandPool = computeCommandPool;
+
+		CHECK_VK(vkAllocateCommandBuffers(device, &commandBufferAI, &compute.commandBuffer));
+
+		VkDescriptorPoolSize sourceComputeDescriptorPoolSize = {};
+		sourceComputeDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		sourceComputeDescriptorPoolSize.descriptorCount = mipmapCount;
+
+		VkDescriptorPoolSize destinationComputeDescriptorPoolSize = {};
+		destinationComputeDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		destinationComputeDescriptorPoolSize.descriptorCount = mipmapCount;
+
+		std::array<VkDescriptorPoolSize, 2> poolSizes = { sourceComputeDescriptorPoolSize, destinationComputeDescriptorPoolSize };
+		VkDescriptorPoolCreateInfo descriptorPoolCI = {};
+		descriptorPoolCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		descriptorPoolCI.poolSizeCount = TO_UINT32_T(poolSizes.size());
+		descriptorPoolCI.pPoolSizes = poolSizes.data();
+		descriptorPoolCI.maxSets = mipmapCount * 2;
+
+		CHECK_VK(vkCreateDescriptorPool(device, &descriptorPoolCI, nullptr, &compute.descriptorPool));
 
 		GenerateIrradianceParameters parameters;
 		parameters.deltaPhi = (2.0f * PI) / 180.0f;
@@ -186,32 +201,100 @@ namespace lux::rhi
 		commandBufferBI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		commandBufferBI.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-		CHECK_VK(vkBeginCommandBuffer(computeCommandBuffer, &commandBufferBI));
+		CHECK_VK(vkBeginCommandBuffer(compute.commandBuffer, &commandBufferBI));
 		
-		//CommandTransitionImageLayout(computeCommandBuffer, cubemapSource.image, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, 6, TO_UINT32_T(floor(log2(CUBEMAP_TEXTURE_SIZE))) + 1);
-		CommandTransitionImageLayout(computeCommandBuffer, irradiance.image, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, 6, TO_UINT32_T(floor(log2(IRRADIANCE_TEXTURE_SIZE))) + 1);
+		CommandTransitionImageLayout(compute.commandBuffer, irradiance.image, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, 6, TO_UINT32_T(floor(log2(IRRADIANCE_TEXTURE_SIZE))) + 1);
 
-		vkCmdBindPipeline(computeCommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline.pipeline);
+		vkCmdBindPipeline(compute.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute.pipeline.pipeline);
 
-		vkCmdBindDescriptorSets(computeCommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline.pipelineLayout, 0, 1, &generateIrradianceDescriptorSet, 0, nullptr);
+		vkCmdPushConstants(compute.commandBuffer, compute.pipeline.pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(GenerateIrradianceParameters), &parameters);
 
-		vkCmdPushConstants(computeCommandBuffer, computePipeline.pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(GenerateIrradianceParameters), &parameters);
+		compute.imageViews.resize(TO_SIZE_T(mipmapCount));
+		compute.descriptorSets.resize(TO_SIZE_T(mipmapCount));
+		for (uint32_t i = 0; i < mipmapCount; ++i)
+		{
+			VkImageViewCreateInfo imageViewCI = {};
+			imageViewCI.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			imageViewCI.image = irradiance.image;
+			imageViewCI.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+			imageViewCI.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+			imageViewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			imageViewCI.subresourceRange.levelCount = mipmapCount - i;
+			imageViewCI.subresourceRange.baseMipLevel = i;
+			imageViewCI.subresourceRange.layerCount = 6;
+			imageViewCI.subresourceRange.baseArrayLayer = 0;
+			CHECK_VK(vkCreateImageView(device, &imageViewCI, nullptr, &compute.imageViews[i]));
+			
+			VkDescriptorSetLayout generateIrradianceMapSetLayout = compute.pipeline.descriptorSetLayout;
+			VkDescriptorSetAllocateInfo generateIrradianceDescriptorSetAI = {};
+			generateIrradianceDescriptorSetAI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+			generateIrradianceDescriptorSetAI.descriptorPool = compute.descriptorPool;
+			generateIrradianceDescriptorSetAI.descriptorSetCount = 1;
+			generateIrradianceDescriptorSetAI.pSetLayouts = &generateIrradianceMapSetLayout;
 
-		vkCmdDispatch(computeCommandBuffer, CUBEMAP_TEXTURE_SIZE / 32, CUBEMAP_TEXTURE_SIZE / 32, 6);
+			CHECK_VK(vkAllocateDescriptorSets(device, &generateIrradianceDescriptorSetAI, &compute.descriptorSets[i]));
 
-		CommandTransitionImageLayout(computeCommandBuffer, irradiance.image, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 6, TO_UINT32_T(floor(log2(IRRADIANCE_TEXTURE_SIZE))) + 1);
-		//CommandTransitionImageLayout(computeCommandBuffer, cubemapSource.image, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 6, TO_UINT32_T(floor(log2(CUBEMAP_TEXTURE_SIZE))) + 1);
+			VkDescriptorImageInfo computeEnvMapMapDescriptorImageInfo = {};
+			computeEnvMapMapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			computeEnvMapMapDescriptorImageInfo.imageView = cubemapSource.imageView;
+			computeEnvMapMapDescriptorImageInfo.sampler = forward.cubemapSampler;
 
-		CHECK_VK(vkEndCommandBuffer(computeCommandBuffer));
+			VkWriteDescriptorSet writeComputeEnvMapDescriptorSet = {};
+			writeComputeEnvMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			writeComputeEnvMapDescriptorSet.descriptorCount = 1;
+			writeComputeEnvMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			writeComputeEnvMapDescriptorSet.dstBinding = 0;
+			writeComputeEnvMapDescriptorSet.dstArrayElement = 0;
+			writeComputeEnvMapDescriptorSet.pImageInfo = &computeEnvMapMapDescriptorImageInfo;
+			writeComputeEnvMapDescriptorSet.dstSet = compute.descriptorSets[i];
+
+			VkDescriptorImageInfo computeIrradianceMapDescriptorImageInfo = {};
+			computeIrradianceMapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+			computeIrradianceMapDescriptorImageInfo.imageView = compute.imageViews[i];
+
+			VkWriteDescriptorSet writeComputeIrradianceMapDescriptorSet = {};
+			writeComputeIrradianceMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			writeComputeIrradianceMapDescriptorSet.descriptorCount = 1;
+			writeComputeIrradianceMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+			writeComputeIrradianceMapDescriptorSet.dstBinding = 1;
+			writeComputeIrradianceMapDescriptorSet.dstArrayElement = 0;
+			writeComputeIrradianceMapDescriptorSet.pImageInfo = &computeIrradianceMapDescriptorImageInfo;
+			writeComputeIrradianceMapDescriptorSet.dstSet = compute.descriptorSets[i];
+
+			std::array<VkWriteDescriptorSet, 2> writeDescriptorSets =
+			{
+				writeComputeEnvMapDescriptorSet,
+				writeComputeIrradianceMapDescriptorSet
+			};
+
+			vkUpdateDescriptorSets(device, TO_UINT32_T(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
+
+			vkCmdBindDescriptorSets(compute.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute.pipeline.pipelineLayout, 0, 1, &compute.descriptorSets[i], 0, nullptr);
+
+			uint32_t dispatch = std::max((CUBEMAP_TEXTURE_SIZE >> i) / 16, 1);
+			vkCmdDispatch(compute.commandBuffer, dispatch, dispatch, 6);
+		}
+
+		CommandTransitionImageLayout(compute.commandBuffer, irradiance.image, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 6, TO_UINT32_T(floor(log2(IRRADIANCE_TEXTURE_SIZE))) + 1);
+
+		CHECK_VK(vkEndCommandBuffer(compute.commandBuffer));
 
 		VkSubmitInfo submitInfo = {};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &computeCommandBuffer;
+		submitInfo.pCommandBuffers = &compute.commandBuffer;
 
 		CHECK_VK(vkQueueSubmit(computeQueue, 1, &submitInfo, VK_NULL_HANDLE));
 		CHECK_VK(vkQueueWaitIdle(computeQueue));
 
+		DestroyComputePipeline(compute.pipeline);
+		vkDestroyDescriptorPool(device, compute.descriptorPool, nullptr);
+		vkFreeCommandBuffers(device, computeCommandPool, 1, &compute.commandBuffer);
+
+		for (size_t i = 0; i < mipmapCount; i++)
+		{
+			vkDestroyImageView(device, compute.imageViews[i], nullptr);
+		}
 
 		// Update Descriptor Set
 		VkDescriptorImageInfo irradianceMapDescriptorImageInfo = {};
@@ -237,15 +320,185 @@ namespace lux::rhi
 
 	void RHI::GeneratePrefilteredFromCubemap(const Image& cubemapSource, Image& prefiltered) noexcept
 	{
-		rhi::CubeMapCreateInfo prefilteredCI = {};
-		prefilteredCI.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-		prefilteredCI.size = PREFILTERED_TEXTURE_SIZE;
-		prefilteredCI.binaryVertexFilePath = "data/shaders/generatePrefilteredMap/generatePrefilteredMap.vert.spv";
-		prefilteredCI.binaryFragmentFilePath = "data/shaders/generatePrefilteredMap/generatePrefilteredMap.frag.spv";
-		prefilteredCI.sampler = forward.cubemapSampler;
-		prefilteredCI.mipmapCount = TO_UINT32_T(floor(log2(PREFILTERED_TEXTURE_SIZE))) + 1;
+		//rhi::CubeMapCreateInfo prefilteredCI = {};
+		//prefilteredCI.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+		//prefilteredCI.size = PREFILTERED_TEXTURE_SIZE;
+		//prefilteredCI.binaryVertexFilePath = "data/shaders/generatePrefilteredMap/generatePrefilteredMap.vert.spv";
+		//prefilteredCI.binaryFragmentFilePath = "data/shaders/generatePrefilteredMap/generatePrefilteredMap.frag.spv";
+		//prefilteredCI.sampler = forward.cubemapSampler;
+		//prefilteredCI.mipmapCount = TO_UINT32_T(floor(log2(PREFILTERED_TEXTURE_SIZE))) + 1;
 
-		GenerateCubemap(prefilteredCI, cubemapSource, prefiltered);
+		//GenerateCubemap(prefilteredCI, cubemapSource, prefiltered);
+
+		struct ComputeResources
+		{
+			ComputePipeline pipeline;
+			VkDescriptorPool descriptorPool;
+			VkCommandBuffer commandBuffer;
+			std::vector<VkImageView> imageViews;
+			std::vector<VkDescriptorSet> descriptorSets;
+		} compute;
+
+		uint32_t mipmapCount = TO_UINT32_T(floor(log2(PREFILTERED_TEXTURE_SIZE))) + 1;
+
+
+		// Pipeline
+		VkDescriptorSetLayoutBinding cubemapInputDescriptorSetLayoutBinding = {};
+		cubemapInputDescriptorSetLayoutBinding.binding = 0;
+		cubemapInputDescriptorSetLayoutBinding.descriptorCount = 1;
+		cubemapInputDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		cubemapInputDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+		VkDescriptorSetLayoutBinding prefilteredOutputDescriptorSetLayoutBinding = {};
+		prefilteredOutputDescriptorSetLayoutBinding.binding = 1;
+		prefilteredOutputDescriptorSetLayoutBinding.descriptorCount = 1;
+		prefilteredOutputDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		prefilteredOutputDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+		VkPushConstantRange generatePrefilteredPushConstantRange = {};
+		generatePrefilteredPushConstantRange.offset = 0;
+		generatePrefilteredPushConstantRange.size = sizeof(GeneratePrefilteredParameters);
+		generatePrefilteredPushConstantRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+		ComputePipelineCreateInfo computePipelineCI = {};
+		computePipelineCI.binaryComputeFilePath = "data/shaders/generatePrefilteredMap/generatePrefilteredMap.comp.spv";
+		computePipelineCI.descriptorSetLayoutBindings = { cubemapInputDescriptorSetLayoutBinding, prefilteredOutputDescriptorSetLayoutBinding };
+		computePipelineCI.pushConstants = { generatePrefilteredPushConstantRange };
+
+		CreateComputePipeline(computePipelineCI, compute.pipeline);
+
+
+		VkCommandBufferAllocateInfo commandBufferAI = {};
+		commandBufferAI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		commandBufferAI.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		commandBufferAI.commandBufferCount = 1;
+		commandBufferAI.commandPool = computeCommandPool;
+
+		CHECK_VK(vkAllocateCommandBuffers(device, &commandBufferAI, &compute.commandBuffer));
+
+		VkDescriptorPoolSize sourceComputeDescriptorPoolSize = {};
+		sourceComputeDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		sourceComputeDescriptorPoolSize.descriptorCount = mipmapCount;
+
+		VkDescriptorPoolSize destinationComputeDescriptorPoolSize = {};
+		destinationComputeDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		destinationComputeDescriptorPoolSize.descriptorCount = mipmapCount;
+
+		std::array<VkDescriptorPoolSize, 2> poolSizes = { sourceComputeDescriptorPoolSize, destinationComputeDescriptorPoolSize };
+		VkDescriptorPoolCreateInfo descriptorPoolCI = {};
+		descriptorPoolCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		descriptorPoolCI.poolSizeCount = TO_UINT32_T(poolSizes.size());
+		descriptorPoolCI.pPoolSizes = poolSizes.data();
+		descriptorPoolCI.maxSets = mipmapCount * 2;
+
+		CHECK_VK(vkCreateDescriptorPool(device, &descriptorPoolCI, nullptr, &compute.descriptorPool));
+
+
+		VkCommandBufferBeginInfo commandBufferBI = {};
+		commandBufferBI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		commandBufferBI.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+		CHECK_VK(vkBeginCommandBuffer(compute.commandBuffer, &commandBufferBI));
+
+		CommandTransitionImageLayout(compute.commandBuffer, prefiltered.image, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, 6, TO_UINT32_T(floor(log2(PREFILTERED_TEXTURE_SIZE))) + 1);
+
+		vkCmdBindPipeline(compute.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute.pipeline.pipeline);
+
+		compute.imageViews.resize(TO_SIZE_T(mipmapCount));
+		compute.descriptorSets.resize(TO_SIZE_T(mipmapCount));
+		for (uint32_t i = 0; i < mipmapCount; ++i)
+		{
+			VkImageViewCreateInfo imageViewCI = {};
+			imageViewCI.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			imageViewCI.image = prefiltered.image;
+			imageViewCI.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+			imageViewCI.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+			imageViewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			imageViewCI.subresourceRange.levelCount = mipmapCount - i;
+			imageViewCI.subresourceRange.baseMipLevel = i;
+			imageViewCI.subresourceRange.layerCount = 6;
+			imageViewCI.subresourceRange.baseArrayLayer = 0;
+			CHECK_VK(vkCreateImageView(device, &imageViewCI, nullptr, &compute.imageViews[i]));
+
+			VkDescriptorSetLayout generatePrefilteredMapSetLayout = compute.pipeline.descriptorSetLayout;
+			VkDescriptorSetAllocateInfo generatePrefilteredDescriptorSetAI = {};
+			generatePrefilteredDescriptorSetAI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+			generatePrefilteredDescriptorSetAI.descriptorPool = compute.descriptorPool;
+			generatePrefilteredDescriptorSetAI.descriptorSetCount = 1;
+			generatePrefilteredDescriptorSetAI.pSetLayouts = &generatePrefilteredMapSetLayout;
+
+			CHECK_VK(vkAllocateDescriptorSets(device, &generatePrefilteredDescriptorSetAI, &compute.descriptorSets[i]));
+
+			VkDescriptorImageInfo computeEnvMapMapDescriptorImageInfo = {};
+			computeEnvMapMapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			computeEnvMapMapDescriptorImageInfo.imageView = cubemapSource.imageView;
+			computeEnvMapMapDescriptorImageInfo.sampler = forward.cubemapSampler;
+
+
+			VkWriteDescriptorSet writeComputeEnvMapDescriptorSet = {};
+			writeComputeEnvMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			writeComputeEnvMapDescriptorSet.descriptorCount = 1;
+			writeComputeEnvMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			writeComputeEnvMapDescriptorSet.dstBinding = 0;
+			writeComputeEnvMapDescriptorSet.dstArrayElement = 0;
+			writeComputeEnvMapDescriptorSet.pImageInfo = &computeEnvMapMapDescriptorImageInfo;
+			writeComputeEnvMapDescriptorSet.dstSet = compute.descriptorSets[i];
+
+			VkDescriptorImageInfo computePrefilteredMapDescriptorImageInfo = {};
+			computePrefilteredMapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+			computePrefilteredMapDescriptorImageInfo.imageView = compute.imageViews[i];
+
+			VkWriteDescriptorSet writeComputePrefilteredMapDescriptorSet = {};
+			writeComputePrefilteredMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			writeComputePrefilteredMapDescriptorSet.descriptorCount = 1;
+			writeComputePrefilteredMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+			writeComputePrefilteredMapDescriptorSet.dstBinding = 1;
+			writeComputePrefilteredMapDescriptorSet.dstArrayElement = 0;
+			writeComputePrefilteredMapDescriptorSet.pImageInfo = &computePrefilteredMapDescriptorImageInfo;
+			writeComputePrefilteredMapDescriptorSet.dstSet = compute.descriptorSets[i];
+
+			std::array<VkWriteDescriptorSet, 2> writeDescriptorSets =
+			{
+				writeComputeEnvMapDescriptorSet,
+				writeComputePrefilteredMapDescriptorSet
+			};
+
+			vkUpdateDescriptorSets(device, TO_UINT32_T(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
+
+			vkCmdBindDescriptorSets(compute.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute.pipeline.pipelineLayout, 0, 1, &compute.descriptorSets[i], 0, nullptr);
+
+
+			GeneratePrefilteredParameters parameters;
+			parameters.cubemapSize = glm::vec2(PREFILTERED_TEXTURE_SIZE >> i);
+			parameters.roughness = TO_FLOAT(i) / TO_FLOAT(mipmapCount - 1);
+			parameters.samplesCount = 32;
+
+			vkCmdPushConstants(compute.commandBuffer, compute.pipeline.pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(GeneratePrefilteredParameters), &parameters);
+
+			uint32_t dispatch = std::max((CUBEMAP_TEXTURE_SIZE >> i) / 16, 1);
+			vkCmdDispatch(compute.commandBuffer, dispatch, dispatch, 6);
+		}
+
+		CommandTransitionImageLayout(compute.commandBuffer, prefiltered.image, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 6, TO_UINT32_T(floor(log2(PREFILTERED_TEXTURE_SIZE))) + 1);
+
+		CHECK_VK(vkEndCommandBuffer(compute.commandBuffer));
+
+		VkSubmitInfo submitInfo = {};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &compute.commandBuffer;
+
+		CHECK_VK(vkQueueSubmit(computeQueue, 1, &submitInfo, VK_NULL_HANDLE));
+		CHECK_VK(vkQueueWaitIdle(computeQueue));
+
+		DestroyComputePipeline(compute.pipeline);
+		vkDestroyDescriptorPool(device, compute.descriptorPool, nullptr);
+		vkFreeCommandBuffers(device, computeCommandPool, 1, &compute.commandBuffer);
+
+		for (size_t i = 0; i < mipmapCount; i++)
+		{
+			vkDestroyImageView(device, compute.imageViews[i], nullptr);
+		}
 
 		// Update Descriptor Set
 		VkDescriptorImageInfo prefilteredMapDescriptorImageInfo = {};

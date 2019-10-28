@@ -33,6 +33,14 @@ namespace lux::rhi
 		float deltaTheta;
 	};
 
+
+	struct GeneratePrefilteredParameters
+	{
+		glm::vec2 cubemapSize;
+		float roughness;
+		int samplesCount;
+	};
+
 	struct LightBuffer
 	{
 		alignas(16) glm::vec4 position;
@@ -127,9 +135,9 @@ namespace lux::rhi
 		std::vector<VkCommandBuffer> commandBuffers;
 
 		VkCommandPool computeCommandPool;
-		VkCommandBuffer computeCommandBuffer;
-		VkDescriptorPool computeDescriptorPool;
-		VkDescriptorSet generateIrradianceDescriptorSet;
+		//VkCommandBuffer computeCommandBuffer;
+		//VkDescriptorPool computeDescriptorPool;
+		//VkDescriptorSet generateIrradianceDescriptorSet;
 
 		std::vector<Buffer> lightUniformBuffers;
 		LightCountPushConstant lightCountPushConstant;
@@ -139,13 +147,10 @@ namespace lux::rhi
 		uint32_t currentFrame;
 
 		ShadowMapper shadowMapper;
-		ComputePipeline computePipeline;
-
 
 		void InitInstanceAndDevice(const Window& window) noexcept;
 		void InitSwapchain() noexcept;
 		void InitCommandBuffer() noexcept;
-		void InitComputePipeline() noexcept;
 
 
 		void InitForwardRenderPass() noexcept;

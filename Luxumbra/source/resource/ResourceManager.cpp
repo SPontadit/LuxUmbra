@@ -9,6 +9,7 @@
 
 #include "glm\gtc\type_ptr.hpp"
 
+#include "Logger.h"
 
 namespace lux::resource
 {
@@ -263,7 +264,7 @@ namespace lux::resource
 
 		// Create Prefiltered Image
 		imageCI.width = PREFILTERED_TEXTURE_SIZE;
-		imageCI.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		imageCI.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 		imageCI.height = PREFILTERED_TEXTURE_SIZE;
 		imageCI.mipmapCount = TO_UINT32_T(floor(log2(PREFILTERED_TEXTURE_SIZE))) + 1;
 		rhi.CreateImage(imageCI, prefiltered->image);
