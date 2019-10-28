@@ -131,7 +131,7 @@ namespace lux::rhi
 		//GenerateCubemap(irradianceCI, cubemapSource, irradiance);
 
 
-		VkDescriptorSetLayout generateIrradianceMapSetLayout = computeDescriptorSetLayout;
+		VkDescriptorSetLayout generateIrradianceMapSetLayout = computePipeline.descriptorSetLayout;
 		VkDescriptorSetAllocateInfo generateIrradianceDescriptorSetAI = {};
 		generateIrradianceDescriptorSetAI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 		generateIrradianceDescriptorSetAI.descriptorPool = computeDescriptorPool;
@@ -191,11 +191,11 @@ namespace lux::rhi
 		//CommandTransitionImageLayout(computeCommandBuffer, cubemapSource.image, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, 6, TO_UINT32_T(floor(log2(CUBEMAP_TEXTURE_SIZE))) + 1);
 		CommandTransitionImageLayout(computeCommandBuffer, irradiance.image, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, 6, TO_UINT32_T(floor(log2(IRRADIANCE_TEXTURE_SIZE))) + 1);
 
-		vkCmdBindPipeline(computeCommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline);
+		vkCmdBindPipeline(computeCommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline.pipeline);
 
-		vkCmdBindDescriptorSets(computeCommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipelineLayout, 0, 1, &generateIrradianceDescriptorSet, 0, nullptr);
+		vkCmdBindDescriptorSets(computeCommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline.pipelineLayout, 0, 1, &generateIrradianceDescriptorSet, 0, nullptr);
 
-		vkCmdPushConstants(computeCommandBuffer, computePipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(GenerateIrradianceParameters), &parameters);
+		vkCmdPushConstants(computeCommandBuffer, computePipeline.pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(GenerateIrradianceParameters), &parameters);
 
 		vkCmdDispatch(computeCommandBuffer, CUBEMAP_TEXTURE_SIZE / 32, CUBEMAP_TEXTURE_SIZE / 32, 6);
 

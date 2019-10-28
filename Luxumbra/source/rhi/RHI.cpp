@@ -528,15 +528,6 @@ namespace lux::rhi
 
 	void RHI::InitComputePipeline() noexcept
 	{
-		VkShaderModule computeShaderModule = VK_NULL_HANDLE;
-		CreateShaderModule("data/shaders/generateIrradianceMap/generateIrradianceMap.comp.spv", &computeShaderModule);
-
-		VkPipelineShaderStageCreateInfo computeStageCI = {};
-		computeStageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		computeStageCI.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-		computeStageCI.module = computeShaderModule;
-		computeStageCI.pName = "main";
-
 		VkDescriptorSetLayoutBinding cubemapInputDescriptorSetLayoutBinding = {};
 		cubemapInputDescriptorSetLayoutBinding.binding = 0;
 		cubemapInputDescriptorSetLayoutBinding.descriptorCount = 1;
@@ -549,43 +540,18 @@ namespace lux::rhi
 		irradianceOutputDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 		irradianceOutputDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-		std::array<VkDescriptorSetLayoutBinding, 2> descriptorSetLayoutBindings =
-		{
-			cubemapInputDescriptorSetLayoutBinding,
-			irradianceOutputDescriptorSetLayoutBinding
-		};
-
-		VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI = {};
-		descriptorSetLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		descriptorSetLayoutCI.bindingCount = TO_UINT32_T(descriptorSetLayoutBindings.size());
-		descriptorSetLayoutCI.pBindings = descriptorSetLayoutBindings.data();
-
-		CHECK_VK(vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCI, nullptr, &computeDescriptorSetLayout));
-
 		VkPushConstantRange generateIrradiancePushConstantRange = {};
 		generateIrradiancePushConstantRange.offset = 0;
 		generateIrradiancePushConstantRange.size = sizeof(GenerateIrradianceParameters);
 		generateIrradiancePushConstantRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-		VkPipelineLayoutCreateInfo pipelineLayoutCI = {};
-		pipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutCI.setLayoutCount = 1;
-		pipelineLayoutCI.pSetLayouts = &computeDescriptorSetLayout;
-		pipelineLayoutCI.pushConstantRangeCount = 1;
-		pipelineLayoutCI.pPushConstantRanges = &generateIrradiancePushConstantRange;
+		ComputePipelineCreateInfo computePipelineCI = {};
+		computePipelineCI.binaryComputeFilePath = "data/shaders/generateIrradianceMap/generateIrradianceMap.comp.spv";
+		computePipelineCI.descriptorSetLayoutBindings = { cubemapInputDescriptorSetLayoutBinding, irradianceOutputDescriptorSetLayoutBinding };
+		computePipelineCI.pushConstants = { generateIrradiancePushConstantRange };
 
-		CHECK_VK(vkCreatePipelineLayout(device, &pipelineLayoutCI, nullptr, &computePipelineLayout));
+		CreateComputePipeline(computePipelineCI, computePipeline);
 
-
-		VkComputePipelineCreateInfo computePipelineCI = {};
-		computePipelineCI.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-		computePipelineCI.stage = computeStageCI;
-		computePipelineCI.layout = computePipelineLayout;
-
-		CHECK_VK(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &computePipelineCI, nullptr, &computePipeline));
-	
-		vkDestroyShaderModule(device, computeShaderModule, nullptr);
-	
 		VkCommandPoolCreateInfo commandPoolCI = {};
 		commandPoolCI.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 		commandPoolCI.queueFamilyIndex = computeQueueIndex;
@@ -1132,10 +1098,8 @@ namespace lux::rhi
 
 	void RHI::DestroyComputeRelatedResources() noexcept
 	{
+		DestroyComputePipeline(computePipeline);
 		vkDestroyDescriptorPool(device, computeDescriptorPool, nullptr);
-		vkDestroyPipeline(device, computePipeline, nullptr);
-		vkDestroyPipelineLayout(device, computePipelineLayout, nullptr);
-		vkDestroyDescriptorSetLayout(device, computeDescriptorSetLayout, nullptr);
 		vkFreeCommandBuffers(device, computeCommandPool, 1, &computeCommandBuffer);
 		vkDestroyCommandPool(device, computeCommandPool, nullptr);
 	}

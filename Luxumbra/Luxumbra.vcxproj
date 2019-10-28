@@ -154,6 +154,7 @@
     <ClCompile Include="source\resource\ResourceManager.cpp" />
     <ClCompile Include="source\resource\Texture.cpp" />
     <ClCompile Include="source\rhi\RHI_Buffer.cpp" />
+    <ClCompile Include="source\rhi\RHI_ComputePipeline.cpp" />
     <ClCompile Include="source\rhi\RHI_ForwardRenderer.cpp" />
     <ClCompile Include="source\rhi\RHI_GraphicsPipeline.cpp" />
     <ClCompile Include="source\rhi\RHI.cpp" />
@@ -187,6 +188,7 @@
     <ClInclude Include="include\resource\ResourceManager.h" />
     <ClInclude Include="include\resource\Texture.h" />
     <ClInclude Include="include\rhi\Buffer.h" />
+    <ClInclude Include="include\rhi\ComputePipeline.h" />
     <ClInclude Include="include\rhi\ForwardRenderer.h" />
     <ClInclude Include="include\rhi\Image.h" />
     <ClInclude Include="include\rhi\LuxVkImpl.h" />

@@ -8,6 +8,7 @@
 #include "rhi\LuxVkImpl.h"
 #include "Window.h"
 #include "rhi\GraphicsPipeline.h"
+#include "rhi\ComputePipeline.h"
 #include "rhi\ForwardRenderer.h"
 #include "rhi\ShadowMapper.h"
 #include "rhi\Image.h"
@@ -138,10 +139,8 @@ namespace lux::rhi
 		uint32_t currentFrame;
 
 		ShadowMapper shadowMapper;
+		ComputePipeline computePipeline;
 
-		VkPipeline computePipeline;
-		VkDescriptorSetLayout computeDescriptorSetLayout;
-		VkPipelineLayout computePipelineLayout;
 
 		void InitInstanceAndDevice(const Window& window) noexcept;
 		void InitSwapchain() noexcept;
@@ -195,6 +194,9 @@ namespace lux::rhi
 		void CreateGraphicsPipeline(const GraphicsPipelineCreateInfo& luxGraphicsPipelineCI, GraphicsPipeline& graphicsPipeline) noexcept;
 		void CreateShaderModule(const std::string& binaryFilePath, VkShaderModule* shaderModule) const noexcept;
 		void DestroyGraphicsPipeline(GraphicsPipeline& graphicsPipeline) noexcept;
+
+		void CreateComputePipeline(const ComputePipelineCreateInfo& luxComputePipelineCI, ComputePipeline& computePipeline) noexcept;
+		void DestroyComputePipeline(ComputePipeline& computePipeline) noexcept;
 
 #ifdef VULKAN_ENABLE_VALIDATION
 		VkDebugReportCallbackEXT debugReportCallback;
