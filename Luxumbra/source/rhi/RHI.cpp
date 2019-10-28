@@ -455,7 +455,7 @@ namespace lux::rhi
 
 		VkDescriptorPoolSize materialsSamplerDescriptorPoolSize = {};
 		materialsSamplerDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		materialsSamplerDescriptorPoolSize.descriptorCount = swapchainImageCount * 2 * MATERIAL_MAX_SET;
+		materialsSamplerDescriptorPoolSize.descriptorCount = swapchainImageCount * 4 * MATERIAL_MAX_SET;
 
 		std::array<VkDescriptorPoolSize, 2> descriptorPoolSizes = { materialsUniformDescriptorPoolSize, materialsSamplerDescriptorPoolSize };
 
@@ -712,6 +712,37 @@ namespace lux::rhi
 		writeMaterialNormalDescriptorSet.pImageInfo = &materialNormalDescriptorImageInfo;
 
 
+		// Metallic/Roughness
+
+		VkDescriptorImageInfo materialMetallicRoughnessDescriptorImageInfo = {};
+		materialMetallicRoughnessDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		materialMetallicRoughnessDescriptorImageInfo.sampler = forward.sampler;
+		materialMetallicRoughnessDescriptorImageInfo.imageView = material.metallicRoughness->image.imageView;
+
+		VkWriteDescriptorSet writeMaterialMetallicRoughnessDescriptorSet = {};
+		writeMaterialMetallicRoughnessDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeMaterialMetallicRoughnessDescriptorSet.descriptorCount = 1;
+		writeMaterialMetallicRoughnessDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		writeMaterialMetallicRoughnessDescriptorSet.dstBinding = 3;
+		writeMaterialMetallicRoughnessDescriptorSet.dstArrayElement = 0;
+		writeMaterialMetallicRoughnessDescriptorSet.pImageInfo = &materialMetallicRoughnessDescriptorImageInfo;
+		
+
+		// Ambient Occlusion
+		VkDescriptorImageInfo materialAmbientOcclusionDescriptorImageInfo = {};
+		materialAmbientOcclusionDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		materialAmbientOcclusionDescriptorImageInfo.sampler = forward.sampler;
+		materialAmbientOcclusionDescriptorImageInfo.imageView = material.ambientOcclusion->image.imageView;
+
+		VkWriteDescriptorSet writeMaterialAmbientOcclusionDescriptorSet = {};
+		writeMaterialAmbientOcclusionDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeMaterialAmbientOcclusionDescriptorSet.descriptorCount = 1;
+		writeMaterialAmbientOcclusionDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		writeMaterialAmbientOcclusionDescriptorSet.dstBinding = 4;
+		writeMaterialAmbientOcclusionDescriptorSet.dstArrayElement = 0;
+		writeMaterialAmbientOcclusionDescriptorSet.pImageInfo = &materialAmbientOcclusionDescriptorImageInfo;
+
+
 		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
 			CreateBuffer(materialBufferCI, material.buffer[i]);
@@ -722,8 +753,17 @@ namespace lux::rhi
 
 			writeMaterialAlbedoDescriptorSet.dstSet = material.descriptorSet[i];
 			writeMaterialNormalDescriptorSet.dstSet = material.descriptorSet[i];
+			writeMaterialMetallicRoughnessDescriptorSet.dstSet = material.descriptorSet[i];
+			writeMaterialAmbientOcclusionDescriptorSet.dstSet = material.descriptorSet[i];
 
-			std::array<VkWriteDescriptorSet, 3> writeDescriptorSets = { writeMaterialParametersDescriptorSet, writeMaterialAlbedoDescriptorSet, writeMaterialNormalDescriptorSet };
+			std::array<VkWriteDescriptorSet, 5> writeDescriptorSets = 
+			{ 
+				writeMaterialParametersDescriptorSet, 
+				writeMaterialAlbedoDescriptorSet, 
+				writeMaterialNormalDescriptorSet,
+				writeMaterialMetallicRoughnessDescriptorSet,
+				writeMaterialAmbientOcclusionDescriptorSet
+			};
 
 			vkUpdateDescriptorSets(device, TO_UINT32_T(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
 		}

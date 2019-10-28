@@ -2,6 +2,7 @@
 
 void CornellBox(lux::Engine& luxUmbra) noexcept;
 void ShadowTest(lux::Engine& luxUmbra) noexcept;
+void TexturedPBR(lux::Engine& luxUmbra) noexcept;
 
 
 int main(int ac, char* av[])
@@ -22,7 +23,7 @@ int main(int ac, char* av[])
 
 
 	//scene.AddCameraNode(nullptr, { 2.5f, 5.f, 20.f }, { 0.f, 0.f, 0.f }, false, 45.f, 0.01f, 1000.f, true);
-	ShadowTest(luxUmbra);
+	TexturedPBR(luxUmbra);
 
 
 	luxUmbra.Run();
@@ -69,6 +70,48 @@ void ShadowTest(lux::Engine& luxUmbra) noexcept
 	plane = scene.AddMeshNode(nullptr, glm::vec3(2.f, 1.f, 0.f), glm::radians(glm::vec3(0.f, 0.f, 0.f)), false, lux::resource::MeshPrimitive::MESH_PLANE_PRIMITIVE, "White");
 
 	scene.AddMeshNode(nullptr, glm::vec3(0.f), glm::vec3(0.f), false, "data/models/ironman.fbx", "ironman");
+
+	scene.AddLightNode(nullptr, { 0.0f, 0.0f, -1.0f }, { 0.f, 0.f, 0.f }, false, lux::scene::LightType::LIGHT_TYPE_DIRECTIONAL, { 1.0f, 1.0f, 1.0f });
+}
+
+void TexturedPBR(lux::Engine& luxUmbra) noexcept
+{
+	lux::scene::Scene& scene = luxUmbra.GetScene();
+	lux::resource::ResourceManager& resourceManager = luxUmbra.GetResourceManager();
+
+	resourceManager.UseCubemap("data/envmaps/Ridgecrest_Road_Ref.hdr");
+
+
+	std::shared_ptr<lux::resource::Texture> baseColor = resourceManager.GetTexture("data/DamagedHelmet/Default_albedo.jpg");
+	std::shared_ptr<lux::resource::Texture> normal = resourceManager.GetTexture("data/DamagedHelmet/Default_normal.jpg");
+	std::shared_ptr<lux::resource::Texture> metallicRoughness = resourceManager.GetTexture("data/DamagedHelmet/Default_metalRoughness.jpg");
+	std::shared_ptr<lux::resource::Texture> ao = resourceManager.GetTexture("data/DamagedHelmet/Default_AO.jpg");
+
+	lux::resource::MaterialCreateInfo defaultMaterialCI;
+	defaultMaterialCI.baseColor = glm::vec3(1.0f);
+	defaultMaterialCI.metallic = false;
+	defaultMaterialCI.perceptualRoughness = 0.0f;
+	defaultMaterialCI.reflectance = 0.5f;
+	defaultMaterialCI.isTransparent = false;
+	defaultMaterialCI.textureMask = 0;
+	resourceManager.CreateMaterial("White", defaultMaterialCI);
+
+
+	defaultMaterialCI.albedo = baseColor;
+	defaultMaterialCI.normal = normal;
+	defaultMaterialCI.metallicRoughness = metallicRoughness;
+	defaultMaterialCI.textureMask = lux::resource::TextureMask::METALLIC_TEXTURE_MASK | lux::resource::TextureMask::ROUGHNESS_TEXTURE_MASK;
+	defaultMaterialCI.ambientOcclusion = ao;
+	resourceManager.CreateMaterial("Helmet", defaultMaterialCI);
+
+
+	scene.AddCameraNode(nullptr, { 0.f, 1.f, 5.f }, { 0.f, 0.f, 0.f }, false, 45.f, 0.01f, 1000.f, true);
+
+	lux::scene::MeshNode* plane = scene.AddMeshNode(nullptr, glm::vec3(0.f, 1.f, -2.f), glm::radians(glm::vec3(0.f, 90.f, 0.f)), false, lux::resource::MeshPrimitive::MESH_PLANE_PRIMITIVE, "White");
+	plane = scene.AddMeshNode(nullptr, glm::vec3(-2.f, 1.f, 0.f), glm::radians(glm::vec3(0.f, 180.f, 0.f)), false, lux::resource::MeshPrimitive::MESH_PLANE_PRIMITIVE, "White");
+	plane = scene.AddMeshNode(nullptr, glm::vec3(2.f, 1.f, 0.f), glm::radians(glm::vec3(0.f, 0.f, 0.f)), false, lux::resource::MeshPrimitive::MESH_PLANE_PRIMITIVE, "White");
+
+	scene.AddMeshNode(nullptr, glm::vec3(0.f), glm::vec3(0.f), false, "data/DamagedHelmet/DamagedHelmet.gltf", "Helmet");
 
 	scene.AddLightNode(nullptr, { 0.0f, 0.0f, -1.0f }, { 0.f, 0.f, 0.f }, false, lux::scene::LightType::LIGHT_TYPE_DIRECTIONAL, { 1.0f, 1.0f, 1.0f });
 }

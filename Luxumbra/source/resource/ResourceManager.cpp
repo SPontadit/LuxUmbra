@@ -189,6 +189,15 @@ namespace lux::resource
 		if (materialCI.normal == nullptr)
 			materialCI.normal = defaultNormalMap;
 
+		if (materialCI.metallicRoughness == nullptr)
+		{
+			materialCI.textureMask = 0;
+			materialCI.metallicRoughness = defaultWhite;
+		}
+
+		if (materialCI.ambientOcclusion == nullptr)
+			materialCI.ambientOcclusion = defaultWhite;
+
 		std::shared_ptr<Material> material = std::make_shared<Material>(name, materialCI);
 
 		rhi.CreateMaterial(*material);

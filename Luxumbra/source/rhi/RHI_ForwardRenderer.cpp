@@ -445,12 +445,23 @@ namespace lux::rhi
 		materialAlbedoDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		materialAlbedoDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-
 		VkDescriptorSetLayoutBinding materialNormalDescriptorSetLayoutBinding = {};
 		materialNormalDescriptorSetLayoutBinding.binding = 2;
 		materialNormalDescriptorSetLayoutBinding.descriptorCount = 1;
 		materialNormalDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		materialNormalDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		VkDescriptorSetLayoutBinding materialMetallicRoughnessDescriptorSetLayoutBinding = {};
+		materialMetallicRoughnessDescriptorSetLayoutBinding.binding = 3;
+		materialMetallicRoughnessDescriptorSetLayoutBinding.descriptorCount = 1;
+		materialMetallicRoughnessDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		materialMetallicRoughnessDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		VkDescriptorSetLayoutBinding materialAmbientOcclusionDescriptorSetLayoutBinding = {};
+		materialAmbientOcclusionDescriptorSetLayoutBinding.binding = 4;
+		materialAmbientOcclusionDescriptorSetLayoutBinding.descriptorCount = 1;
+		materialAmbientOcclusionDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		materialAmbientOcclusionDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 
 		// Push Constant
@@ -494,7 +505,15 @@ namespace lux::rhi
 			shadowMapDescriptorSetLayoutBinding
 		};
 
-		rtGraphicsPipelineCI.materialDescriptorSetLayoutBindings = { materialParametersDescriptorSetLayoutBinding, materialAlbedoDescriptorSetLayoutBinding, materialNormalDescriptorSetLayoutBinding };
+		rtGraphicsPipelineCI.materialDescriptorSetLayoutBindings = 
+		{ 
+			materialParametersDescriptorSetLayoutBinding, 
+			materialAlbedoDescriptorSetLayoutBinding, 
+			materialNormalDescriptorSetLayoutBinding,
+			materialMetallicRoughnessDescriptorSetLayoutBinding,
+			materialAmbientOcclusionDescriptorSetLayoutBinding,
+		};
+
 		rtGraphicsPipelineCI.pushConstants = { rtModelPushConstantRange, lightCountPushConstantRange };
 
 		CreateGraphicsPipeline(rtGraphicsPipelineCI, forward.rtGraphicsPipeline);

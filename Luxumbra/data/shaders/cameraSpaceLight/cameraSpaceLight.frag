@@ -42,10 +42,13 @@ layout(set = 1, binding = 0) uniform Material
 	float metallic;
 	float perceptualRoughness;
 	float reflectance;
+	int useTextureMask;
 } material;
 
 layout(set = 1, binding = 1) uniform sampler2D albedo;
 layout(set = 1, binding = 2) uniform sampler2D normalMap;
+layout(set = 1, binding = 3) uniform sampler2D metallicRoughnessMap;
+layout(set = 1, binding = 4) uniform sampler2D ambientOcclusionMap;
 
 //#define BASE_COLOR material.color.xyz
 //#define METALLIC material.color.w
@@ -56,6 +59,9 @@ layout(set = 1, binding = 2) uniform sampler2D normalMap;
 //	vec4 color;
 //	vec4 parameter;
 //} material;
+
+#define ROUGHNESS_MASK = 0x01
+#define METALLIC_MASK = 0x02
 
 const float PI = 3.1415926;
 
@@ -136,9 +142,14 @@ vec4 CameraSpace()
 	vec3 baseColor = pow(textureColor.rgb * material.baseColor, vec3(2.2));
 	baseColor *= textureColor.a;
 
-	float roughness = material.perceptualRoughness * material.perceptualRoughness;
-	vec3 diffuseColor = RemapDiffuseColor(baseColor, material.metallic);
-	vec3 F0 = GetF0(material.reflectance, material.metallic, baseColor);
+//	float roughness = material.perceptualRoughness * material.perceptualRoughness;
+
+	// Perceptual dans la texture ?
+
+	float roughness = (material.useTextureMask & ROUGHNESS_MASK) == ROUGHNESS_MASK ? texture(metallicRoughnessMap, fsIn.textureCoordinateLS).g : material.perceptualRoughness * material.perceptualRoughness;
+	float metallic = (material.useTextureMask & METALLIC_MASK) == METALLIC_MASK ? texture(metallicRoughnessMap, fsIn.textureCoordinateLS).b : material.metallic;
+	vec3 diffuseColor = RemapDiffuseColor(baseColor, metallic);
+	vec3 F0 = GetF0(material.reflectance, metallic, baseColor);
 
 	for(int i = 0; i < pushConsts.lightCount; ++i)
 	{
@@ -204,8 +215,11 @@ vec4 CameraSpace()
 
 	vec3 Kdiff = 1.0 - F;
 	vec3 indirectDiffuseColor = irradiance * diffuseColor * Kdiff;
-
 	vec3 indirectColor = indirectDiffuseColor + indirectSpecularColor;
+	
+	float ao = texture(ambientOcclusionMap, fsIn.textureCoordinateLS).r;
+
+	indirectColor *= ao;
 
 	return vec4(directColor * shadow + indirectColor, textureColor.a);
 }
