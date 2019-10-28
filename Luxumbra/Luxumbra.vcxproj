@@ -219,6 +219,7 @@
     <None Include="data\shaders\generateBRDFLut\generateBRDFLut.vert" />
     <None Include="data\shaders\generateCubeMap\generateCubeMap.frag" />
     <None Include="data\shaders\generateCubeMap\generateCubeMap.vert" />
+    <None Include="data\shaders\generateIrradianceMap\generateIrradianceMap.comp" />
     <None Include="data\shaders\generateIrradianceMap\generateIrradianceMap.frag" />
     <None Include="data\shaders\generateIrradianceMap\generateIrradianceMap.vert" />
     <None Include="data\shaders\generatePrefilteredMap\generatePrefilteredMap.frag" />

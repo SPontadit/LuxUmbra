@@ -245,6 +245,7 @@ namespace lux::resource
 		imageCI.imageViewType = VK_IMAGE_VIEW_TYPE_CUBE;
 		imageCI.imageData = nullptr;
 		imageCI.imageSize = 0;
+		imageCI.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
 		imageCI.width = CUBEMAP_TEXTURE_SIZE;
 		imageCI.height = CUBEMAP_TEXTURE_SIZE;
 		imageCI.mipmapCount = TO_UINT32_T(floor(log2(CUBEMAP_TEXTURE_SIZE))) + 1;
@@ -255,12 +256,14 @@ namespace lux::resource
 		// Create Irradiance Image
 		imageCI.width = IRRADIANCE_TEXTURE_SIZE;
 		imageCI.height = IRRADIANCE_TEXTURE_SIZE;
+		imageCI.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 		imageCI.mipmapCount = TO_UINT32_T(floor(log2(IRRADIANCE_TEXTURE_SIZE))) + 1;
 		rhi.CreateImage(imageCI, irradiance->image);
 
 
 		// Create Prefiltered Image
 		imageCI.width = PREFILTERED_TEXTURE_SIZE;
+		imageCI.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 		imageCI.height = PREFILTERED_TEXTURE_SIZE;
 		imageCI.mipmapCount = TO_UINT32_T(floor(log2(PREFILTERED_TEXTURE_SIZE))) + 1;
 		rhi.CreateImage(imageCI, prefiltered->image);

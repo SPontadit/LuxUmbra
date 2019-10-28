@@ -11,11 +11,12 @@ namespace lux::rhi
 {
 	RHI::RHI() noexcept
 		: isInitialized(false), instance(VK_NULL_HANDLE), surface(VK_NULL_HANDLE), physicalDevice(VK_NULL_HANDLE), device(VK_NULL_HANDLE),
-		graphicsQueueIndex(UINT32_MAX), presentQueueIndex(UINT32_MAX), graphicsQueue(VK_NULL_HANDLE), presentQueue(VK_NULL_HANDLE),
+		graphicsQueueIndex(UINT32_MAX), presentQueueIndex(UINT32_MAX), computeQueueIndex(UINT32_MAX), graphicsQueue(VK_NULL_HANDLE), presentQueue(VK_NULL_HANDLE), computeQueue(VK_NULL_HANDLE),
 		swapchainImageFormat(VK_FORMAT_UNDEFINED), swapchainExtent({ 0, 0 }), swapchainImageSubresourceRange{}, swapchain(VK_NULL_HANDLE),
 		swapchainImageCount(0), swapchainImages(0), swapchainImageViews(0), msaaSamples(VK_SAMPLE_COUNT_1_BIT),
 		presentSemaphores(0), acquireSemaphores(0), fences(0),
 		imguiDescriptorPool(VK_NULL_HANDLE), materialDescriptorPool(VK_NULL_HANDLE), commandPool(VK_NULL_HANDLE), commandBuffers(0),
+		computeCommandPool(VK_NULL_HANDLE), computeCommandBuffer(VK_NULL_HANDLE),
 		lightUniformBuffers(0), lightCountPushConstant(), frameCount(0), currentFrame(0), cube(nullptr),
 		shadowMapper(), forward()
 #ifdef VULKAN_ENABLE_VALIDATION
@@ -35,6 +36,8 @@ namespace lux::rhi
 		DestroyShadowMapper();
 
 		DestroySwapchainRelatedResources();
+
+		DestroyComputeRelatedResources();
 
 		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
@@ -95,6 +98,8 @@ namespace lux::rhi
 		BuildLightUniformBuffers(2);
 
 		InitForwardDescriptorSets();
+
+		InitComputePipeline();
 
 		// End
 
@@ -240,6 +245,7 @@ namespace lux::rhi
 
 		bool foundGraphicsQueue = false;
 		bool foundPresentQueue = false;
+		bool foundComputeQueue = false;
 
 		for (uint32_t i = 0; i < queueFamilieCount; i++)
 		{
@@ -248,6 +254,12 @@ namespace lux::rhi
 			{
 				graphicsQueueIndex = i;
 				foundGraphicsQueue = true;
+			}
+
+			if (!foundComputeQueue && (queueFamilyProperties.queueFlags & VK_QUEUE_COMPUTE_BIT) && ((queueFamilyProperties.queueFlags & VK_QUEUE_COMPUTE_BIT) == 0))
+			{
+				computeQueueIndex = i;
+				foundComputeQueue = true;
 			}
 
 			if (!foundPresentQueue)
@@ -262,8 +274,22 @@ namespace lux::rhi
 				}
 			}
 
-			if (foundGraphicsQueue && foundPresentQueue)
+			if (foundGraphicsQueue && foundPresentQueue && foundComputeQueue)
 				break;
+		}
+
+		if (!foundComputeQueue)
+		{
+			for (uint32_t i = 0; i < queueFamilieCount; i++)
+			{
+				VkQueueFamilyProperties queueFamilyProperties = queueFamiliesProperties[TO_SIZE_T(i)];
+				if (queueFamilyProperties.queueFlags & VK_QUEUE_COMPUTE_BIT)
+				{
+					computeQueueIndex = i;
+					foundComputeQueue = true;
+					break;
+				}
+			}
 		}
 
 		float queuePriority = 1.0f;
@@ -285,6 +311,17 @@ namespace lux::rhi
 			presentQueueCI.pQueuePriorities = &queuePriority;
 
 			deviceQueueCIs.push_back(presentQueueCI);
+		}
+
+		if (computeQueueIndex != graphicsQueueIndex)
+		{
+			VkDeviceQueueCreateInfo computeQueueCI = {};
+			computeQueueCI.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+			computeQueueCI.queueFamilyIndex = computeQueueIndex;
+			computeQueueCI.queueCount = 1;
+			computeQueueCI.pQueuePriorities = &queuePriority;
+
+			deviceQueueCIs.push_back(computeQueueCI);
 		}
 
 		VkPhysicalDeviceFeatures physicalDeviceFeatures = {};
@@ -312,6 +349,7 @@ namespace lux::rhi
 
 		vkGetDeviceQueue(device, graphicsQueueIndex, 0, &graphicsQueue);
 		vkGetDeviceQueue(device, presentQueueIndex, 0, &presentQueue);
+		vkGetDeviceQueue(device, computeQueueIndex, 0, &computeQueue);
 
 		std::vector<VkFormat> depthAttachmentFormats{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT };
 		depthImageFormat = FindSupportedImageFormat(depthAttachmentFormats, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
@@ -486,6 +524,99 @@ namespace lux::rhi
 
 		commandBuffers.resize(TO_SIZE_T(swapchainImageCount));
 		CHECK_VK(vkAllocateCommandBuffers(device, &commandBufferAI, commandBuffers.data()));
+	}
+
+	void RHI::InitComputePipeline() noexcept
+	{
+		VkShaderModule computeShaderModule = VK_NULL_HANDLE;
+		CreateShaderModule("data/shaders/generateIrradianceMap/generateIrradianceMap.comp.spv", &computeShaderModule);
+
+		VkPipelineShaderStageCreateInfo computeStageCI = {};
+		computeStageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		computeStageCI.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+		computeStageCI.module = computeShaderModule;
+		computeStageCI.pName = "main";
+
+		VkDescriptorSetLayoutBinding cubemapInputDescriptorSetLayoutBinding = {};
+		cubemapInputDescriptorSetLayoutBinding.binding = 0;
+		cubemapInputDescriptorSetLayoutBinding.descriptorCount = 1;
+		cubemapInputDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		cubemapInputDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+		VkDescriptorSetLayoutBinding irradianceOutputDescriptorSetLayoutBinding = {};
+		irradianceOutputDescriptorSetLayoutBinding.binding = 1;
+		irradianceOutputDescriptorSetLayoutBinding.descriptorCount = 1;
+		irradianceOutputDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		irradianceOutputDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+		std::array<VkDescriptorSetLayoutBinding, 2> descriptorSetLayoutBindings =
+		{
+			cubemapInputDescriptorSetLayoutBinding,
+			irradianceOutputDescriptorSetLayoutBinding
+		};
+
+		VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI = {};
+		descriptorSetLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		descriptorSetLayoutCI.bindingCount = TO_UINT32_T(descriptorSetLayoutBindings.size());
+		descriptorSetLayoutCI.pBindings = descriptorSetLayoutBindings.data();
+
+		CHECK_VK(vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCI, nullptr, &computeDescriptorSetLayout));
+
+		VkPushConstantRange generateIrradiancePushConstantRange = {};
+		generateIrradiancePushConstantRange.offset = 0;
+		generateIrradiancePushConstantRange.size = sizeof(GenerateIrradianceParameters);
+		generateIrradiancePushConstantRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+		VkPipelineLayoutCreateInfo pipelineLayoutCI = {};
+		pipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		pipelineLayoutCI.setLayoutCount = 1;
+		pipelineLayoutCI.pSetLayouts = &computeDescriptorSetLayout;
+		pipelineLayoutCI.pushConstantRangeCount = 1;
+		pipelineLayoutCI.pPushConstantRanges = &generateIrradiancePushConstantRange;
+
+		CHECK_VK(vkCreatePipelineLayout(device, &pipelineLayoutCI, nullptr, &computePipelineLayout));
+
+
+		VkComputePipelineCreateInfo computePipelineCI = {};
+		computePipelineCI.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+		computePipelineCI.stage = computeStageCI;
+		computePipelineCI.layout = computePipelineLayout;
+
+		CHECK_VK(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &computePipelineCI, nullptr, &computePipeline));
+	
+		vkDestroyShaderModule(device, computeShaderModule, nullptr);
+	
+		VkCommandPoolCreateInfo commandPoolCI = {};
+		commandPoolCI.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		commandPoolCI.queueFamilyIndex = computeQueueIndex;
+		commandPoolCI.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+		CHECK_VK(vkCreateCommandPool(device, &commandPoolCI, nullptr, &computeCommandPool));
+
+		VkCommandBufferAllocateInfo commandBufferAI = {};
+		commandBufferAI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		commandBufferAI.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		commandBufferAI.commandBufferCount = 1;
+		commandBufferAI.commandPool = computeCommandPool;
+
+		CHECK_VK(vkAllocateCommandBuffers(device, &commandBufferAI, &computeCommandBuffer));
+
+		VkDescriptorPoolSize sourceComputeDescriptorPoolSize = {};
+		sourceComputeDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		sourceComputeDescriptorPoolSize.descriptorCount = 1;
+
+		VkDescriptorPoolSize destinationComputeDescriptorPoolSize = {};
+		destinationComputeDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		destinationComputeDescriptorPoolSize.descriptorCount = 1;
+
+		std::array<VkDescriptorPoolSize, 2> poolSizes = { sourceComputeDescriptorPoolSize, destinationComputeDescriptorPoolSize };
+		VkDescriptorPoolCreateInfo descriptorPoolCI = {};
+		descriptorPoolCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		descriptorPoolCI.poolSizeCount = TO_UINT32_T(poolSizes.size());
+		descriptorPoolCI.pPoolSizes = poolSizes.data();
+		descriptorPoolCI.maxSets = 2;
+
+		CHECK_VK(vkCreateDescriptorPool(device, &descriptorPoolCI, nullptr, &computeDescriptorPool));
 	}
 
 	void RHI::Render(const scene::CameraNode* camera, scene::LightNode* shadowCastingDirectional, const std::vector<scene::MeshNode*> meshes, const std::vector<scene::LightNode*>& lights) noexcept
@@ -900,18 +1031,27 @@ namespace lux::rhi
 			imageMemoryBarrier.srcAccessMask = 0;
 			srcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 			break;
+
 		case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
 			imageMemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 			srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 			break;
+
 		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
 			imageMemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 			srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
 			break;
+
+		case VK_IMAGE_LAYOUT_GENERAL:
+			imageMemoryBarrier.srcAccessMask = 0;
+			srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+			break;
+
 		case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
 			imageMemoryBarrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
 			srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 			break;
+		
 		case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
 			imageMemoryBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 			srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
@@ -924,9 +1064,15 @@ namespace lux::rhi
 			imageMemoryBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 			dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 			break;
+
 		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
 			imageMemoryBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 			dstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+			break;
+
+		case VK_IMAGE_LAYOUT_GENERAL:
+			imageMemoryBarrier.dstAccessMask = 0;
+			dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 			break;
 
 		case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
@@ -982,6 +1128,16 @@ namespace lux::rhi
 		}
 
 		vkDestroySwapchainKHR(device, swapchain, nullptr);
+	}
+
+	void RHI::DestroyComputeRelatedResources() noexcept
+	{
+		vkDestroyDescriptorPool(device, computeDescriptorPool, nullptr);
+		vkDestroyPipeline(device, computePipeline, nullptr);
+		vkDestroyPipelineLayout(device, computePipelineLayout, nullptr);
+		vkDestroyDescriptorSetLayout(device, computeDescriptorSetLayout, nullptr);
+		vkFreeCommandBuffers(device, computeCommandPool, 1, &computeCommandBuffer);
+		vkDestroyCommandPool(device, computeCommandPool, nullptr);
 	}
 
 	uint32_t RHI::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const noexcept

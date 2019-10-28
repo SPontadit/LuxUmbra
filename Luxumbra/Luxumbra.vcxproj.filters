@@ -82,7 +82,7 @@
     <Filter Include="Resource Files\generateBRDFLut">
       <UniqueIdentifier>{de1ea4f4-5462-430f-9bd1-6b6782e19e72}</UniqueIdentifier>
     </Filter>
-	<Filter Include="Resource Files\shadowMapping">
+    <Filter Include="Resource Files\shadowMapping">
       <UniqueIdentifier>{bb890761-e6c5-4237-b3ca-3f80d71c6424}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -351,6 +351,9 @@
     </None>
     <None Include="data\shaders\CompileShaders.bat">
       <Filter>Resource Files</Filter>
+    </None>
+    <None Include="data\shaders\generateIrradianceMap\generateIrradianceMap.comp">
+      <Filter>Resource Files\generateIrradianceMap</Filter>
     </None>
   </ItemGroup>
 </Project>

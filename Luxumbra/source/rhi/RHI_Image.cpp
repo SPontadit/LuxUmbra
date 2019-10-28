@@ -120,15 +120,97 @@ namespace lux::rhi
 
 	void RHI::GenerateIrradianceFromCubemap(const Image& cubemapSource, Image& irradiance) noexcept
 	{
-		rhi::CubeMapCreateInfo irradianceCI = {};
-		irradianceCI.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-		irradianceCI.size = IRRADIANCE_TEXTURE_SIZE;
-		irradianceCI.binaryVertexFilePath = "data/shaders/generateIrradianceMap/generateIrradianceMap.vert.spv";
-		irradianceCI.binaryFragmentFilePath = "data/shaders/generateIrradianceMap/generateIrradianceMap.frag.spv";
-		irradianceCI.sampler = forward.cubemapSampler;
-		irradianceCI.mipmapCount = TO_UINT32_T(floor(log2(IRRADIANCE_TEXTURE_SIZE))) + 1;
+		//rhi::CubeMapCreateInfo irradianceCI = {};
+		//irradianceCI.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+		//irradianceCI.size = IRRADIANCE_TEXTURE_SIZE;
+		//irradianceCI.binaryVertexFilePath = "data/shaders/generateIrradianceMap/generateIrradianceMap.vert.spv";
+		//irradianceCI.binaryFragmentFilePath = "data/shaders/generateIrradianceMap/generateIrradianceMap.frag.spv";
+		//irradianceCI.sampler = forward.cubemapSampler;
+		//irradianceCI.mipmapCount = TO_UINT32_T(floor(log2(IRRADIANCE_TEXTURE_SIZE))) + 1;
 
-		GenerateCubemap(irradianceCI, cubemapSource, irradiance);
+		//GenerateCubemap(irradianceCI, cubemapSource, irradiance);
+
+
+		VkDescriptorSetLayout generateIrradianceMapSetLayout = computeDescriptorSetLayout;
+		VkDescriptorSetAllocateInfo generateIrradianceDescriptorSetAI = {};
+		generateIrradianceDescriptorSetAI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		generateIrradianceDescriptorSetAI.descriptorPool = computeDescriptorPool;
+		generateIrradianceDescriptorSetAI.descriptorSetCount = 1;
+		generateIrradianceDescriptorSetAI.pSetLayouts = &generateIrradianceMapSetLayout;
+
+		CHECK_VK(vkAllocateDescriptorSets(device, &generateIrradianceDescriptorSetAI, &generateIrradianceDescriptorSet));
+
+
+		VkDescriptorImageInfo computeEnvMapMapDescriptorImageInfo = {};
+		computeEnvMapMapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		computeEnvMapMapDescriptorImageInfo.imageView = cubemapSource.imageView;
+		computeEnvMapMapDescriptorImageInfo.sampler = forward.cubemapSampler;
+
+		VkWriteDescriptorSet writeComputeEnvMapDescriptorSet = {};
+		writeComputeEnvMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeComputeEnvMapDescriptorSet.descriptorCount = 1;
+		writeComputeEnvMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		writeComputeEnvMapDescriptorSet.dstBinding = 0;
+		writeComputeEnvMapDescriptorSet.dstArrayElement = 0;
+		writeComputeEnvMapDescriptorSet.pImageInfo = &computeEnvMapMapDescriptorImageInfo;
+		writeComputeEnvMapDescriptorSet.dstSet = generateIrradianceDescriptorSet;
+
+
+		VkDescriptorImageInfo computeIrradianceMapDescriptorImageInfo = {};
+		computeIrradianceMapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+		computeIrradianceMapDescriptorImageInfo.imageView = irradiance.imageView;
+
+		VkWriteDescriptorSet writeComputeIrradianceMapDescriptorSet = {};
+		writeComputeIrradianceMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeComputeIrradianceMapDescriptorSet.descriptorCount = 1;
+		writeComputeIrradianceMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		writeComputeIrradianceMapDescriptorSet.dstBinding = 1;
+		writeComputeIrradianceMapDescriptorSet.dstArrayElement = 0;
+		writeComputeIrradianceMapDescriptorSet.pImageInfo = &computeIrradianceMapDescriptorImageInfo;
+		writeComputeIrradianceMapDescriptorSet.dstSet = generateIrradianceDescriptorSet;
+
+		std::array<VkWriteDescriptorSet, 2> writeDescriptorSets =
+		{
+			writeComputeEnvMapDescriptorSet,
+			writeComputeIrradianceMapDescriptorSet
+		};
+
+		vkUpdateDescriptorSets(device, TO_UINT32_T(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
+
+		GenerateIrradianceParameters parameters;
+		parameters.deltaPhi = (2.0f * PI) / 180.0f;
+		parameters.deltaTheta = (0.5f * PI) / TO_FLOAT(IRRADIANCE_TEXTURE_SIZE);
+		parameters.cubemapSize = glm::vec2(CUBEMAP_TEXTURE_SIZE);
+
+		VkCommandBufferBeginInfo commandBufferBI = {};
+		commandBufferBI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		commandBufferBI.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+		CHECK_VK(vkBeginCommandBuffer(computeCommandBuffer, &commandBufferBI));
+		
+		//CommandTransitionImageLayout(computeCommandBuffer, cubemapSource.image, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, 6, TO_UINT32_T(floor(log2(CUBEMAP_TEXTURE_SIZE))) + 1);
+		CommandTransitionImageLayout(computeCommandBuffer, irradiance.image, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, 6, TO_UINT32_T(floor(log2(IRRADIANCE_TEXTURE_SIZE))) + 1);
+
+		vkCmdBindPipeline(computeCommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline);
+
+		vkCmdBindDescriptorSets(computeCommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipelineLayout, 0, 1, &generateIrradianceDescriptorSet, 0, nullptr);
+
+		vkCmdPushConstants(computeCommandBuffer, computePipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(GenerateIrradianceParameters), &parameters);
+
+		vkCmdDispatch(computeCommandBuffer, CUBEMAP_TEXTURE_SIZE / 32, CUBEMAP_TEXTURE_SIZE / 32, 6);
+
+		CommandTransitionImageLayout(computeCommandBuffer, irradiance.image, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 6, TO_UINT32_T(floor(log2(IRRADIANCE_TEXTURE_SIZE))) + 1);
+		//CommandTransitionImageLayout(computeCommandBuffer, cubemapSource.image, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 6, TO_UINT32_T(floor(log2(CUBEMAP_TEXTURE_SIZE))) + 1);
+
+		CHECK_VK(vkEndCommandBuffer(computeCommandBuffer));
+
+		VkSubmitInfo submitInfo = {};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &computeCommandBuffer;
+
+		CHECK_VK(vkQueueSubmit(computeQueue, 1, &submitInfo, VK_NULL_HANDLE));
+		CHECK_VK(vkQueueWaitIdle(computeQueue));
 
 
 		// Update Descriptor Set

@@ -25,6 +25,12 @@ namespace lux::rhi
 
 	using namespace lux;
 
+	struct GenerateIrradianceParameters
+	{
+		glm::vec2 cubemapSize;
+		float deltaPhi;
+		float deltaTheta;
+	};
 
 	struct LightBuffer
 	{
@@ -90,8 +96,10 @@ namespace lux::rhi
 
 		uint32_t graphicsQueueIndex;
 		uint32_t presentQueueIndex;
+		uint32_t computeQueueIndex;
 		VkQueue graphicsQueue;
 		VkQueue presentQueue;
+		VkQueue computeQueue;
 
 		VkSampleCountFlagBits msaaSamples;
 
@@ -117,6 +125,11 @@ namespace lux::rhi
 		VkCommandPool commandPool;
 		std::vector<VkCommandBuffer> commandBuffers;
 
+		VkCommandPool computeCommandPool;
+		VkCommandBuffer computeCommandBuffer;
+		VkDescriptorPool computeDescriptorPool;
+		VkDescriptorSet generateIrradianceDescriptorSet;
+
 		std::vector<Buffer> lightUniformBuffers;
 		LightCountPushConstant lightCountPushConstant;
 
@@ -126,9 +139,15 @@ namespace lux::rhi
 
 		ShadowMapper shadowMapper;
 
+		VkPipeline computePipeline;
+		VkDescriptorSetLayout computeDescriptorSetLayout;
+		VkPipelineLayout computePipelineLayout;
+
 		void InitInstanceAndDevice(const Window& window) noexcept;
 		void InitSwapchain() noexcept;
 		void InitCommandBuffer() noexcept;
+		void InitComputePipeline() noexcept;
+
 
 		void InitForwardRenderPass() noexcept;
 		void InitForwardFramebuffers() noexcept;
@@ -156,6 +175,7 @@ namespace lux::rhi
 		void UpdateForwardUniformBuffers(const scene::CameraNode* camera, const std::vector<resource::Material*>& materials, const std::vector<scene::LightNode*>& lights) noexcept;
 
 		void DestroySwapchainRelatedResources() noexcept;
+		void DestroyComputeRelatedResources() noexcept;
 		void DestroyShadowMapper() noexcept;
 		void DestroyForwardRenderer() noexcept;
 		void DestroyForwardGraphicsPipeline() noexcept;
