@@ -107,6 +107,24 @@ namespace lux::rhi
 
 	void RHI::GenerateCubemapFromHDR(const Image& HDRSource, Image& cubemap) noexcept
 	{
+		ImageCreateInfo imageCI = {};
+		imageCI.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+		imageCI.arrayLayers = 6;
+		imageCI.subresourceRangeLayerCount = 6;
+		imageCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		imageCI.imageViewType = VK_IMAGE_VIEW_TYPE_CUBE;
+		imageCI.width = CUBEMAP_TEXTURE_SIZE;
+		imageCI.height = CUBEMAP_TEXTURE_SIZE;
+		imageCI.mipmapCount = TO_UINT32_T(floor(log2(CUBEMAP_TEXTURE_SIZE))) + 1;
+
+#ifdef USE_COMPUTE_SHADER_FOR_IBL_RESOURCES
+		imageCI.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+#else
+		imageCI.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+#endif
+
+		CreateImage(imageCI, cubemap);
+
 		rhi::CubeMapCreateInfo cubemapCI = {};
 		cubemapCI.format = VK_FORMAT_R32G32B32A32_SFLOAT;
 		cubemapCI.size = CUBEMAP_TEXTURE_SIZE;
@@ -120,6 +138,24 @@ namespace lux::rhi
 
 	void RHI::GenerateIrradianceFromCubemap(const Image& cubemapSource, Image& irradiance) noexcept
 	{
+		ImageCreateInfo imageCI = {};
+		imageCI.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+		imageCI.arrayLayers = 6;
+		imageCI.subresourceRangeLayerCount = 6;
+		imageCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		imageCI.imageViewType = VK_IMAGE_VIEW_TYPE_CUBE;
+		imageCI.width = IRRADIANCE_TEXTURE_SIZE;
+		imageCI.height = IRRADIANCE_TEXTURE_SIZE;
+		imageCI.mipmapCount = TO_UINT32_T(floor(log2(IRRADIANCE_TEXTURE_SIZE))) + 1;
+
+#ifdef USE_COMPUTE_SHADER_FOR_IBL_RESOURCES
+		imageCI.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+#else
+		imageCI.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+#endif
+
+		CreateImage(imageCI, irradiance);
+
 #ifdef USE_COMPUTE_SHADER_FOR_IBL_RESOURCES
 		GenerateIrradianceFromCubemapCS(cubemapSource, irradiance);
 #else
@@ -340,6 +376,25 @@ namespace lux::rhi
 
 	void RHI::GeneratePrefilteredFromCubemap(const Image& cubemapSource, Image& prefiltered) noexcept
 	{
+		ImageCreateInfo imageCI = {};
+		imageCI.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+		imageCI.arrayLayers = 6;
+		imageCI.subresourceRangeLayerCount = 6;
+		imageCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		imageCI.imageViewType = VK_IMAGE_VIEW_TYPE_CUBE;
+		imageCI.width = PREFILTERED_TEXTURE_SIZE;
+		imageCI.height = PREFILTERED_TEXTURE_SIZE;
+		imageCI.mipmapCount = TO_UINT32_T(floor(log2(PREFILTERED_TEXTURE_SIZE))) + 1;
+
+#ifdef USE_COMPUTE_SHADER_FOR_IBL_RESOURCES
+		imageCI.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+#else
+		imageCI.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+#endif
+
+		CreateImage(imageCI, prefiltered);
+
+
 #ifdef USE_COMPUTE_SHADER_FOR_IBL_RESOURCES
 		GeneratePrefilteredFromCubemapCS(cubemapSource, prefiltered);
 #else
@@ -529,7 +584,7 @@ namespace lux::rhi
 
 
 			GeneratePrefilteredParameters parameters;
-			parameters.cubemapSize = glm::vec2(PREFILTERED_TEXTURE_SIZE >> i);
+			parameters.cubemapSize = glm::vec2(TO_FLOAT(PREFILTERED_TEXTURE_SIZE >> i));
 			parameters.roughness = TO_FLOAT(i) / TO_FLOAT(mipmapCount - 1);
 			parameters.samplesCount = 32;
 
@@ -851,13 +906,13 @@ namespace lux::rhi
 		vkDestroyRenderPass(device, offscreen.renderPass, nullptr);
 	}
 
-	void RHI::GenerateBRDFLut(VkFormat format, uint32_t size, Image& BRDFLut) noexcept
+	void RHI::GenerateBRDFLut(Image& BRDFLut) noexcept
 	{
 		ImageCreateInfo imageCI = {};
 		imageCI.arrayLayers = 1;
-		imageCI.format = format;
-		imageCI.width = size;
-		imageCI.height = size;
+		imageCI.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+		imageCI.width = BRDF_LUT_TEXTURE_SIZE;
+		imageCI.height = BRDF_LUT_TEXTURE_SIZE;
 		imageCI.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
 		imageCI.subresourceRangeLayerCount = 1;
 		imageCI.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -874,9 +929,9 @@ namespace lux::rhi
 
 
 #ifdef USE_COMPUTE_SHADER_FOR_IBL_RESOURCES
-		GenerateBRDFLutCS(format, size, BRDFLut);
+		GenerateBRDFLutCS(BRDFLut);
 #else
-		GenerateBRDFLutFS(format, size, BRDFLut);
+		GenerateBRDFLutFS(BRDFLut);
 #endif
 
 
@@ -902,7 +957,7 @@ namespace lux::rhi
 		}
 	}
 
-	void RHI::GenerateBRDFLutFS(VkFormat format, uint32_t size, Image& BRDFLut) noexcept
+	void RHI::GenerateBRDFLutFS(Image& BRDFLut) noexcept
 	{
 		struct OffscreenResource
 		{
@@ -913,7 +968,7 @@ namespace lux::rhi
 
 		// Attachment
 		VkAttachmentDescription attachmentDescription = {};
-		attachmentDescription.format = format;
+		attachmentDescription.format = VK_FORMAT_R32G32B32A32_SFLOAT;
 		attachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT;
 		attachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		attachmentDescription.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -969,8 +1024,8 @@ namespace lux::rhi
 		framebufferCI.renderPass = offscreen.renderPass;
 		framebufferCI.attachmentCount = 1;
 		framebufferCI.pAttachments = &BRDFLut.imageView;
-		framebufferCI.width = size;
-		framebufferCI.height = size;
+		framebufferCI.width = BRDF_LUT_TEXTURE_SIZE;
+		framebufferCI.height = BRDF_LUT_TEXTURE_SIZE;
 		framebufferCI.layers = 1;
 
 		CHECK_VK(vkCreateFramebuffer(device, &framebufferCI, nullptr, &offscreen.framebuffer));
@@ -991,8 +1046,8 @@ namespace lux::rhi
 		graphicsPipelineCI.binaryFragmentFilePath = "data/shaders/generateBRDFLut/generateBRDFLut.frag.spv";
 		graphicsPipelineCI.vertexLayout = lux::VertexLayout::NO_VERTEX_LAYOUT;
 		graphicsPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-		graphicsPipelineCI.viewportWidth = TO_FLOAT(size); // TODO: Change if issue -> swapchain extent
-		graphicsPipelineCI.viewportHeight = TO_FLOAT(size);
+		graphicsPipelineCI.viewportWidth = TO_FLOAT(BRDF_LUT_TEXTURE_SIZE);
+		graphicsPipelineCI.viewportHeight = TO_FLOAT(BRDF_LUT_TEXTURE_SIZE);
 		graphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_NONE;
 		graphicsPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_CLOCKWISE;
 		graphicsPipelineCI.disableMSAA = true;
@@ -1013,8 +1068,8 @@ namespace lux::rhi
 		renderPassBI.framebuffer = offscreen.framebuffer;
 		renderPassBI.clearValueCount = 1;
 		renderPassBI.pClearValues = &clearValue;
-		renderPassBI.renderArea.extent.width = size;
-		renderPassBI.renderArea.extent.height = size;
+		renderPassBI.renderArea.extent.width = BRDF_LUT_TEXTURE_SIZE;
+		renderPassBI.renderArea.extent.height = BRDF_LUT_TEXTURE_SIZE;
 		renderPassBI.renderPass = offscreen.renderPass;
 
 		vkCmdBeginRenderPass(commandBuffer, &renderPassBI, VK_SUBPASS_CONTENTS_INLINE);
@@ -1036,7 +1091,7 @@ namespace lux::rhi
 		vkDestroyRenderPass(device, offscreen.renderPass, nullptr);
 	}
 
-	void RHI::GenerateBRDFLutCS(VkFormat format, uint32_t size, Image& BRDFLut) noexcept
+	void RHI::GenerateBRDFLutCS(Image& BRDFLut) noexcept
 	{
 		struct ComputeResources
 		{

@@ -70,10 +70,7 @@ namespace lux::rhi
 		void GenerateCubemapFromHDR(const Image& HDRSource, Image& cubemap) noexcept;
 		void GenerateIrradianceFromCubemap(const Image& cubemapSource, Image& irradiance) noexcept;
 		void GeneratePrefilteredFromCubemap(const Image& cubemapSource, Image& prefiltered) noexcept;
-		void GenerateBRDFLut(VkFormat format, uint32_t size, Image& BRDFLut) noexcept;
-
-		//void GenerateBRDFLutCompute(VkFormat format, uint32_t size, Image& BRDFLut) noexcept;
-
+		void GenerateBRDFLut(Image& BRDFLut) noexcept;
 
 		void SetCubeMesh(std::shared_ptr<resource::Mesh> mesh) noexcept;
 
@@ -159,8 +156,8 @@ namespace lux::rhi
 		void GenerateIrradianceFromCubemapCS(const Image& cubemapSource, Image& irradiance) noexcept;
 		void GeneratePrefilteredFromCubemapFS(const Image& cubemapSource, Image& prefiltered) noexcept;
 		void GeneratePrefilteredFromCubemapCS(const Image& cubemapSource, Image& prefiltered) noexcept;
-		void GenerateBRDFLutFS(VkFormat format, uint32_t size, Image& BRDFLut) noexcept;
-		void GenerateBRDFLutCS(VkFormat format, uint32_t size, Image& BRDFLut) noexcept;
+		void GenerateBRDFLutFS(Image& BRDFLut) noexcept;
+		void GenerateBRDFLutCS(Image& BRDFLut) noexcept;
 
 		void RenderShadowMaps(VkCommandBuffer commandBuffer, int imageIndex, scene::LightNode* shadowCastingDirectional, const std::vector<scene::MeshNode*>& meshes) noexcept;
 		void RenderForward(VkCommandBuffer commandBuffer, int imageIndex, const scene::CameraNode* camera, const std::vector<scene::MeshNode*>& meshes, const std::vector<scene::LightNode*>& lights) noexcept;

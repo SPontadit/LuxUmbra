@@ -240,48 +240,11 @@ namespace lux::resource
 		rhi.CreateImage(imageCI, source);
 
 
-		// Create Cubemap Image
-		imageCI.arrayLayers = 6;
-		imageCI.subresourceRangeLayerCount = 6;
-		imageCI.imageViewType = VK_IMAGE_VIEW_TYPE_CUBE;
-		imageCI.imageData = nullptr;
-		imageCI.imageSize = 0;
-		imageCI.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
-		imageCI.width = CUBEMAP_TEXTURE_SIZE;
-		imageCI.height = CUBEMAP_TEXTURE_SIZE;
-		imageCI.mipmapCount = TO_UINT32_T(floor(log2(CUBEMAP_TEXTURE_SIZE))) + 1;
-
-		rhi.CreateImage(imageCI, cubemap->image);
-
-
-		// Create Irradiance Image
-		imageCI.width = IRRADIANCE_TEXTURE_SIZE;
-		imageCI.height = IRRADIANCE_TEXTURE_SIZE;
-		imageCI.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
-
-#ifdef USE_COMPUTE_SHADER_FOR_IBL_RESOURCES
-		imageCI.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
-#else
-		imageCI.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-#endif
-
-		imageCI.mipmapCount = TO_UINT32_T(floor(log2(IRRADIANCE_TEXTURE_SIZE))) + 1;
-		rhi.CreateImage(imageCI, irradiance->image);
-
-
-		// Create Prefiltered Image
-		imageCI.width = PREFILTERED_TEXTURE_SIZE;
-		imageCI.height = PREFILTERED_TEXTURE_SIZE;
-		imageCI.mipmapCount = TO_UINT32_T(floor(log2(PREFILTERED_TEXTURE_SIZE))) + 1;
-		rhi.CreateImage(imageCI, prefiltered->image);
-
-
-
 		// Generate Cubemap
 		rhi.GenerateCubemapFromHDR(source, cubemap->image);
 		rhi.GenerateIrradianceFromCubemap(cubemap->image, irradiance->image);
 		rhi.GeneratePrefilteredFromCubemap(cubemap->image, prefiltered->image);
-		rhi.GenerateBRDFLut(VK_FORMAT_R32G32B32A32_SFLOAT, BRDF_LUT_TEXTURE_SIZE, BRDFLut->image);
+		rhi.GenerateBRDFLut(BRDFLut->image);
 
 		rhi.CreateEnvMapDescriptorSet(cubemap->image);
 
