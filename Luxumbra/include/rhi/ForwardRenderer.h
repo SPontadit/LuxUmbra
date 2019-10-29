@@ -27,7 +27,10 @@ namespace lux::rhi
 
 	struct PostProcessParameters
 	{
+		glm::vec2 inverseScreenSize;
 		float exposure = 1.0f;
+		float FXAAPercent = 0.5f;
+		int postProcessType = 1;
 	};
 
 	struct ForwardRenderer

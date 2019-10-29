@@ -392,6 +392,8 @@ namespace lux::rhi
 		blitPostProcessParameterPushConstantRange.size = sizeof(PostProcessParameters);
 		blitPostProcessParameterPushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
+		forward.postProcessParameters.inverseScreenSize = { TO_FLOAT(1.0 / swapchainExtent.width), TO_FLOAT(1.0 / swapchainExtent.height) };
+
 		GraphicsPipelineCreateInfo blitGraphicsPipelineCI = {};
 		blitGraphicsPipelineCI.renderPass = forward.blitRenderPass;
 		blitGraphicsPipelineCI.subpassIndex = 0;

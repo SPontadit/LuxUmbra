@@ -93,6 +93,26 @@ namespace lux
 			rhi.forward.postProcessParameters.exposure = newExposure;
 		}
 
+		bool useFXAA = rhi.forward.postProcessParameters.useFXAA;
+		bool newUseFXAA = useFXAA;
+
+		ImGui::Checkbox("Use FXAA", &newUseFXAA);
+		
+		if (useFXAA != newUseFXAA)
+		{
+			rhi.forward.postProcessParameters.useFXAA = newUseFXAA;
+		}
+
+		float FXAAPercent = rhi.forward.postProcessParameters.FXAAPercent;
+		float newFXAAPercent = FXAAPercent;
+
+		ImGui::SliderFloat("FXAA Percent", &newFXAAPercent, 0.0f, 1.0f, "%.2f");
+
+		if (FXAAPercent != newFXAAPercent)
+		{
+			rhi.forward.postProcessParameters.FXAAPercent = newFXAAPercent;
+		}
+
 		scene::CameraNode* camera = scene.GetCurrentCamera();
 		DisplayCameraNode(camera);
 		ImGui::NewLine();
