@@ -82,7 +82,7 @@
     <Filter Include="Resource Files\generateBRDFLut">
       <UniqueIdentifier>{de1ea4f4-5462-430f-9bd1-6b6782e19e72}</UniqueIdentifier>
     </Filter>
-	<Filter Include="Resource Files\shadowMapping">
+    <Filter Include="Resource Files\shadowMapping">
       <UniqueIdentifier>{bb890761-e6c5-4237-b3ca-3f80d71c6424}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -170,6 +170,9 @@
     </ClCompile>
     <ClCompile Include="source\AABB.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\rhi\RHI_ComputePipeline.cpp">
+      <Filter>Source Files\RHI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -272,6 +275,9 @@
     <ClInclude Include="include\AABB.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\rhi\ComputePipeline.h">
+      <Filter>Header Files\RHI</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="include\Logger.inl">
@@ -351,6 +357,15 @@
     </None>
     <None Include="data\shaders\CompileShaders.bat">
       <Filter>Resource Files</Filter>
+    </None>
+    <None Include="data\shaders\generateIrradianceMap\generateIrradianceMap.comp">
+      <Filter>Resource Files\generateIrradianceMap</Filter>
+    </None>
+    <None Include="data\shaders\generatePrefilteredMap\generatePrefilteredMap.comp">
+      <Filter>Resource Files\generatePrefilteredMap</Filter>
+    </None>
+    <None Include="data\shaders\generateBRDFLut\generateBRDFLut.comp">
+      <Filter>Resource Files\generateBRDFLut</Filter>
     </None>
   </ItemGroup>
 </Project>

@@ -3,6 +3,8 @@
 
 #include "Luxumbra.h"
 
+#include <string>
+
 #include "rhi\LuxVkImpl.h"
 
 namespace lux::rhi
