@@ -10,10 +10,11 @@ namespace lux::rhi
 
 	ShadowMapper::ShadowMapper() noexcept
 		: renderPass(VK_NULL_HANDLE),
-		shadowMaps(0), framebuffers(0),
-		directionalShadowMappingPipeline(),
-		viewProjUniformBuffer(),
-		descriptorPool(VK_NULL_HANDLE), viewProjUniformBufferDescriptorSet(VK_NULL_HANDLE)
+		directionalShadowMaps(0), directionalFramebuffers(0),
+		directionalUniformBuffers(0), directionalUniformBufferDescriptorSets(0),
+		pointShadowMaps(0), pointFramebuffers(0),
+		pointUniformBuffers(0), pointUniformBufferDescriptorSets(0),
+		directionalShadowMappingPipeline()
 	{
 
 	}
@@ -50,8 +51,15 @@ namespace lux::rhi
 
 	void RHI::InitShadowMapperPipelines() noexcept
 	{
-		shadowMapper.shadowMaps.reserve(LIGHT_MAX_COUNT);
-		shadowMapper.framebuffers.reserve(LIGHT_MAX_COUNT);
+		shadowMapper.directionalShadowMaps.reserve(DIRECTIONAL_LIGHT_MAX_COUNT);
+		shadowMapper.directionalFramebuffers.reserve(DIRECTIONAL_LIGHT_MAX_COUNT);
+		shadowMapper.directionalUniformBuffers.reserve(DIRECTIONAL_LIGHT_MAX_COUNT);
+		shadowMapper.directionalUniformBufferDescriptorSets.reserve(DIRECTIONAL_LIGHT_MAX_COUNT);
+
+		shadowMapper.pointShadowMaps.reserve(POINT_LIGHT_MAX_COUNT);
+		shadowMapper.pointFramebuffers.reserve(POINT_LIGHT_MAX_COUNT);
+		shadowMapper.pointUniformBuffers.reserve(POINT_LIGHT_MAX_COUNT);
+		shadowMapper.pointUniformBufferDescriptorSets.reserve(POINT_LIGHT_MAX_COUNT);
 
 		VkDescriptorSetLayoutBinding viewProjUniformBufferDescriptorSetLayoutBinding = {};
 		viewProjUniformBufferDescriptorSetLayoutBinding.binding = 0;
@@ -87,161 +95,172 @@ namespace lux::rhi
 		CreateGraphicsPipeline(directionalShadowMappingPipelineCI, shadowMapper.directionalShadowMappingPipeline);
 	}
 
-	void RHI::InitShadowMapperViewProjUniformBuffer() noexcept
-	{
-		BufferCreateInfo bufferCI = {};
-		bufferCI.usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-		bufferCI.size = static_cast<VkDeviceSize>(sizeof(ShadowMappingViewProjUniform));
-		bufferCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-		bufferCI.memoryProperty = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-
-		CreateBuffer(bufferCI, shadowMapper.viewProjUniformBuffer);
-	}
-
 	void RHI::InitShadowMapperDescriptorPool() noexcept
 	{
-		VkDescriptorPoolSize shadowMappingViewProjUBODescriptorPoolSize = {};
-		shadowMappingViewProjUBODescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		shadowMappingViewProjUBODescriptorPoolSize.descriptorCount = LIGHT_MAX_COUNT;
+		uint32_t lightMaxCount = DIRECTIONAL_LIGHT_MAX_COUNT + POINT_LIGHT_MAX_COUNT;
+
+		VkDescriptorPoolSize shadowMappingUniformBuffersDescriptorPoolSize = {};
+		shadowMappingUniformBuffersDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		shadowMappingUniformBuffersDescriptorPoolSize.descriptorCount = lightMaxCount;
 
 		VkDescriptorPoolCreateInfo descriptorPoolCI = {};
 		descriptorPoolCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 		descriptorPoolCI.poolSizeCount = 1;
-		descriptorPoolCI.pPoolSizes = &shadowMappingViewProjUBODescriptorPoolSize;
-		descriptorPoolCI.maxSets = LIGHT_MAX_COUNT;
+		descriptorPoolCI.pPoolSizes = &shadowMappingUniformBuffersDescriptorPoolSize;
+		descriptorPoolCI.maxSets = lightMaxCount;
 
 		CHECK_VK(vkCreateDescriptorPool(device, &descriptorPoolCI, nullptr, &shadowMapper.descriptorPool));
 	}
 
-	void RHI::InitShadowMapperDescriptorSets() noexcept
-	{
-		VkDescriptorSetAllocateInfo descriptorSetAI = {};
-		descriptorSetAI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		descriptorSetAI.descriptorPool = shadowMapper.descriptorPool;
-		descriptorSetAI.descriptorSetCount = 1;
-		descriptorSetAI.pSetLayouts = &shadowMapper.directionalShadowMappingPipeline.viewDescriptorSetLayout;
-
-		CHECK_VK(vkAllocateDescriptorSets(device, &descriptorSetAI, &shadowMapper.viewProjUniformBufferDescriptorSet));
-
-		VkDescriptorBufferInfo viewProjDescriptorBufferInfo = {};
-		viewProjDescriptorBufferInfo.offset = 0;
-		viewProjDescriptorBufferInfo.range = sizeof(ShadowMappingViewProjUniform);
-		viewProjDescriptorBufferInfo.buffer = shadowMapper.viewProjUniformBuffer.buffer;
-
-		VkWriteDescriptorSet writeViewProjUniformBufferDescriptorSet = {};
-		writeViewProjUniformBufferDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writeViewProjUniformBufferDescriptorSet.descriptorCount = 1;
-		writeViewProjUniformBufferDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		writeViewProjUniformBufferDescriptorSet.dstBinding = 0;
-		writeViewProjUniformBufferDescriptorSet.dstArrayElement = 0;
-		writeViewProjUniformBufferDescriptorSet.pBufferInfo = &viewProjDescriptorBufferInfo;
-		writeViewProjUniformBufferDescriptorSet.dstSet = shadowMapper.viewProjUniformBufferDescriptorSet;
-
-		vkUpdateDescriptorSets(device, 1, &writeViewProjUniformBufferDescriptorSet, 0, nullptr);
-	}
-
 	void RHI::DestroyShadowMapper() noexcept
 	{
-		vkFreeDescriptorSets(device, shadowMapper.descriptorPool, 1, &shadowMapper.viewProjUniformBufferDescriptorSet);
+		size_t directionalLightCount = shadowMapper.directionalFramebuffers.size();
+		for (size_t i = 0; i < directionalLightCount; i++)
+		{
+			vkDestroyFramebuffer(device, shadowMapper.directionalFramebuffers[i], nullptr);
+			DestroyImage(shadowMapper.directionalShadowMaps[i]);
+			DestroyBuffer(shadowMapper.directionalUniformBuffers[i]);
+		}
+		vkFreeDescriptorSets(device, shadowMapper.descriptorPool, TO_UINT32_T(directionalLightCount), shadowMapper.directionalUniformBufferDescriptorSets.data());
+
+		size_t pointLightCount = shadowMapper.pointFramebuffers.size();
+		for (size_t i = 0; i < pointLightCount; i++)
+		{
+			vkDestroyFramebuffer(device, shadowMapper.pointFramebuffers[i], nullptr);
+			DestroyImage(shadowMapper.pointShadowMaps[i]);
+		}
+		vkFreeDescriptorSets(device, shadowMapper.descriptorPool, TO_UINT32_T(pointLightCount), shadowMapper.pointUniformBufferDescriptorSets.data());
 
 		vkDestroyDescriptorPool(device, shadowMapper.descriptorPool, nullptr);
 
-		DestroyBuffer(shadowMapper.viewProjUniformBuffer);
-
 		DestroyGraphicsPipeline(shadowMapper.directionalShadowMappingPipeline);
-
-		size_t shadowMappingResourceCount = shadowMapper.shadowMaps.size();
-		for (size_t i = 0; i < shadowMappingResourceCount; i++)
-		{
-			vkDestroyFramebuffer(device, shadowMapper.framebuffers[i], nullptr);
-			DestroyImage(shadowMapper.shadowMaps[i]);
-		}
 
 		vkDestroyRenderPass(device, shadowMapper.renderPass, nullptr);
 	}
 
-	void RHI::RenderShadowMaps(VkCommandBuffer commandBuffer, int imageIndex, scene::LightNode* shadowCastingDirectional, const std::vector<scene::MeshNode*>& meshes) noexcept
+	void RHI::RenderShadowMaps(VkCommandBuffer commandBuffer, int imageIndex, const std::vector<scene::LightNode*> lights, const std::vector<scene::MeshNode*>& meshes) noexcept
 	{
-		/*VkDeviceSize vertexBufferOffsets[] = { 0 };
-		uint32_t meshCount = TO_UINT32_T(meshes.size());
+		std::array<DirectionalLightBuffer, DIRECTIONAL_LIGHT_MAX_COUNT> directionalLightBuffer;
 
-		// Shadow mapping
+		size_t directionalLightIndex = 0;
+		size_t pointLightIndex = 0;
 
-		ShadowMappingViewProjUniform shadowMappingViewProjUniform = {};
+		size_t lightCount = lights.size();
+		size_t meshCount = meshes.size();
 
-		AABB lightAABB;
+		VkDeviceSize vertexBufferOffsets[] = { 0 };
 
-		glm::mat4 lightTransform = glm::toMat4(shadowCastingDirectional->GetWorldRotation());
-		glm::mat4 inverseLightTransform = glm::inverse(lightTransform);
-
-		float aabbDebugBoxScaleFactor = 1.0f / 1.28f;
-
-		for (uint32_t i = 0; i < meshCount; i++)
+		for (size_t i = 0; i < lightCount; i++)
 		{
-			scene::MeshNode* meshNode = meshes[TO_SIZE_T(i)];
+			scene::LightNode* light = lights[i];
 
-			glm::mat4 localToLightTransform = inverseLightTransform * meshNode->GetWorldTransform();
+			switch (light->GetType())
+			{
 
-			AABB meshAABB = meshNode->GetMesh().aabb;
-			meshAABB.Transform(localToLightTransform);
+			case scene::LightType::LIGHT_TYPE_DIRECTIONAL:
+			{
+				if (directionalLightIndex > DIRECTIONAL_LIGHT_MAX_COUNT)
+					break;
 
-			if (i == 1)
-				lightAABB = meshAABB;
-			else
-				lightAABB.MakeFit(meshAABB);
+				DirectionalLightBuffer& lightsBuffer(directionalLightBuffer[directionalLightIndex]);
+
+				// Compute AABB in light space that bounds the entire scene
+
+				AABB lightAABB;
+
+				glm::mat4 lightTransform = glm::toMat4(light->GetWorldRotation());
+				glm::mat4 inverseLightTransform = glm::inverse(lightTransform);
+
+				for (size_t j = 0; j < meshCount; j++)
+				{
+					scene::MeshNode* meshNode = meshes[j];
+
+					glm::mat4 localtoLightTransform = inverseLightTransform * meshNode->GetWorldTransform();
+
+					AABB meshAABB = meshNode->GetMesh().aabb;
+					meshAABB.Transform(localtoLightTransform);
+
+					if (i == 0)
+						lightAABB = meshAABB;
+					else
+						lightAABB.MakeFit(meshAABB);
+				}
+
+				// Compute ortho proj from light to ndc space
+
+				float aabbx = (lightAABB.max.x - lightAABB.min.x) * 0.5f + 1.f;
+				float aabby = (lightAABB.max.y - lightAABB.min.y) * 0.5f + 1.f;
+				float aabbz = (lightAABB.max.z - lightAABB.min.z) * 0.5f + 1.f;
+
+				glm::mat4 proj = glm::ortho(-aabbx, aabbx, -aabby, aabby, -aabbz, aabbz);
+				proj[1][1] *= -1.f;
+
+				// Compute view from world to light space
+
+				glm::vec3 lightPos = (lightTransform * glm::vec4((lightAABB.min + lightAABB.max) * 0.5f, 1.0f)).xyz;
+				glm::vec3 lightDir = (lightTransform * glm::vec4(0.f, 0.f, -1.f, 1.f)).xyz;
+
+				glm::mat4 view = glm::lookAt(lightPos, lightPos + lightDir, glm::vec3(0.f, 1.f, 0.f));
+
+				// Update light UBO
+
+				lightsBuffer.direction = lightDir;
+				lightsBuffer.color = light->GetColor();
+				lightsBuffer.viewProj = proj * view;
+
+				// RNEDER SHADOW MAP
+
+				size_t resourceIndex = TO_SIZE_T(light->GetShadowMappingResourceIndex());
+
+				// Update shadow mapping UBO
+
+				DirectionalShadowMappingViewProjUniform viewProjUniform;
+				viewProjUniform.viewProj = lightsBuffer.viewProj;
+
+
+				UpdateBuffer(shadowMapper.directionalUniformBuffers[resourceIndex], &viewProjUniform);
+
+				VkClearValue depthClearValue = {};
+				depthClearValue.depthStencil.depth = 1.f;
+				depthClearValue.depthStencil.stencil = 0;
+
+				VkRenderPassBeginInfo shadowMappingRenderPassBI = {};
+				shadowMappingRenderPassBI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+				shadowMappingRenderPassBI.renderPass = shadowMapper.renderPass;
+				shadowMappingRenderPassBI.framebuffer = shadowMapper.directionalFramebuffers[resourceIndex];
+				shadowMappingRenderPassBI.renderArea = { { 0, 0 }, {SHADOW_MAP_TEXTURE_SIZE, SHADOW_MAP_TEXTURE_SIZE} };
+				shadowMappingRenderPassBI.clearValueCount = 1;
+				shadowMappingRenderPassBI.pClearValues = &depthClearValue;
+
+				vkCmdBeginRenderPass(commandBuffer, &shadowMappingRenderPassBI, VK_SUBPASS_CONTENTS_INLINE);
+
+				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shadowMapper.directionalShadowMappingPipeline.pipeline);
+				vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shadowMapper.directionalShadowMappingPipeline.pipelineLayout, 0, 1, &shadowMapper.directionalUniformBufferDescriptorSets[resourceIndex], 0, nullptr);
+
+				ShadowMappingModelConstant shadowMappingModelConstant = {};
+
+				for (size_t j = 0; j < meshCount; j++)
+				{
+					scene::MeshNode* meshNode = meshes[j];
+
+					shadowMappingModelConstant.model = meshNode->GetWorldTransform();
+					vkCmdPushConstants(commandBuffer, shadowMapper.directionalShadowMappingPipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, TO_UINT32_T(sizeof(ShadowMappingModelConstant)), &shadowMappingModelConstant);
+
+					const resource::Mesh& mesh = meshNode->GetMesh();
+					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &mesh.vertexBuffer.buffer, vertexBufferOffsets);
+					vkCmdBindIndexBuffer(commandBuffer, mesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+					vkCmdDrawIndexed(commandBuffer, mesh.indexCount, 1, 0, 0, 0);
+				}
+
+				vkCmdEndRenderPass(commandBuffer);
+
+				directionalLightIndex++;
+			}
+
+			}
 		}
 
-		float aabbx = (lightAABB.max.x - lightAABB.min.x) * 0.5f + 1.f;
-		float aabby = (lightAABB.max.y - lightAABB.min.y) * 0.5f + 1.f;
-		float aabbz = (lightAABB.max.z - lightAABB.min.z) * 0.5f + 1.f;
-
-		glm::mat4 proj = glm::ortho(-aabbx, aabbx, -aabby, aabby, -aabbz, aabbz);
-		proj[1][1] *= -1.f;
-
-		glm::vec3 lightPos = (lightTransform * glm::vec4((lightAABB.min + lightAABB.max) * 0.5f, 1.0f)).xyz;
-		glm::vec3 lightDir = (lightTransform * glm::vec4(0.f, 0.f, -1.f, 1.f)).xyz;
-
-		glm::mat4 view = glm::lookAt(lightPos, lightPos + lightDir, glm::vec3(0.f, 1.f, 0.f));
-
-		shadowMappingViewProjUniform.viewProj = proj * view;
-
-		UpdateBuffer(shadowMapper.viewProjUniformBuffer, &shadowMappingViewProjUniform);
-
-		forward.rtViewProjUniform.lightViewProj = shadowMappingViewProjUniform.viewProj;
-
-		VkClearValue depthClearValue = {};
-		depthClearValue.depthStencil.depth = 1.f;
-		depthClearValue.depthStencil.stencil = 0;
-
-		VkRenderPassBeginInfo shadowMappingRenderPassBI = {};
-		shadowMappingRenderPassBI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		shadowMappingRenderPassBI.renderPass = shadowMapper.renderPass;
-		shadowMappingRenderPassBI.framebuffer = shadowMapper.framebuffer;
-		shadowMappingRenderPassBI.renderArea = { { 0, 0 }, {SHADOW_MAP_TEXTURE_SIZE, SHADOW_MAP_TEXTURE_SIZE} };
-		shadowMappingRenderPassBI.clearValueCount = 1;
-		shadowMappingRenderPassBI.pClearValues = &depthClearValue;
-
-		vkCmdBeginRenderPass(commandBuffer, &shadowMappingRenderPassBI, VK_SUBPASS_CONTENTS_INLINE);
-
-		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shadowMapper.directionalShadowMappingPipeline.pipeline);
-		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shadowMapper.directionalShadowMappingPipeline.pipelineLayout, 0, 1, &shadowMapper.viewProjUniformBufferDescriptorSet, 0, nullptr);
-
-		ShadowMappingModelConstant shadowMappingModelConstant = {};
-
-		for (uint32_t i = 0; i < meshCount; i++)
-		{
-			scene::MeshNode* meshNode = meshes[i];
-
-			shadowMappingModelConstant.model = meshNode->GetWorldTransform();
-			vkCmdPushConstants(commandBuffer, shadowMapper.directionalShadowMappingPipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, TO_UINT32_T(sizeof(ShadowMappingModelConstant)), &shadowMappingModelConstant);
-
-			const resource::Mesh& mesh = meshNode->GetMesh();
-			vkCmdBindVertexBuffers(commandBuffer, 0, 1, &mesh.vertexBuffer.buffer, vertexBufferOffsets);
-			vkCmdBindIndexBuffer(commandBuffer, mesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-			vkCmdDrawIndexed(commandBuffer, mesh.indexCount, 1, 0, 0, 0);
-		}
-
-		vkCmdEndRenderPass(commandBuffer);*/
+		/**/
 	}
 
 	int16_t RHI::CreateLightShadowMappingResources(scene::LightType lightType) noexcept
@@ -250,10 +269,15 @@ namespace lux::rhi
 		{
 		case scene::LightType::LIGHT_TYPE_DIRECTIONAL:
 		{
-			size_t newResourceIndex = shadowMapper.shadowMaps.size() + 1;
+			size_t newResourceIndex = shadowMapper.directionalShadowMaps.size() + 1;
 
-			shadowMapper.shadowMaps.resize(newResourceIndex + 1);
-			shadowMapper.framebuffers.resize(newResourceIndex + 1);
+			if (newResourceIndex > DIRECTIONAL_LIGHT_MAX_COUNT)
+				return -1;
+
+			shadowMapper.directionalShadowMaps.resize(newResourceIndex + 1);
+			shadowMapper.directionalFramebuffers.resize(newResourceIndex + 1);
+			shadowMapper.directionalUniformBuffers.resize(newResourceIndex + 1);
+			shadowMapper.directionalUniformBufferDescriptorSets.resize(newResourceIndex + 1);
 
 			ImageCreateInfo imageCI = {};
 			imageCI.format = depthImageFormat;
@@ -265,9 +289,9 @@ namespace lux::rhi
 			imageCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 			imageCI.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
 
-			CreateImage(imageCI, shadowMapper.shadowMaps[newResourceIndex]);
+			CreateImage(imageCI, shadowMapper.directionalShadowMaps[newResourceIndex]);
 
-			CommandTransitionImageLayout(shadowMapper.shadowMaps[newResourceIndex].image, depthImageFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+			CommandTransitionImageLayout(shadowMapper.directionalShadowMaps[newResourceIndex].image, depthImageFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 			VkFramebufferCreateInfo framebufferCI = {};
 			framebufferCI.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -276,9 +300,41 @@ namespace lux::rhi
 			framebufferCI.height = SHADOW_MAP_TEXTURE_SIZE;
 			framebufferCI.layers = 1;
 			framebufferCI.attachmentCount = 1;
-			framebufferCI.pAttachments = &shadowMapper.shadowMaps[newResourceIndex].imageView;
+			framebufferCI.pAttachments = &shadowMapper.directionalShadowMaps[newResourceIndex].imageView;
 
-			CHECK_VK(vkCreateFramebuffer(device, &framebufferCI, nullptr, &shadowMapper.framebuffers[newResourceIndex]));
+			CHECK_VK(vkCreateFramebuffer(device, &framebufferCI, nullptr, &shadowMapper.directionalFramebuffers[newResourceIndex]));
+
+			BufferCreateInfo uniformBufferCI = {};
+			uniformBufferCI.usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+			uniformBufferCI.size = sizeof(DirectionalShadowMappingViewProjUniform);
+			uniformBufferCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+			uniformBufferCI.memoryProperty = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+			CreateBuffer(uniformBufferCI, shadowMapper.directionalUniformBuffers[newResourceIndex]);
+
+			VkDescriptorSetAllocateInfo descriptorSetAI = {};
+			descriptorSetAI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+			descriptorSetAI.descriptorPool = shadowMapper.descriptorPool;
+			descriptorSetAI.descriptorSetCount = 1;
+			descriptorSetAI.pSetLayouts = &shadowMapper.directionalShadowMappingPipeline.viewDescriptorSetLayout;
+			
+			CHECK_VK(vkAllocateDescriptorSets(device, &descriptorSetAI, &shadowMapper.directionalUniformBufferDescriptorSets[newResourceIndex]));
+			
+			VkDescriptorBufferInfo viewProjDescriptorBufferInfo = {};
+			viewProjDescriptorBufferInfo.offset = 0;
+			viewProjDescriptorBufferInfo.range = sizeof(DirectionalShadowMappingViewProjUniform);
+			viewProjDescriptorBufferInfo.buffer = shadowMapper.directionalUniformBuffers[newResourceIndex].buffer;
+			
+			VkWriteDescriptorSet writeViewProjUniformBufferDescriptorSet = {};
+			writeViewProjUniformBufferDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			writeViewProjUniformBufferDescriptorSet.descriptorCount = 1;
+			writeViewProjUniformBufferDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			writeViewProjUniformBufferDescriptorSet.dstBinding = 0;
+			writeViewProjUniformBufferDescriptorSet.dstArrayElement = 0;
+			writeViewProjUniformBufferDescriptorSet.pBufferInfo = &viewProjDescriptorBufferInfo;
+			writeViewProjUniformBufferDescriptorSet.dstSet = shadowMapper.directionalUniformBufferDescriptorSets[newResourceIndex];
+			
+			vkUpdateDescriptorSets(device, 1, &writeViewProjUniformBufferDescriptorSet, 0, nullptr);
 
 			return TO_INT16_T(newResourceIndex);
 		}
@@ -286,6 +342,39 @@ namespace lux::rhi
 		default:
 			return -1;
 		}
+	}
+
+	void RHI::UpdateLightsUniformBuffers(const std::vector<scene::LightNode*>& lights) noexcept
+	{
+		/*size_t lightCount = std::min(lights.size(), TO_SIZE_T(LIGHT_MAX_COUNT));
+
+		if (lightCount != lightCountPushConstant.lightCount)
+		{
+			lightCountPushConstant.lightCount = TO_UINT32_T(lightCount);
+		}
+
+		// Lights
+
+		std::vector<LightBuffer> lightDatas(lightCount);
+		scene::LightNode* currentNode;
+		for (size_t i = 0; i < lightCount; i++)
+		{
+			currentNode = lights[i];
+
+			if (currentNode->GetType() == scene::LightType::LIGHT_TYPE_DIRECTIONAL)
+			{
+				glm::vec3 worldRotation = glm::rotate(currentNode->GetWorldRotation(), glm::vec3(0.0f, 0.0f, -1.0f));
+				lightDatas[i].position = glm::vec4(worldRotation, 0.0f);
+			}
+			else // if (currentNode->GetType() == scene::LightType::LIGHT_TYPE_POINT)
+			{
+				lightDatas[i].position = glm::vec4(currentNode->GetWorldPosition(), 1.0f);
+			}
+
+			lightDatas[i].color = currentNode->GetColor();
+		}
+
+		UpdateBuffer(lightUniformBuffers[currentFrame], lightDatas.data());*/
 	}
 
 } // namespace lux::rhi

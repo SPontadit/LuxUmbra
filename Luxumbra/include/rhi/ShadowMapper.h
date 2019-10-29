@@ -12,7 +12,7 @@
 namespace lux::rhi
 {
 
-	struct ShadowMappingViewProjUniform
+	struct DirectionalShadowMappingViewProjUniform
 	{
 		glm::mat4 viewProj;
 	};
@@ -35,15 +35,19 @@ namespace lux::rhi
 
 		VkRenderPass renderPass;
 
-		std::vector<Image> shadowMaps;
-		std::vector<VkFramebuffer> framebuffers;
-
 		GraphicsPipeline directionalShadowMappingPipeline;
 
-		Buffer viewProjUniformBuffer;
-
 		VkDescriptorPool descriptorPool;
-		VkDescriptorSet viewProjUniformBufferDescriptorSet;
+
+		std::vector<Image> directionalShadowMaps;
+		std::vector<VkFramebuffer> directionalFramebuffers;
+		std::vector<Buffer> directionalUniformBuffers;
+		std::vector<VkDescriptorSet> directionalUniformBufferDescriptorSets;
+
+		std::vector<Image> pointShadowMaps;
+		std::vector<VkFramebuffer> pointFramebuffers;
+		std::vector<Buffer> pointUniformBuffers;
+		std::vector<VkDescriptorSet> pointUniformBufferDescriptorSets;
 	};
 
 } // namespace lux::rhi

@@ -49,7 +49,6 @@ namespace lux::scene
 		std::vector<MeshNode*> meshNodes;
 		std::vector<LightNode*> lightNodes;
 		CameraNode* currentCamera;
-		LightNode* shadowCastingDirectional;
 	};
 
 } // namespace lux::scene

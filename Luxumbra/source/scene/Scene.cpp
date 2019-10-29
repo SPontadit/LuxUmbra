@@ -39,11 +39,6 @@ namespace lux::scene
 		return currentCamera;
 	}
 
-	LightNode* Scene::GetShadowCastingDirectional() const noexcept
-	{
-		return shadowCastingDirectional;
-	}
-
 	const std::vector<MeshNode*>& Scene::GetMeshNodes() const noexcept
 	{
 		return meshNodes;

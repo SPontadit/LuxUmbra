@@ -192,7 +192,6 @@
     <ClInclude Include="include\rhi\LuxVkImpl.h" />
     <ClInclude Include="include\rhi\GraphicsPipeline.h" />
     <ClInclude Include="include\rhi\RHI.h" />
-    <ClInclude Include="include\rhi\ShadowMappingPipeline.h" />
     <ClInclude Include="include\rhi\ShadowMapper.h" />
     <ClInclude Include="include\scene\CameraNode.h" />
     <ClInclude Include="include\scene\LightNode.h" />

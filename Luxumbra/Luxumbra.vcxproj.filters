@@ -82,7 +82,7 @@
     <Filter Include="Resource Files\generateBRDFLut">
       <UniqueIdentifier>{de1ea4f4-5462-430f-9bd1-6b6782e19e72}</UniqueIdentifier>
     </Filter>
-	<Filter Include="Resource Files\shadowMapping">
+    <Filter Include="Resource Files\shadowMapping">
       <UniqueIdentifier>{bb890761-e6c5-4237-b3ca-3f80d71c6424}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -264,9 +264,6 @@
       <Filter>Header Files\Utility</Filter>
     </ClInclude>
     <ClInclude Include="include\rhi\ShadowMapper.h">
-      <Filter>Header Files\RHI</Filter>
-    </ClInclude>
-    <ClInclude Include="include\rhi\ShadowMappingPipeline.h">
       <Filter>Header Files\RHI</Filter>
     </ClInclude>
     <ClInclude Include="include\AABB.h">

@@ -47,7 +47,7 @@ namespace lux
 		{
 			DrawImgui();
 
-			rhi.Render(scene.GetCurrentCamera(), scene.GetShadowCastingDirectional(), scene.GetMeshNodes(), scene.GetLightNodes());
+			rhi.Render(scene.GetCurrentCamera(), scene.GetMeshNodes(), scene.GetLightNodes());
 
 			window.PollEvents();
 		}

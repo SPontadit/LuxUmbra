@@ -1,7 +1,9 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
+#extension GL_KHR_vulkan_glsl : enable
 
-#define LIGHT_MAX_COUNT 64
+#define DIRECTIONAL_LIGHT_MAX_COUNT 4
+#define POINT_LIGHT_MAX_COUNT 64
 
 layout(location = 0) in FsIn
 {
@@ -10,30 +12,44 @@ layout(location = 0) in FsIn
 	vec3 normalWS;
 	mat4 viewMatrix;
 	mat3 textureToViewMatrix;
-	vec4 shadowCoord;
 } fsIn;
 
 layout(location = 0) out vec4 outColor;
 
-struct Light
+struct DirectionalLight
 {
-	vec4 parameter;
+	vec3 direction;
+	vec3 color;
+	mat4 viewProj;
+};
+
+struct PointLight
+{
+	vec3 position;
 	vec3 color;
 };
 
-layout(set = 0, binding = 1) uniform LightBuffer
+layout(set = 0, binding = 1) uniform DirectionalLightBuffer
 {
-	Light lights[LIGHT_MAX_COUNT];
+	DirectionalLight directionalLights[DIRECTIONAL_LIGHT_MAX_COUNT];
 };
 
-layout(set = 0, binding = 2) uniform samplerCube irradianceMap;
-layout(set = 0, binding = 3) uniform samplerCube prefilteredMap;
-layout(set = 0, binding = 4) uniform sampler2D BRDFLut;
-layout(set = 0, binding = 5) uniform sampler2D shadowMap;
+layout(set = 0, binding = 2) uniform pointLightBuffer
+{
+	PointLight pointLights[POINT_LIGHT_MAX_COUNT];
+};
+
+layout(set = 0, binding = 3) uniform sampler2D[DIRECTIONAL_LIGHT_MAX_COUNT] directionalShadowMaps;
+layout(set = 0, binding = 4) uniform samplerCube[POINT_LIGHT_MAX_COUNT] pointLightShadowMaps;
+
+layout(set = 0, binding = 5) uniform samplerCube irradianceMap;
+layout(set = 0, binding = 6) uniform samplerCube prefilteredMap;
+layout(set = 0, binding = 7) uniform sampler2D BRDFLut;
 
 layout(push_constant) uniform PushConsts
 {
-	layout(offset = 64) int lightCount;
+	layout(offset = 64) uint directionalLightCount;
+	layout(offset = 68) uint pointLightCount;
 } pushConsts;
 
 layout(set = 1, binding = 0) uniform Material
@@ -59,8 +75,7 @@ layout(set = 1, binding = 2) uniform sampler2D normalMap;
 
 const float PI = 3.1415926;
 
-float Shadow(vec4 shadowCoord);
-vec4 CameraSpace();
+float DirectionalShadow(vec4 shadowCoord, int shadowMapIndex);
 
 // PBR
 vec3 RemapDiffuseColor(vec3 baseColor, float metallic);
@@ -76,45 +91,6 @@ vec3 PrefilteredReflection(vec3 R, float roughness);
 
 
 void main() 
-{
-	outColor = CameraSpace();
-
-	// Tonemapping
-	//outColor = outColor / (outColor + vec4(1.0));
-
-	//outColor = pow(outColor, vec4(1.0/2.2));
-}
-
-vec3 getNormalFromMap()
-{
-    vec3 tangentNormal = texture(normalMap, fsIn.textureCoordinateLS).xyz * 2.0 - 1.0;
-
-    vec3 Q1  = dFdx(fsIn.positionWS);
-    vec3 Q2  = dFdy(fsIn.positionWS);
-    vec2 st1 = dFdx(fsIn.textureCoordinateLS);
-    vec2 st2 = dFdy(fsIn.textureCoordinateLS);
-
-    vec3 N   = normalize(fsIn.normalWS);
-    vec3 T  = normalize(Q1*st2.t - Q2*st1.t);
-    vec3 B  = -normalize(cross(N, T));
-    mat3 TBN = mat3(T, B, N);
-
-    return normalize(TBN  * tangentNormal);
-}
-
-float Shadow(vec4 shadowCoord)
-{
-	if (abs(shadowCoord.x) > 1.0 || abs(shadowCoord.y) > 1.0 || abs(shadowCoord.z) > 1.0)
-		return 0.0;
-
-	vec2 shadowUV = shadowCoord.xy * 0.5 + 0.5;
-	if (shadowCoord.z > texture(shadowMap, shadowUV).x)
-		return 0.0;
-
-	return 1.0;
-}
-
-vec4 CameraSpace()
 {
 	vec3 directColor  = vec3(0.0);
 	vec4 textureColor = texture(albedo, fsIn.textureCoordinateLS);
@@ -140,19 +116,22 @@ vec4 CameraSpace()
 	vec3 diffuseColor = RemapDiffuseColor(baseColor, material.metallic);
 	vec3 F0 = GetF0(material.reflectance, material.metallic, baseColor);
 
-	for(int i = 0; i < pushConsts.lightCount; ++i)
+	for(int i = 0; i < pushConsts.directionalLightCount; ++i)
 	{
 		vec3 lightDir;
 		vec3 radiance;
+		float shadow;
 
 		// Directional
-		if(lights[i].parameter.w == 0.0)
+		//if(lights[i].parameter.w == 0.0)
 		{
-			lightDir = normalize(mat3(fsIn.viewMatrix) * -lights[i].parameter.xyz);
-			radiance = lights[i].color;
+			lightDir = normalize(mat3(fsIn.viewMatrix) * -directionalLights[i].direction);
+			radiance = directionalLights[i].color;
 
+			vec4 shadowFragCord = directionalLights[i].viewProj * vec4(fsIn.positionWS, 1.0);
+			shadow = DirectionalShadow(shadowFragCord / shadowFragCord.w, i);
 		}
-		else
+		/*else
 		{
 			vec3 lightPosVS = mat3(fsIn.viewMatrix) * (lights[i].parameter.xyz - fsIn.positionWS);
 			lightDir = normalize(lightPosVS);
@@ -160,7 +139,7 @@ vec4 CameraSpace()
 			float attenuation = 1.0 / (distance * distance);
 			
 			radiance = lights[i].color * attenuation;
-		}
+		}*/
 
 		vec3 h = normalize(viewDir + lightDir);
 		float NdotH = max(dot(normal, h), 0.001);
@@ -178,11 +157,8 @@ vec4 CameraSpace()
 		//vec3 directDiffuseColor = diffuseColor * Kdiff * Fd_Burley(NdotV, NdotL, LdotH, roughness);
 		vec3 directDiffuseColor = diffuseColor * Kdiff * Fd_Lambert();
 
-		directColor += (directDiffuseColor + specular) * radiance * NdotL;
+		directColor += (directDiffuseColor + specular) * radiance * NdotL * shadow;
 	}
-
-	float shadow = Shadow(fsIn.shadowCoord / fsIn.shadowCoord.w);
-
 
 	viewDir = -fsIn.viewMatrix[3].xyz  * mat3(fsIn.viewMatrix);
 	viewDir = normalize(viewDir - fsIn.positionWS);
@@ -207,7 +183,36 @@ vec4 CameraSpace()
 
 	vec3 indirectColor = indirectDiffuseColor + indirectSpecularColor;
 
-	return vec4(directColor * shadow + indirectColor, textureColor.a);
+	outColor = vec4(directColor + indirectColor, textureColor.a);
+}
+
+vec3 getNormalFromMap()
+{
+    vec3 tangentNormal = texture(normalMap, fsIn.textureCoordinateLS).xyz * 2.0 - 1.0;
+
+    vec3 Q1  = dFdx(fsIn.positionWS);
+    vec3 Q2  = dFdy(fsIn.positionWS);
+    vec2 st1 = dFdx(fsIn.textureCoordinateLS);
+    vec2 st2 = dFdy(fsIn.textureCoordinateLS);
+
+    vec3 N   = normalize(fsIn.normalWS);
+    vec3 T  = normalize(Q1*st2.t - Q2*st1.t);
+    vec3 B  = -normalize(cross(N, T));
+    mat3 TBN = mat3(T, B, N);
+
+    return normalize(TBN  * tangentNormal);
+}
+
+float DirectionalShadow(vec4 shadowCoord, int shadowMapIndex)
+{
+	if (abs(shadowCoord.x) > 1.0 || abs(shadowCoord.y) > 1.0 || abs(shadowCoord.z) > 1.0)
+		return 0.0;
+
+	vec2 shadowUV = shadowCoord.xy * 0.5 + 0.5;
+	if (shadowCoord.z > texture(directionalShadowMaps[shadowMapIndex], shadowUV).x)
+		return 0.0;
+
+	return 1.0;
 }
 
 vec3 PrefilteredReflection(vec3 R, float roughness)

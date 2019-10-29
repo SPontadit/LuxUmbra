@@ -16,7 +16,7 @@ namespace lux::rhi
 		swapchainImageCount(0), swapchainImages(0), swapchainImageViews(0), msaaSamples(VK_SAMPLE_COUNT_1_BIT),
 		presentSemaphores(0), acquireSemaphores(0), fences(0),
 		imguiDescriptorPool(VK_NULL_HANDLE), materialDescriptorPool(VK_NULL_HANDLE), commandPool(VK_NULL_HANDLE), commandBuffers(0),
-		lightUniformBuffers(0), lightCountPushConstant(), frameCount(0), currentFrame(0), cube(nullptr),
+		directionalLightUniformBuffers(0), pointLightUniformBuffers(0), lightCountsPushConstant(), frameCount(0), currentFrame(0), cube(nullptr),
 		shadowMapper(), forward()
 #ifdef VULKAN_ENABLE_VALIDATION
 		, debugReportCallback(VK_NULL_HANDLE)
@@ -68,15 +68,9 @@ namespace lux::rhi
 
 		InitShadowMapperRenderPass();
 
-		InitShadowMapperFramebuffer();
-
 		InitShadowMapperPipelines();
 
-		InitShadowMapperViewProjUniformBuffer();
-
 		InitShadowMapperDescriptorPool();
-
-		InitShadowMapperDescriptorSets();
 
 		// Forward renderer
 
@@ -488,7 +482,7 @@ namespace lux::rhi
 		CHECK_VK(vkAllocateCommandBuffers(device, &commandBufferAI, commandBuffers.data()));
 	}
 
-	void RHI::Render(const scene::CameraNode* camera, scene::LightNode* shadowCastingDirectional, const std::vector<scene::MeshNode*> meshes, const std::vector<scene::LightNode*>& lights) noexcept
+	void RHI::Render(const scene::CameraNode* camera, const std::vector<scene::MeshNode*> meshes, const std::vector<scene::LightNode*>& lights) noexcept
 	{
 		// Acquire next image
 		VkFence* fence = &fences[currentFrame];
@@ -514,7 +508,7 @@ namespace lux::rhi
 
 		CHECK_VK(vkBeginCommandBuffer(commandBuffer, &commandBufferBI));
 
-		RenderShadowMaps(commandBuffer, imageIndex, shadowCastingDirectional, meshes);
+		RenderShadowMaps(commandBuffer, imageIndex, lights, meshes);
 
 		RenderForward(commandBuffer, imageIndex, camera, meshes, lights);
 
@@ -636,15 +630,18 @@ namespace lux::rhi
 	{
 		BufferCreateInfo lightBufferCI = {};
 		lightBufferCI.usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-		lightBufferCI.size = sizeof(LightBuffer) * LIGHT_MAX_COUNT;
 		lightBufferCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		lightBufferCI.memoryProperty = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-		lightUniformBuffers.resize(TO_SIZE_T(swapchainImageCount));
+		lightBufferCI.size = sizeof(DirectionalLightBuffer) * DIRECTIONAL_LIGHT_MAX_COUNT;
+		directionalLightUniformBuffers.resize(TO_SIZE_T(swapchainImageCount));
 		for (size_t i = 0; i < swapchainImageCount; i++)
-		{
-			CreateBuffer(lightBufferCI, lightUniformBuffers[i]);
-		}
+			CreateBuffer(lightBufferCI, directionalLightUniformBuffers[i]);
+
+		lightBufferCI.size = sizeof(PointLightBuffer) * POINT_LIGHT_MAX_COUNT;
+		pointLightUniformBuffers.resize(TO_SIZE_T(swapchainImageCount));
+		for (size_t i = 0; i < swapchainImageCount; i++)
+			CreateBuffer(lightBufferCI, pointLightUniformBuffers[i]);
 	}
 
 	void RHI::CreateMaterial(resource::Material& material) noexcept
@@ -936,7 +933,8 @@ namespace lux::rhi
 		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
 			vkDestroyImageView(device, swapchainImageViews[i], nullptr);
-			DestroyBuffer(lightUniformBuffers[i]);
+			DestroyBuffer(directionalLightUniformBuffers[i]);
+			DestroyBuffer(pointLightUniformBuffers[i]);
 		}
 
 		vkDestroySwapchainKHR(device, swapchain, nullptr);
