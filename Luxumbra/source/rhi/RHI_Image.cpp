@@ -980,6 +980,163 @@ namespace lux::rhi
 		}
 	}
 
+	void RHI::GenerateBRDFLutCompute(VkFormat format, uint32_t size, Image& BRDFLut) noexcept
+	{
+		ImageCreateInfo imageCI = {};
+		imageCI.arrayLayers = 1;
+		imageCI.format = format;
+		imageCI.width = size;
+		imageCI.height = size;
+		imageCI.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
+		imageCI.subresourceRangeLayerCount = 1;
+		imageCI.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		imageCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+		CreateImage(imageCI, BRDFLut);
+
+		struct ComputeResources
+		{
+			ComputePipeline pipeline;
+			VkDescriptorPool descriptorPool;
+			VkCommandBuffer commandBuffer;
+			VkDescriptorSet descriptorSet;
+		} compute;
+
+		struct GenerateBRDFLut
+		{
+			float textureSize;
+			int sampleCount;
+		};
+
+		VkPushConstantRange generateBRDFLutPushConstantRange = {};
+		generateBRDFLutPushConstantRange.size = sizeof(GenerateBRDFLut);
+		generateBRDFLutPushConstantRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+
+		VkDescriptorSetLayoutBinding BRDFLutOutputDescriptorSetLayoutBinding = {};
+		BRDFLutOutputDescriptorSetLayoutBinding.binding = 0;
+		BRDFLutOutputDescriptorSetLayoutBinding.descriptorCount = 1;
+		BRDFLutOutputDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		BRDFLutOutputDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+		ComputePipelineCreateInfo computePipelineCI = {};
+		computePipelineCI.binaryComputeFilePath = "data/shaders/generateBRDFLut/generateBRDFLut.comp.spv";
+		computePipelineCI.descriptorSetLayoutBindings = { BRDFLutOutputDescriptorSetLayoutBinding };
+		computePipelineCI.pushConstants = { generateBRDFLutPushConstantRange };
+
+		CreateComputePipeline(computePipelineCI, compute.pipeline);
+
+
+		GenerateBRDFLut parameters;
+		parameters.textureSize = TO_FLOAT(BRDF_LUT_TEXTURE_SIZE);
+		parameters.sampleCount = 1024;
+		
+
+
+		VkCommandBufferAllocateInfo commandBufferAI = {};
+		commandBufferAI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		commandBufferAI.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		commandBufferAI.commandBufferCount = 1;
+		commandBufferAI.commandPool = computeCommandPool;
+
+		CHECK_VK(vkAllocateCommandBuffers(device, &commandBufferAI, &compute.commandBuffer));
+
+
+		VkDescriptorPoolSize destinationComputeDescriptorPoolSize = {};
+		destinationComputeDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		destinationComputeDescriptorPoolSize.descriptorCount = 1;
+
+		VkDescriptorPoolCreateInfo descriptorPoolCI = {};
+		descriptorPoolCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		descriptorPoolCI.poolSizeCount = 1;
+		descriptorPoolCI.pPoolSizes = &destinationComputeDescriptorPoolSize;
+		descriptorPoolCI.maxSets = 1;
+
+		CHECK_VK(vkCreateDescriptorPool(device, &descriptorPoolCI, nullptr, &compute.descriptorPool));
+
+
+		VkDescriptorSetLayout generateBRDFLutSetLayout = compute.pipeline.descriptorSetLayout;
+		VkDescriptorSetAllocateInfo generateBRDFLutDescriptorSetAI = {};
+		generateBRDFLutDescriptorSetAI .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		generateBRDFLutDescriptorSetAI .descriptorPool = compute.descriptorPool;
+		generateBRDFLutDescriptorSetAI .descriptorSetCount = 1;
+		generateBRDFLutDescriptorSetAI .pSetLayouts = &generateBRDFLutSetLayout;
+
+		CHECK_VK(vkAllocateDescriptorSets(device, &generateBRDFLutDescriptorSetAI, &compute.descriptorSet));
+
+
+		VkDescriptorImageInfo computeBRDFLutDescriptorImageInfo = {};
+		computeBRDFLutDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+		computeBRDFLutDescriptorImageInfo.imageView = BRDFLut.imageView;
+
+
+		VkWriteDescriptorSet writeComputeBRDFLutDescriptorSet = {};
+		writeComputeBRDFLutDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeComputeBRDFLutDescriptorSet.descriptorCount = 1;
+		writeComputeBRDFLutDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		writeComputeBRDFLutDescriptorSet.dstBinding = 0;
+		writeComputeBRDFLutDescriptorSet.dstArrayElement = 0;
+		writeComputeBRDFLutDescriptorSet.pImageInfo = &computeBRDFLutDescriptorImageInfo;
+		writeComputeBRDFLutDescriptorSet.dstSet = compute.descriptorSet;
+
+		vkUpdateDescriptorSets(device, 1, &writeComputeBRDFLutDescriptorSet, 0, nullptr);
+
+
+		VkCommandBufferBeginInfo commandBufferBI = {};
+		commandBufferBI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		commandBufferBI.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+		CHECK_VK(vkBeginCommandBuffer(compute.commandBuffer, &commandBufferBI));
+
+		CommandTransitionImageLayout(compute.commandBuffer, BRDFLut.image, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+
+		vkCmdBindPipeline(compute.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute.pipeline.pipeline);
+
+		vkCmdBindDescriptorSets(compute.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute.pipeline.pipelineLayout, 0, 1, &compute.descriptorSet, 0, nullptr);
+
+		vkCmdPushConstants(compute.commandBuffer, compute.pipeline.pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(GenerateBRDFLut), &parameters);
+
+		vkCmdDispatch(compute.commandBuffer, BRDF_LUT_TEXTURE_SIZE /16, BRDF_LUT_TEXTURE_SIZE / 16, 1);
+
+		CommandTransitionImageLayout(compute.commandBuffer, BRDFLut.image, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+		CHECK_VK(vkEndCommandBuffer(compute.commandBuffer));
+
+		VkSubmitInfo submitInfo = {};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &compute.commandBuffer;
+
+		CHECK_VK(vkQueueSubmit(computeQueue, 1, &submitInfo, VK_NULL_HANDLE));
+		CHECK_VK(vkQueueWaitIdle(computeQueue));
+
+		DestroyComputePipeline(compute.pipeline);
+		vkDestroyDescriptorPool(device, compute.descriptorPool, nullptr);
+		vkFreeCommandBuffers(device, computeCommandPool, 1, &compute.commandBuffer);
+
+		// Update Descriptor Set
+		VkDescriptorImageInfo BRDFLutDescriptorImageInfo = {};
+		BRDFLutDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		BRDFLutDescriptorImageInfo.sampler = forward.prefilteredSampler;
+		BRDFLutDescriptorImageInfo.imageView = BRDFLut.imageView;
+
+		VkWriteDescriptorSet writeBRDFLutDescriptorSet = {};
+		writeBRDFLutDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeBRDFLutDescriptorSet.descriptorCount = 1;
+		writeBRDFLutDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		writeBRDFLutDescriptorSet.dstBinding = 4;
+		writeBRDFLutDescriptorSet.dstArrayElement = 0;
+		writeBRDFLutDescriptorSet.pImageInfo = &BRDFLutDescriptorImageInfo;
+
+		for (size_t i = 0; i < swapchainImageCount; i++)
+		{
+			writeBRDFLutDescriptorSet.dstSet = forward.rtViewDescriptorSets[i];
+
+			vkUpdateDescriptorSets(device, 1, &writeBRDFLutDescriptorSet, 0, nullptr);
+		}
+	}
+
+
 	void RHI::DestroyImage(Image& image) noexcept
 	{
 		vkDestroyImageView(device, image.imageView, nullptr);

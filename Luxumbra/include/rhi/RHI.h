@@ -86,6 +86,7 @@ namespace lux::rhi
 		void GenerateIrradianceFromCubemap(const Image& cubemapSource, Image& irradiance) noexcept;
 		void GeneratePrefilteredFromCubemap(const Image& cubemapSource, Image& prefiltered) noexcept;
 		void GenerateBRDFLut(VkFormat format, uint32_t size, Image& BRDFLut) noexcept;
+		void GenerateBRDFLutCompute(VkFormat format, uint32_t size, Image& BRDFLut) noexcept;
 
 
 		void SetCubeMesh(std::shared_ptr<resource::Mesh> mesh) noexcept;

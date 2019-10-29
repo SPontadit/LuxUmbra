@@ -217,6 +217,7 @@
     <None Include="data\shaders\directLighting\directLighting.vert" />
     <None Include="data\shaders\envMap\envMap.frag" />
     <None Include="data\shaders\envMap\envMap.vert" />
+    <None Include="data\shaders\generateBRDFLut\generateBRDFLut.comp" />
     <None Include="data\shaders\generateBRDFLut\generateBRDFLut.frag" />
     <None Include="data\shaders\generateBRDFLut\generateBRDFLut.vert" />
     <None Include="data\shaders\generateCubeMap\generateCubeMap.frag" />

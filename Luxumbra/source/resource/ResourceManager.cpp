@@ -275,7 +275,8 @@ namespace lux::resource
 		rhi.GenerateCubemapFromHDR(source, cubemap->image);
 		rhi.GenerateIrradianceFromCubemap(cubemap->image, irradiance->image);
 		rhi.GeneratePrefilteredFromCubemap(cubemap->image, prefiltered->image);
-		rhi.GenerateBRDFLut(VK_FORMAT_R32G32B32A32_SFLOAT, BRDF_LUT_TEXTURE_SIZE, BRDFLut->image);
+		//rhi.GenerateBRDFLut(VK_FORMAT_R32G32B32A32_SFLOAT, BRDF_LUT_TEXTURE_SIZE, BRDFLut->image);
+		rhi.GenerateBRDFLutCompute(VK_FORMAT_R32G32B32A32_SFLOAT, BRDF_LUT_TEXTURE_SIZE, BRDFLut->image);
 
 		rhi.CreateEnvMapDescriptorSet(cubemap->image);
 
