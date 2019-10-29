@@ -120,16 +120,49 @@ namespace lux::rhi
 
 	void RHI::GenerateIrradianceFromCubemap(const Image& cubemapSource, Image& irradiance) noexcept
 	{
-		//rhi::CubeMapCreateInfo irradianceCI = {};
-		//irradianceCI.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-		//irradianceCI.size = IRRADIANCE_TEXTURE_SIZE;
-		//irradianceCI.binaryVertexFilePath = "data/shaders/generateIrradianceMap/generateIrradianceMap.vert.spv";
-		//irradianceCI.binaryFragmentFilePath = "data/shaders/generateIrradianceMap/generateIrradianceMap.frag.spv";
-		//irradianceCI.sampler = forward.cubemapSampler;
-		//irradianceCI.mipmapCount = TO_UINT32_T(floor(log2(IRRADIANCE_TEXTURE_SIZE))) + 1;
+#ifdef USE_COMPUTE_SHADER_FOR_IBL_RESOURCES
+		GenerateIrradianceFromCubemapCS(cubemapSource, irradiance);
+#else
+		GenerateIrradianceFromCubemapFS(cubemapSource, irradiance);
+#endif
 
-		//GenerateCubemap(irradianceCI, cubemapSource, irradiance);
+		// Update Descriptor Set
+		VkDescriptorImageInfo irradianceMapDescriptorImageInfo = {};
+		irradianceMapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		irradianceMapDescriptorImageInfo.sampler = forward.irradianceSampler;
+		irradianceMapDescriptorImageInfo.imageView = irradiance.imageView;
 
+		VkWriteDescriptorSet writeIrradianceMapDescriptorSet = {};
+		writeIrradianceMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeIrradianceMapDescriptorSet.descriptorCount = 1;
+		writeIrradianceMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		writeIrradianceMapDescriptorSet.dstBinding = 2;
+		writeIrradianceMapDescriptorSet.dstArrayElement = 0;
+		writeIrradianceMapDescriptorSet.pImageInfo = &irradianceMapDescriptorImageInfo;
+
+		for (size_t i = 0; i < swapchainImageCount; i++)
+		{
+			writeIrradianceMapDescriptorSet.dstSet = forward.rtViewDescriptorSets[i];
+
+			vkUpdateDescriptorSets(device, 1, &writeIrradianceMapDescriptorSet, 0, nullptr);
+		}
+	}
+
+	void RHI::GenerateIrradianceFromCubemapFS(const Image& cubemapSource, Image& irradiance) noexcept
+	{
+		rhi::CubeMapCreateInfo irradianceCI = {};
+		irradianceCI.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+		irradianceCI.size = IRRADIANCE_TEXTURE_SIZE;
+		irradianceCI.binaryVertexFilePath = "data/shaders/generateIrradianceMap/generateIrradianceMap.vert.spv";
+		irradianceCI.binaryFragmentFilePath = "data/shaders/generateIrradianceMap/generateIrradianceMap.frag.spv";
+		irradianceCI.sampler = forward.cubemapSampler;
+		irradianceCI.mipmapCount = TO_UINT32_T(floor(log2(IRRADIANCE_TEXTURE_SIZE))) + 1;
+
+		GenerateCubemap(irradianceCI, cubemapSource, irradiance);
+	}
+
+	void RHI::GenerateIrradianceFromCubemapCS(const Image& cubemapSource, Image& irradiance) noexcept
+	{
 		struct ComputeResources
 		{
 			ComputePipeline pipeline;
@@ -142,17 +175,24 @@ namespace lux::rhi
 		uint32_t mipmapCount = TO_UINT32_T(floor(log2(IRRADIANCE_TEXTURE_SIZE))) + 1;
 
 		// Pipeline
-		VkDescriptorSetLayoutBinding cubemapInputDescriptorSetLayoutBinding = {};
-		cubemapInputDescriptorSetLayoutBinding.binding = 0;
-		cubemapInputDescriptorSetLayoutBinding.descriptorCount = 1;
-		cubemapInputDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		cubemapInputDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+		VkDescriptorSetLayoutBinding cubemapDescriptorSetLayoutBinding = {};
+		cubemapDescriptorSetLayoutBinding.binding = 0;
+		cubemapDescriptorSetLayoutBinding.descriptorCount = 1;
+		cubemapDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		cubemapDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-		VkDescriptorSetLayoutBinding irradianceOutputDescriptorSetLayoutBinding = {};
-		irradianceOutputDescriptorSetLayoutBinding.binding = 1;
-		irradianceOutputDescriptorSetLayoutBinding.descriptorCount = 1;
-		irradianceOutputDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-		irradianceOutputDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+		VkDescriptorSetLayoutBinding irradianceDescriptorSetLayoutBinding = {};
+		irradianceDescriptorSetLayoutBinding.binding = 1;
+		irradianceDescriptorSetLayoutBinding.descriptorCount = 1;
+		irradianceDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		irradianceDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+		struct GenerateIrradianceParameters
+		{
+			glm::vec2 cubemapSize;
+			float deltaPhi;
+			float deltaTheta;
+		};
 
 		VkPushConstantRange generateIrradiancePushConstantRange = {};
 		generateIrradiancePushConstantRange.offset = 0;
@@ -161,7 +201,7 @@ namespace lux::rhi
 
 		ComputePipelineCreateInfo computePipelineCI = {};
 		computePipelineCI.binaryComputeFilePath = "data/shaders/generateIrradianceMap/generateIrradianceMap.comp.spv";
-		computePipelineCI.descriptorSetLayoutBindings = { cubemapInputDescriptorSetLayoutBinding, irradianceOutputDescriptorSetLayoutBinding };
+		computePipelineCI.descriptorSetLayoutBindings = { cubemapDescriptorSetLayoutBinding, irradianceDescriptorSetLayoutBinding };
 		computePipelineCI.pushConstants = { generateIrradiancePushConstantRange };
 
 		CreateComputePipeline(computePipelineCI, compute.pipeline);
@@ -175,15 +215,15 @@ namespace lux::rhi
 
 		CHECK_VK(vkAllocateCommandBuffers(device, &commandBufferAI, &compute.commandBuffer));
 
-		VkDescriptorPoolSize sourceComputeDescriptorPoolSize = {};
-		sourceComputeDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		sourceComputeDescriptorPoolSize.descriptorCount = mipmapCount;
+		VkDescriptorPoolSize samplerDescriptorPoolSize = {};
+		samplerDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		samplerDescriptorPoolSize.descriptorCount = mipmapCount;
 
-		VkDescriptorPoolSize destinationComputeDescriptorPoolSize = {};
-		destinationComputeDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-		destinationComputeDescriptorPoolSize.descriptorCount = mipmapCount;
+		VkDescriptorPoolSize storageDescriptorPoolSize = {};
+		storageDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		storageDescriptorPoolSize.descriptorCount = mipmapCount;
 
-		std::array<VkDescriptorPoolSize, 2> poolSizes = { sourceComputeDescriptorPoolSize, destinationComputeDescriptorPoolSize };
+		std::array<VkDescriptorPoolSize, 2> poolSizes = { samplerDescriptorPoolSize, storageDescriptorPoolSize };
 		VkDescriptorPoolCreateInfo descriptorPoolCI = {};
 		descriptorPoolCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 		descriptorPoolCI.poolSizeCount = TO_UINT32_T(poolSizes.size());
@@ -191,6 +231,7 @@ namespace lux::rhi
 		descriptorPoolCI.maxSets = mipmapCount * 2;
 
 		CHECK_VK(vkCreateDescriptorPool(device, &descriptorPoolCI, nullptr, &compute.descriptorPool));
+
 
 		GenerateIrradianceParameters parameters;
 		parameters.deltaPhi = (2.0f * PI) / 180.0f;
@@ -202,7 +243,7 @@ namespace lux::rhi
 		commandBufferBI.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
 		CHECK_VK(vkBeginCommandBuffer(compute.commandBuffer, &commandBufferBI));
-		
+
 		CommandTransitionImageLayout(compute.commandBuffer, irradiance.image, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, 6, TO_UINT32_T(floor(log2(IRRADIANCE_TEXTURE_SIZE))) + 1);
 
 		vkCmdBindPipeline(compute.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute.pipeline.pipeline);
@@ -224,7 +265,7 @@ namespace lux::rhi
 			imageViewCI.subresourceRange.layerCount = 6;
 			imageViewCI.subresourceRange.baseArrayLayer = 0;
 			CHECK_VK(vkCreateImageView(device, &imageViewCI, nullptr, &compute.imageViews[i]));
-			
+
 			VkDescriptorSetLayout generateIrradianceMapSetLayout = compute.pipeline.descriptorSetLayout;
 			VkDescriptorSetAllocateInfo generateIrradianceDescriptorSetAI = {};
 			generateIrradianceDescriptorSetAI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -234,37 +275,37 @@ namespace lux::rhi
 
 			CHECK_VK(vkAllocateDescriptorSets(device, &generateIrradianceDescriptorSetAI, &compute.descriptorSets[i]));
 
-			VkDescriptorImageInfo computeEnvMapMapDescriptorImageInfo = {};
-			computeEnvMapMapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			computeEnvMapMapDescriptorImageInfo.imageView = cubemapSource.imageView;
-			computeEnvMapMapDescriptorImageInfo.sampler = forward.cubemapSampler;
+			VkDescriptorImageInfo cubemapDescriptorImageInfo = {};
+			cubemapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			cubemapDescriptorImageInfo.imageView = cubemapSource.imageView;
+			cubemapDescriptorImageInfo.sampler = forward.cubemapSampler;
 
-			VkWriteDescriptorSet writeComputeEnvMapDescriptorSet = {};
-			writeComputeEnvMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			writeComputeEnvMapDescriptorSet.descriptorCount = 1;
-			writeComputeEnvMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			writeComputeEnvMapDescriptorSet.dstBinding = 0;
-			writeComputeEnvMapDescriptorSet.dstArrayElement = 0;
-			writeComputeEnvMapDescriptorSet.pImageInfo = &computeEnvMapMapDescriptorImageInfo;
-			writeComputeEnvMapDescriptorSet.dstSet = compute.descriptorSets[i];
+			VkWriteDescriptorSet writeCubemapDescriptorSet = {};
+			writeCubemapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			writeCubemapDescriptorSet.descriptorCount = 1;
+			writeCubemapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			writeCubemapDescriptorSet.dstBinding = 0;
+			writeCubemapDescriptorSet.dstArrayElement = 0;
+			writeCubemapDescriptorSet.pImageInfo = &cubemapDescriptorImageInfo;
+			writeCubemapDescriptorSet.dstSet = compute.descriptorSets[i];
 
-			VkDescriptorImageInfo computeIrradianceMapDescriptorImageInfo = {};
-			computeIrradianceMapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-			computeIrradianceMapDescriptorImageInfo.imageView = compute.imageViews[i];
+			VkDescriptorImageInfo irradianceMapDescriptorImageInfo = {};
+			irradianceMapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+			irradianceMapDescriptorImageInfo.imageView = compute.imageViews[i];
 
-			VkWriteDescriptorSet writeComputeIrradianceMapDescriptorSet = {};
-			writeComputeIrradianceMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			writeComputeIrradianceMapDescriptorSet.descriptorCount = 1;
-			writeComputeIrradianceMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-			writeComputeIrradianceMapDescriptorSet.dstBinding = 1;
-			writeComputeIrradianceMapDescriptorSet.dstArrayElement = 0;
-			writeComputeIrradianceMapDescriptorSet.pImageInfo = &computeIrradianceMapDescriptorImageInfo;
-			writeComputeIrradianceMapDescriptorSet.dstSet = compute.descriptorSets[i];
+			VkWriteDescriptorSet writeIrradianceMapDescriptorSet = {};
+			writeIrradianceMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			writeIrradianceMapDescriptorSet.descriptorCount = 1;
+			writeIrradianceMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+			writeIrradianceMapDescriptorSet.dstBinding = 1;
+			writeIrradianceMapDescriptorSet.dstArrayElement = 0;
+			writeIrradianceMapDescriptorSet.pImageInfo = &irradianceMapDescriptorImageInfo;
+			writeIrradianceMapDescriptorSet.dstSet = compute.descriptorSets[i];
 
 			std::array<VkWriteDescriptorSet, 2> writeDescriptorSets =
 			{
-				writeComputeEnvMapDescriptorSet,
-				writeComputeIrradianceMapDescriptorSet
+				writeCubemapDescriptorSet,
+				writeIrradianceMapDescriptorSet
 			};
 
 			vkUpdateDescriptorSets(device, TO_UINT32_T(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
@@ -295,41 +336,53 @@ namespace lux::rhi
 		{
 			vkDestroyImageView(device, compute.imageViews[i], nullptr);
 		}
-
-		// Update Descriptor Set
-		VkDescriptorImageInfo irradianceMapDescriptorImageInfo = {};
-		irradianceMapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		irradianceMapDescriptorImageInfo.sampler = forward.irradianceSampler;
-		irradianceMapDescriptorImageInfo.imageView = irradiance.imageView;
-
-		VkWriteDescriptorSet writeIrradianceMapDescriptorSet = {};
-		writeIrradianceMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writeIrradianceMapDescriptorSet.descriptorCount = 1;
-		writeIrradianceMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		writeIrradianceMapDescriptorSet.dstBinding = 2;
-		writeIrradianceMapDescriptorSet.dstArrayElement = 0;
-		writeIrradianceMapDescriptorSet.pImageInfo = &irradianceMapDescriptorImageInfo;
-
-		for (size_t i = 0; i < swapchainImageCount; i++)
-		{
-			writeIrradianceMapDescriptorSet.dstSet = forward.rtViewDescriptorSets[i];
-
-			vkUpdateDescriptorSets(device, 1, &writeIrradianceMapDescriptorSet, 0, nullptr);
-		}
 	}
 
 	void RHI::GeneratePrefilteredFromCubemap(const Image& cubemapSource, Image& prefiltered) noexcept
 	{
-		//rhi::CubeMapCreateInfo prefilteredCI = {};
-		//prefilteredCI.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-		//prefilteredCI.size = PREFILTERED_TEXTURE_SIZE;
-		//prefilteredCI.binaryVertexFilePath = "data/shaders/generatePrefilteredMap/generatePrefilteredMap.vert.spv";
-		//prefilteredCI.binaryFragmentFilePath = "data/shaders/generatePrefilteredMap/generatePrefilteredMap.frag.spv";
-		//prefilteredCI.sampler = forward.cubemapSampler;
-		//prefilteredCI.mipmapCount = TO_UINT32_T(floor(log2(PREFILTERED_TEXTURE_SIZE))) + 1;
+#ifdef USE_COMPUTE_SHADER_FOR_IBL_RESOURCES
+		GeneratePrefilteredFromCubemapCS(cubemapSource, prefiltered);
+#else
+		GeneratePrefilteredFromCubemapFS(cubemapSource, prefiltered);
+#endif
 
-		//GenerateCubemap(prefilteredCI, cubemapSource, prefiltered);
+		// Update Descriptor Set
+		VkDescriptorImageInfo prefilteredMapDescriptorImageInfo = {};
+		prefilteredMapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		prefilteredMapDescriptorImageInfo.sampler = forward.prefilteredSampler;
+		prefilteredMapDescriptorImageInfo.imageView = prefiltered.imageView;
 
+		VkWriteDescriptorSet writePrefilteredMapDescriptorSet = {};
+		writePrefilteredMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writePrefilteredMapDescriptorSet.descriptorCount = 1;
+		writePrefilteredMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		writePrefilteredMapDescriptorSet.dstBinding = 3;
+		writePrefilteredMapDescriptorSet.dstArrayElement = 0;
+		writePrefilteredMapDescriptorSet.pImageInfo = &prefilteredMapDescriptorImageInfo;
+
+		for (size_t i = 0; i < swapchainImageCount; i++)
+		{
+			writePrefilteredMapDescriptorSet.dstSet = forward.rtViewDescriptorSets[i];
+
+			vkUpdateDescriptorSets(device, 1, &writePrefilteredMapDescriptorSet, 0, nullptr);
+		}
+	}
+
+	void RHI::GeneratePrefilteredFromCubemapFS(const Image& cubemapSource, Image& prefiltered) noexcept
+	{
+		rhi::CubeMapCreateInfo prefilteredCI = {};
+		prefilteredCI.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+		prefilteredCI.size = PREFILTERED_TEXTURE_SIZE;
+		prefilteredCI.binaryVertexFilePath = "data/shaders/generatePrefilteredMap/generatePrefilteredMap.vert.spv";
+		prefilteredCI.binaryFragmentFilePath = "data/shaders/generatePrefilteredMap/generatePrefilteredMap.frag.spv";
+		prefilteredCI.sampler = forward.cubemapSampler;
+		prefilteredCI.mipmapCount = TO_UINT32_T(floor(log2(PREFILTERED_TEXTURE_SIZE))) + 1;
+
+		GenerateCubemap(prefilteredCI, cubemapSource, prefiltered);
+	}
+
+	void RHI::GeneratePrefilteredFromCubemapCS(const Image& cubemapSource, Image& prefiltered) noexcept
+	{
 		struct ComputeResources
 		{
 			ComputePipeline pipeline;
@@ -343,17 +396,24 @@ namespace lux::rhi
 
 
 		// Pipeline
-		VkDescriptorSetLayoutBinding cubemapInputDescriptorSetLayoutBinding = {};
-		cubemapInputDescriptorSetLayoutBinding.binding = 0;
-		cubemapInputDescriptorSetLayoutBinding.descriptorCount = 1;
-		cubemapInputDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		cubemapInputDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+		VkDescriptorSetLayoutBinding cubemapDescriptorSetLayoutBinding = {};
+		cubemapDescriptorSetLayoutBinding.binding = 0;
+		cubemapDescriptorSetLayoutBinding.descriptorCount = 1;
+		cubemapDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		cubemapDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-		VkDescriptorSetLayoutBinding prefilteredOutputDescriptorSetLayoutBinding = {};
-		prefilteredOutputDescriptorSetLayoutBinding.binding = 1;
-		prefilteredOutputDescriptorSetLayoutBinding.descriptorCount = 1;
-		prefilteredOutputDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-		prefilteredOutputDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+		VkDescriptorSetLayoutBinding prefilteredMapDescriptorSetLayoutBinding = {};
+		prefilteredMapDescriptorSetLayoutBinding.binding = 1;
+		prefilteredMapDescriptorSetLayoutBinding.descriptorCount = 1;
+		prefilteredMapDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		prefilteredMapDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+		struct GeneratePrefilteredParameters
+		{
+			glm::vec2 cubemapSize;
+			float roughness;
+			int samplesCount;
+		};
 
 		VkPushConstantRange generatePrefilteredPushConstantRange = {};
 		generatePrefilteredPushConstantRange.offset = 0;
@@ -362,7 +422,7 @@ namespace lux::rhi
 
 		ComputePipelineCreateInfo computePipelineCI = {};
 		computePipelineCI.binaryComputeFilePath = "data/shaders/generatePrefilteredMap/generatePrefilteredMap.comp.spv";
-		computePipelineCI.descriptorSetLayoutBindings = { cubemapInputDescriptorSetLayoutBinding, prefilteredOutputDescriptorSetLayoutBinding };
+		computePipelineCI.descriptorSetLayoutBindings = { cubemapDescriptorSetLayoutBinding, prefilteredMapDescriptorSetLayoutBinding };
 		computePipelineCI.pushConstants = { generatePrefilteredPushConstantRange };
 
 		CreateComputePipeline(computePipelineCI, compute.pipeline);
@@ -376,15 +436,15 @@ namespace lux::rhi
 
 		CHECK_VK(vkAllocateCommandBuffers(device, &commandBufferAI, &compute.commandBuffer));
 
-		VkDescriptorPoolSize sourceComputeDescriptorPoolSize = {};
-		sourceComputeDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		sourceComputeDescriptorPoolSize.descriptorCount = mipmapCount;
+		VkDescriptorPoolSize samplerDescriptorPoolSize = {};
+		samplerDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		samplerDescriptorPoolSize.descriptorCount = mipmapCount;
 
-		VkDescriptorPoolSize destinationComputeDescriptorPoolSize = {};
-		destinationComputeDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-		destinationComputeDescriptorPoolSize.descriptorCount = mipmapCount;
+		VkDescriptorPoolSize storageDescriptorPoolSize = {};
+		storageDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		storageDescriptorPoolSize.descriptorCount = mipmapCount;
 
-		std::array<VkDescriptorPoolSize, 2> poolSizes = { sourceComputeDescriptorPoolSize, destinationComputeDescriptorPoolSize };
+		std::array<VkDescriptorPoolSize, 2> poolSizes = { samplerDescriptorPoolSize, storageDescriptorPoolSize };
 		VkDescriptorPoolCreateInfo descriptorPoolCI = {};
 		descriptorPoolCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 		descriptorPoolCI.poolSizeCount = TO_UINT32_T(poolSizes.size());
@@ -420,47 +480,47 @@ namespace lux::rhi
 			imageViewCI.subresourceRange.baseArrayLayer = 0;
 			CHECK_VK(vkCreateImageView(device, &imageViewCI, nullptr, &compute.imageViews[i]));
 
-			VkDescriptorSetLayout generatePrefilteredMapSetLayout = compute.pipeline.descriptorSetLayout;
-			VkDescriptorSetAllocateInfo generatePrefilteredDescriptorSetAI = {};
-			generatePrefilteredDescriptorSetAI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-			generatePrefilteredDescriptorSetAI.descriptorPool = compute.descriptorPool;
-			generatePrefilteredDescriptorSetAI.descriptorSetCount = 1;
-			generatePrefilteredDescriptorSetAI.pSetLayouts = &generatePrefilteredMapSetLayout;
+			VkDescriptorSetLayout prefilteredMapSetLayout = compute.pipeline.descriptorSetLayout;
+			VkDescriptorSetAllocateInfo prefilteredDescriptorSetAI = {};
+			prefilteredDescriptorSetAI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+			prefilteredDescriptorSetAI.descriptorPool = compute.descriptorPool;
+			prefilteredDescriptorSetAI.descriptorSetCount = 1;
+			prefilteredDescriptorSetAI.pSetLayouts = &prefilteredMapSetLayout;
 
-			CHECK_VK(vkAllocateDescriptorSets(device, &generatePrefilteredDescriptorSetAI, &compute.descriptorSets[i]));
+			CHECK_VK(vkAllocateDescriptorSets(device, &prefilteredDescriptorSetAI, &compute.descriptorSets[i]));
 
-			VkDescriptorImageInfo computeEnvMapMapDescriptorImageInfo = {};
-			computeEnvMapMapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			computeEnvMapMapDescriptorImageInfo.imageView = cubemapSource.imageView;
-			computeEnvMapMapDescriptorImageInfo.sampler = forward.cubemapSampler;
+			VkDescriptorImageInfo cubemapDescriptorImageInfo = {};
+			cubemapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			cubemapDescriptorImageInfo.imageView = cubemapSource.imageView;
+			cubemapDescriptorImageInfo.sampler = forward.cubemapSampler;
 
 
-			VkWriteDescriptorSet writeComputeEnvMapDescriptorSet = {};
-			writeComputeEnvMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			writeComputeEnvMapDescriptorSet.descriptorCount = 1;
-			writeComputeEnvMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			writeComputeEnvMapDescriptorSet.dstBinding = 0;
-			writeComputeEnvMapDescriptorSet.dstArrayElement = 0;
-			writeComputeEnvMapDescriptorSet.pImageInfo = &computeEnvMapMapDescriptorImageInfo;
-			writeComputeEnvMapDescriptorSet.dstSet = compute.descriptorSets[i];
+			VkWriteDescriptorSet writeCubemapDescriptorSet = {};
+			writeCubemapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			writeCubemapDescriptorSet.descriptorCount = 1;
+			writeCubemapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			writeCubemapDescriptorSet.dstBinding = 0;
+			writeCubemapDescriptorSet.dstArrayElement = 0;
+			writeCubemapDescriptorSet.pImageInfo = &cubemapDescriptorImageInfo;
+			writeCubemapDescriptorSet.dstSet = compute.descriptorSets[i];
 
-			VkDescriptorImageInfo computePrefilteredMapDescriptorImageInfo = {};
-			computePrefilteredMapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-			computePrefilteredMapDescriptorImageInfo.imageView = compute.imageViews[i];
+			VkDescriptorImageInfo prefilteredMapDescriptorImageInfo = {};
+			prefilteredMapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+			prefilteredMapDescriptorImageInfo.imageView = compute.imageViews[i];
 
-			VkWriteDescriptorSet writeComputePrefilteredMapDescriptorSet = {};
-			writeComputePrefilteredMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			writeComputePrefilteredMapDescriptorSet.descriptorCount = 1;
-			writeComputePrefilteredMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-			writeComputePrefilteredMapDescriptorSet.dstBinding = 1;
-			writeComputePrefilteredMapDescriptorSet.dstArrayElement = 0;
-			writeComputePrefilteredMapDescriptorSet.pImageInfo = &computePrefilteredMapDescriptorImageInfo;
-			writeComputePrefilteredMapDescriptorSet.dstSet = compute.descriptorSets[i];
+			VkWriteDescriptorSet writePrefilteredMapDescriptorSet = {};
+			writePrefilteredMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			writePrefilteredMapDescriptorSet.descriptorCount = 1;
+			writePrefilteredMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+			writePrefilteredMapDescriptorSet.dstBinding = 1;
+			writePrefilteredMapDescriptorSet.dstArrayElement = 0;
+			writePrefilteredMapDescriptorSet.pImageInfo = &prefilteredMapDescriptorImageInfo;
+			writePrefilteredMapDescriptorSet.dstSet = compute.descriptorSets[i];
 
 			std::array<VkWriteDescriptorSet, 2> writeDescriptorSets =
 			{
-				writeComputeEnvMapDescriptorSet,
-				writeComputePrefilteredMapDescriptorSet
+				writeCubemapDescriptorSet,
+				writePrefilteredMapDescriptorSet
 			};
 
 			vkUpdateDescriptorSets(device, TO_UINT32_T(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
@@ -498,27 +558,6 @@ namespace lux::rhi
 		for (size_t i = 0; i < mipmapCount; i++)
 		{
 			vkDestroyImageView(device, compute.imageViews[i], nullptr);
-		}
-
-		// Update Descriptor Set
-		VkDescriptorImageInfo prefilteredMapDescriptorImageInfo = {};
-		prefilteredMapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		prefilteredMapDescriptorImageInfo.sampler = forward.prefilteredSampler;
-		prefilteredMapDescriptorImageInfo.imageView = prefiltered.imageView;
-
-		VkWriteDescriptorSet writePrefilteredMapDescriptorSet = {};
-		writePrefilteredMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writePrefilteredMapDescriptorSet.descriptorCount = 1;
-		writePrefilteredMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		writePrefilteredMapDescriptorSet.dstBinding = 3;
-		writePrefilteredMapDescriptorSet.dstArrayElement = 0;
-		writePrefilteredMapDescriptorSet.pImageInfo = &prefilteredMapDescriptorImageInfo;
-
-		for (size_t i = 0; i < swapchainImageCount; i++)
-		{
-			writePrefilteredMapDescriptorSet.dstSet = forward.rtViewDescriptorSets[i];
-
-			vkUpdateDescriptorSets(device, 1, &writePrefilteredMapDescriptorSet, 0, nullptr);
 		}
 	}
 
@@ -821,12 +860,50 @@ namespace lux::rhi
 		imageCI.height = size;
 		imageCI.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
 		imageCI.subresourceRangeLayerCount = 1;
-		imageCI.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		imageCI.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+
+#ifdef USE_COMPUTE_SHADER_FOR_IBL_RESOURCES
+		imageCI.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+#else
+		imageCI.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+#endif
+
 		imageCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
 		CreateImage(imageCI, BRDFLut);
 
 
+#ifdef USE_COMPUTE_SHADER_FOR_IBL_RESOURCES
+		GenerateBRDFLutCS(format, size, BRDFLut);
+#else
+		GenerateBRDFLutFS(format, size, BRDFLut);
+#endif
+
+
+		// Update Descriptor Set
+		VkDescriptorImageInfo BRDFLutDescriptorImageInfo = {};
+		BRDFLutDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		BRDFLutDescriptorImageInfo.sampler = forward.prefilteredSampler;
+		BRDFLutDescriptorImageInfo.imageView = BRDFLut.imageView;
+
+		VkWriteDescriptorSet writeBRDFLutDescriptorSet = {};
+		writeBRDFLutDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeBRDFLutDescriptorSet.descriptorCount = 1;
+		writeBRDFLutDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		writeBRDFLutDescriptorSet.dstBinding = 4;
+		writeBRDFLutDescriptorSet.dstArrayElement = 0;
+		writeBRDFLutDescriptorSet.pImageInfo = &BRDFLutDescriptorImageInfo;
+
+		for (size_t i = 0; i < swapchainImageCount; i++)
+		{
+			writeBRDFLutDescriptorSet.dstSet = forward.rtViewDescriptorSets[i];
+
+			vkUpdateDescriptorSets(device, 1, &writeBRDFLutDescriptorSet, 0, nullptr);
+		}
+	}
+
+	void RHI::GenerateBRDFLutFS(VkFormat format, uint32_t size, Image& BRDFLut) noexcept
+	{
 		struct OffscreenResource
 		{
 			VkRenderPass renderPass;
@@ -905,7 +982,7 @@ namespace lux::rhi
 
 		VkPushConstantRange pushConstantRange = {};
 		pushConstantRange.size = sizeof(PushConstant);
-		pushConstantRange.stageFlags =  VK_SHADER_STAGE_FRAGMENT_BIT;
+		pushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 		GraphicsPipelineCreateInfo graphicsPipelineCI = {};
 		graphicsPipelineCI.renderPass = offscreen.renderPass;
@@ -957,43 +1034,10 @@ namespace lux::rhi
 		DestroyGraphicsPipeline(offscreen.pipeline);
 		vkDestroyFramebuffer(device, offscreen.framebuffer, nullptr);
 		vkDestroyRenderPass(device, offscreen.renderPass, nullptr);
-
-		// Update Descriptor Set
-		VkDescriptorImageInfo BRDFLutDescriptorImageInfo = {};
-		BRDFLutDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		BRDFLutDescriptorImageInfo.sampler = forward.prefilteredSampler;
-		BRDFLutDescriptorImageInfo.imageView = BRDFLut.imageView;
-
-		VkWriteDescriptorSet writeBRDFLutDescriptorSet = {};
-		writeBRDFLutDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writeBRDFLutDescriptorSet.descriptorCount = 1;
-		writeBRDFLutDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		writeBRDFLutDescriptorSet.dstBinding = 4;
-		writeBRDFLutDescriptorSet.dstArrayElement = 0;
-		writeBRDFLutDescriptorSet.pImageInfo = &BRDFLutDescriptorImageInfo;
-
-		for (size_t i = 0; i < swapchainImageCount; i++)
-		{
-			writeBRDFLutDescriptorSet.dstSet = forward.rtViewDescriptorSets[i];
-
-			vkUpdateDescriptorSets(device, 1, &writeBRDFLutDescriptorSet, 0, nullptr);
-		}
 	}
 
-	void RHI::GenerateBRDFLutCompute(VkFormat format, uint32_t size, Image& BRDFLut) noexcept
+	void RHI::GenerateBRDFLutCS(VkFormat format, uint32_t size, Image& BRDFLut) noexcept
 	{
-		ImageCreateInfo imageCI = {};
-		imageCI.arrayLayers = 1;
-		imageCI.format = format;
-		imageCI.width = size;
-		imageCI.height = size;
-		imageCI.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
-		imageCI.subresourceRangeLayerCount = 1;
-		imageCI.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-		imageCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
-		CreateImage(imageCI, BRDFLut);
-
 		struct ComputeResources
 		{
 			ComputePipeline pipeline;
@@ -1013,15 +1057,15 @@ namespace lux::rhi
 		generateBRDFLutPushConstantRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
 
-		VkDescriptorSetLayoutBinding BRDFLutOutputDescriptorSetLayoutBinding = {};
-		BRDFLutOutputDescriptorSetLayoutBinding.binding = 0;
-		BRDFLutOutputDescriptorSetLayoutBinding.descriptorCount = 1;
-		BRDFLutOutputDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-		BRDFLutOutputDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+		VkDescriptorSetLayoutBinding BRDFLutDescriptorSetLayoutBinding = {};
+		BRDFLutDescriptorSetLayoutBinding.binding = 0;
+		BRDFLutDescriptorSetLayoutBinding.descriptorCount = 1;
+		BRDFLutDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		BRDFLutDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
 		ComputePipelineCreateInfo computePipelineCI = {};
 		computePipelineCI.binaryComputeFilePath = "data/shaders/generateBRDFLut/generateBRDFLut.comp.spv";
-		computePipelineCI.descriptorSetLayoutBindings = { BRDFLutOutputDescriptorSetLayoutBinding };
+		computePipelineCI.descriptorSetLayoutBindings = { BRDFLutDescriptorSetLayoutBinding };
 		computePipelineCI.pushConstants = { generateBRDFLutPushConstantRange };
 
 		CreateComputePipeline(computePipelineCI, compute.pipeline);
@@ -1030,7 +1074,7 @@ namespace lux::rhi
 		GenerateBRDFLut parameters;
 		parameters.textureSize = TO_FLOAT(BRDF_LUT_TEXTURE_SIZE);
 		parameters.sampleCount = 1024;
-		
+
 
 
 		VkCommandBufferAllocateInfo commandBufferAI = {};
@@ -1042,44 +1086,44 @@ namespace lux::rhi
 		CHECK_VK(vkAllocateCommandBuffers(device, &commandBufferAI, &compute.commandBuffer));
 
 
-		VkDescriptorPoolSize destinationComputeDescriptorPoolSize = {};
-		destinationComputeDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-		destinationComputeDescriptorPoolSize.descriptorCount = 1;
+		VkDescriptorPoolSize storageDescriptorPoolSize = {};
+		storageDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		storageDescriptorPoolSize.descriptorCount = 1;
 
 		VkDescriptorPoolCreateInfo descriptorPoolCI = {};
 		descriptorPoolCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 		descriptorPoolCI.poolSizeCount = 1;
-		descriptorPoolCI.pPoolSizes = &destinationComputeDescriptorPoolSize;
+		descriptorPoolCI.pPoolSizes = &storageDescriptorPoolSize;
 		descriptorPoolCI.maxSets = 1;
 
 		CHECK_VK(vkCreateDescriptorPool(device, &descriptorPoolCI, nullptr, &compute.descriptorPool));
 
 
-		VkDescriptorSetLayout generateBRDFLutSetLayout = compute.pipeline.descriptorSetLayout;
+		VkDescriptorSetLayout BRDFLutSetLayout = compute.pipeline.descriptorSetLayout;
 		VkDescriptorSetAllocateInfo generateBRDFLutDescriptorSetAI = {};
-		generateBRDFLutDescriptorSetAI .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		generateBRDFLutDescriptorSetAI .descriptorPool = compute.descriptorPool;
-		generateBRDFLutDescriptorSetAI .descriptorSetCount = 1;
-		generateBRDFLutDescriptorSetAI .pSetLayouts = &generateBRDFLutSetLayout;
+		generateBRDFLutDescriptorSetAI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		generateBRDFLutDescriptorSetAI.descriptorPool = compute.descriptorPool;
+		generateBRDFLutDescriptorSetAI.descriptorSetCount = 1;
+		generateBRDFLutDescriptorSetAI.pSetLayouts = &BRDFLutSetLayout;
 
 		CHECK_VK(vkAllocateDescriptorSets(device, &generateBRDFLutDescriptorSetAI, &compute.descriptorSet));
 
 
-		VkDescriptorImageInfo computeBRDFLutDescriptorImageInfo = {};
-		computeBRDFLutDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-		computeBRDFLutDescriptorImageInfo.imageView = BRDFLut.imageView;
+		VkDescriptorImageInfo storageBRDFLutDescriptorImageInfo = {};
+		storageBRDFLutDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+		storageBRDFLutDescriptorImageInfo.imageView = BRDFLut.imageView;
 
 
-		VkWriteDescriptorSet writeComputeBRDFLutDescriptorSet = {};
-		writeComputeBRDFLutDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writeComputeBRDFLutDescriptorSet.descriptorCount = 1;
-		writeComputeBRDFLutDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-		writeComputeBRDFLutDescriptorSet.dstBinding = 0;
-		writeComputeBRDFLutDescriptorSet.dstArrayElement = 0;
-		writeComputeBRDFLutDescriptorSet.pImageInfo = &computeBRDFLutDescriptorImageInfo;
-		writeComputeBRDFLutDescriptorSet.dstSet = compute.descriptorSet;
+		VkWriteDescriptorSet writeStorageBRDFLutDescriptorSet = {};
+		writeStorageBRDFLutDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeStorageBRDFLutDescriptorSet.descriptorCount = 1;
+		writeStorageBRDFLutDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		writeStorageBRDFLutDescriptorSet.dstBinding = 0;
+		writeStorageBRDFLutDescriptorSet.dstArrayElement = 0;
+		writeStorageBRDFLutDescriptorSet.pImageInfo = &storageBRDFLutDescriptorImageInfo;
+		writeStorageBRDFLutDescriptorSet.dstSet = compute.descriptorSet;
 
-		vkUpdateDescriptorSets(device, 1, &writeComputeBRDFLutDescriptorSet, 0, nullptr);
+		vkUpdateDescriptorSets(device, 1, &writeStorageBRDFLutDescriptorSet, 0, nullptr);
 
 
 		VkCommandBufferBeginInfo commandBufferBI = {};
@@ -1088,17 +1132,18 @@ namespace lux::rhi
 
 		CHECK_VK(vkBeginCommandBuffer(compute.commandBuffer, &commandBufferBI));
 
+
 		CommandTransitionImageLayout(compute.commandBuffer, BRDFLut.image, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
 		vkCmdBindPipeline(compute.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute.pipeline.pipeline);
-
 		vkCmdBindDescriptorSets(compute.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute.pipeline.pipelineLayout, 0, 1, &compute.descriptorSet, 0, nullptr);
-
 		vkCmdPushConstants(compute.commandBuffer, compute.pipeline.pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(GenerateBRDFLut), &parameters);
 
-		vkCmdDispatch(compute.commandBuffer, BRDF_LUT_TEXTURE_SIZE /16, BRDF_LUT_TEXTURE_SIZE / 16, 1);
+		vkCmdDispatch(compute.commandBuffer, BRDF_LUT_TEXTURE_SIZE / 16, BRDF_LUT_TEXTURE_SIZE / 16, 1);
+
 
 		CommandTransitionImageLayout(compute.commandBuffer, BRDFLut.image, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
 
 		CHECK_VK(vkEndCommandBuffer(compute.commandBuffer));
 
@@ -1113,28 +1158,45 @@ namespace lux::rhi
 		DestroyComputePipeline(compute.pipeline);
 		vkDestroyDescriptorPool(device, compute.descriptorPool, nullptr);
 		vkFreeCommandBuffers(device, computeCommandPool, 1, &compute.commandBuffer);
-
-		// Update Descriptor Set
-		VkDescriptorImageInfo BRDFLutDescriptorImageInfo = {};
-		BRDFLutDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		BRDFLutDescriptorImageInfo.sampler = forward.prefilteredSampler;
-		BRDFLutDescriptorImageInfo.imageView = BRDFLut.imageView;
-
-		VkWriteDescriptorSet writeBRDFLutDescriptorSet = {};
-		writeBRDFLutDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writeBRDFLutDescriptorSet.descriptorCount = 1;
-		writeBRDFLutDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		writeBRDFLutDescriptorSet.dstBinding = 4;
-		writeBRDFLutDescriptorSet.dstArrayElement = 0;
-		writeBRDFLutDescriptorSet.pImageInfo = &BRDFLutDescriptorImageInfo;
-
-		for (size_t i = 0; i < swapchainImageCount; i++)
-		{
-			writeBRDFLutDescriptorSet.dstSet = forward.rtViewDescriptorSets[i];
-
-			vkUpdateDescriptorSets(device, 1, &writeBRDFLutDescriptorSet, 0, nullptr);
-		}
 	}
+
+	//void RHI::GenerateBRDFLutCompute(VkFormat format, uint32_t size, Image& BRDFLut) noexcept
+	//{
+	//	ImageCreateInfo imageCI = {};
+	//	imageCI.arrayLayers = 1;
+	//	imageCI.format = format;
+	//	imageCI.width = size;
+	//	imageCI.height = size;
+	//	imageCI.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
+	//	imageCI.subresourceRangeLayerCount = 1;
+	//	imageCI.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+	//	imageCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+	//	CreateImage(imageCI, BRDFLut);
+
+
+
+	//	// Update Descriptor Set
+	//	VkDescriptorImageInfo BRDFLutDescriptorImageInfo = {};
+	//	storageBRDFLutDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	//	storageBRDFLutDescriptorImageInfo.sampler = forward.prefilteredSampler;
+	//	storageBRDFLutDescriptorImageInfo.imageView = BRDFLut.imageView;
+
+	//	VkWriteDescriptorSet writeBRDFLutDescriptorSet = {};
+	//	writeStorageBRDFLutDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	//	writeStorageBRDFLutDescriptorSet.descriptorCount = 1;
+	//	writeStorageBRDFLutDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	//	writeStorageBRDFLutDescriptorSet.dstBinding = 4;
+	//	writeStorageBRDFLutDescriptorSet.dstArrayElement = 0;
+	//	writeStorageBRDFLutDescriptorSet.pImageInfo = &storageBRDFLutDescriptorImageInfo;
+
+	//	for (size_t i = 0; i < swapchainImageCount; i++)
+	//	{
+	//		writeStorageBRDFLutDescriptorSet.dstSet = forward.rtViewDescriptorSets[i];
+
+	//		vkUpdateDescriptorSets(device, 1, &writeStorageBRDFLutDescriptorSet, 0, nullptr);
+	//	}
+	//}
 
 
 	void RHI::DestroyImage(Image& image) noexcept

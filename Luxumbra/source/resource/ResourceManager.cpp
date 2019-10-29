@@ -257,14 +257,20 @@ namespace lux::resource
 		// Create Irradiance Image
 		imageCI.width = IRRADIANCE_TEXTURE_SIZE;
 		imageCI.height = IRRADIANCE_TEXTURE_SIZE;
-		imageCI.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		imageCI.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+
+#ifdef USE_COMPUTE_SHADER_FOR_IBL_RESOURCES
+		imageCI.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+#else
+		imageCI.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+#endif
+
 		imageCI.mipmapCount = TO_UINT32_T(floor(log2(IRRADIANCE_TEXTURE_SIZE))) + 1;
 		rhi.CreateImage(imageCI, irradiance->image);
 
 
 		// Create Prefiltered Image
 		imageCI.width = PREFILTERED_TEXTURE_SIZE;
-		imageCI.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 		imageCI.height = PREFILTERED_TEXTURE_SIZE;
 		imageCI.mipmapCount = TO_UINT32_T(floor(log2(PREFILTERED_TEXTURE_SIZE))) + 1;
 		rhi.CreateImage(imageCI, prefiltered->image);
@@ -275,8 +281,7 @@ namespace lux::resource
 		rhi.GenerateCubemapFromHDR(source, cubemap->image);
 		rhi.GenerateIrradianceFromCubemap(cubemap->image, irradiance->image);
 		rhi.GeneratePrefilteredFromCubemap(cubemap->image, prefiltered->image);
-		//rhi.GenerateBRDFLut(VK_FORMAT_R32G32B32A32_SFLOAT, BRDF_LUT_TEXTURE_SIZE, BRDFLut->image);
-		rhi.GenerateBRDFLutCompute(VK_FORMAT_R32G32B32A32_SFLOAT, BRDF_LUT_TEXTURE_SIZE, BRDFLut->image);
+		rhi.GenerateBRDFLut(VK_FORMAT_R32G32B32A32_SFLOAT, BRDF_LUT_TEXTURE_SIZE, BRDFLut->image);
 
 		rhi.CreateEnvMapDescriptorSet(cubemap->image);
 
