@@ -73,8 +73,6 @@ namespace lux
 		ImGui::NewFrame();
 
 		ImGui::Begin("Luxumbra Engine");
-		
-
 
 		if (ImGui::Button("Reload Shader"))
 		{
@@ -83,46 +81,122 @@ namespace lux
 
 		ImGui::NewLine();
 
-		// PostProcess
-		float exposure = rhi.forward.postProcessParameters.exposure;
-		float newExposure = exposure;
-		ImGui::SliderFloat("Exposure", &newExposure, 0.0f, 15.0f, "%.2f");
-
-		if (newExposure != exposure)
+		if (ImGui::BeginTabBar("##TabBar"))
 		{
-			rhi.forward.postProcessParameters.exposure = newExposure;
+			if (ImGui::BeginTabItem("Post Process"))
+			{
+				lux::rhi::PostProcessParameters& postProcess = rhi.forward.postProcessParameters;
+				
+				if (ImGui::CollapsingHeader("ToneMapping:", ImGuiTreeNodeFlags_DefaultOpen))
+				{
+					ImGui::Spacing();
+
+					int toneMapping = postProcess.toneMapping;
+					int newToneMapping = toneMapping;
+					ImGui::Combo("Tone Mapping", &newToneMapping, "ACES Film\0Uncharted 2\0Reinhard");
+
+					if (newToneMapping != toneMapping)
+						postProcess.toneMapping = newToneMapping;
+
+					ImGui::Spacing();
+
+					// Exposure
+					float exposure = postProcess.exposure;
+					float newExposure = exposure;
+					ImGui::SliderFloat("Exposure", &newExposure, 0.0f, 10.0f, "%.2f");
+
+					if (newExposure != exposure)
+						postProcess.exposure = newExposure;
+				
+					ImGui::NewLine();
+				}
+
+				if (ImGui::CollapsingHeader("FXAA:", ImGuiTreeNodeFlags_DefaultOpen))
+				{
+					ImGui::Spacing();
+
+					int FXAAQuality;
+					if (postProcess.FXAARelativeThreshold == 0.250f) FXAAQuality = 0;
+					else if (postProcess.FXAARelativeThreshold == 0.166f) FXAAQuality = 1;
+					else if (postProcess.FXAARelativeThreshold == 0.125f) FXAAQuality = 2;
+
+					int newFXAAQuality = FXAAQuality;
+
+					const char* qualityName[3] = { "Low", "Medium", "High" };
+					ImGui::SliderInt("Quality", &newFXAAQuality, 0, 2, qualityName[newFXAAQuality]);
+
+					if (newFXAAQuality != FXAAQuality)
+					{
+						// Low
+						if (newFXAAQuality == 0)
+						{
+							postProcess.FXAAContrastThreshold = 0.0833;
+							postProcess.FXAARelativeThreshold = 0.250f;
+
+						}
+						// Medium
+						else if (newFXAAQuality == 1)
+						{
+							postProcess.FXAAContrastThreshold = 0.0625;
+							postProcess.FXAARelativeThreshold = 0.166f;
+
+						}
+						// High
+						else
+						{
+							postProcess.FXAAContrastThreshold = 0.0312f;
+							postProcess.FXAARelativeThreshold = 0.125f;
+						}
+					}
+
+					ImGui::Spacing();
+
+					bool debugFXAA = postProcess.FXAADebug;
+					bool newDebugFXAA = debugFXAA;
+					ImGui::Checkbox("Show Split View", &newDebugFXAA);
+
+					if (newDebugFXAA != debugFXAA)
+						postProcess.FXAADebug = newDebugFXAA;
+
+					if (newDebugFXAA)
+					{
+						ImGui::Spacing();
+
+						// FXAA Percent
+						float FXAAPercent = postProcess.FXAAPercent;
+						float newFXAAPercent = FXAAPercent;
+						ImGui::SliderFloat("Percent", &newFXAAPercent, 0.0f, 1.0f, "%.2f");
+				
+						if (newFXAAPercent != FXAAPercent)
+							postProcess.FXAAPercent = newFXAAPercent;
+					}
+
+					ImGui::NewLine();
+				}
+
+
+				ImGui::EndTabItem();
+			}
+
+			if (ImGui::BeginTabItem("Scene"))
+			{
+				scene::CameraNode* camera = scene.GetCurrentCamera();
+				DisplayCameraNode(camera);
+				ImGui::NewLine();
+
+				DisplayMeshNodes(scene.GetMeshNodes());
+				ImGui::NewLine();
+				DisplayLightNodes(scene.GetLightNodes());
+				ImGui::NewLine();
+
+				DisplayMaterials();
+
+				ImGui::EndTabItem();
+			}
+
+			ImGui::EndTabBar();
 		}
 
-		bool useFXAA = rhi.forward.postProcessParameters.useFXAA;
-		bool newUseFXAA = useFXAA;
-
-		ImGui::Checkbox("Use FXAA", &newUseFXAA);
-		
-		if (useFXAA != newUseFXAA)
-		{
-			rhi.forward.postProcessParameters.useFXAA = newUseFXAA;
-		}
-
-		float FXAAPercent = rhi.forward.postProcessParameters.FXAAPercent;
-		float newFXAAPercent = FXAAPercent;
-
-		ImGui::SliderFloat("FXAA Percent", &newFXAAPercent, 0.0f, 1.0f, "%.2f");
-
-		if (FXAAPercent != newFXAAPercent)
-		{
-			rhi.forward.postProcessParameters.FXAAPercent = newFXAAPercent;
-		}
-
-		scene::CameraNode* camera = scene.GetCurrentCamera();
-		DisplayCameraNode(camera);
-		ImGui::NewLine();
-
-		DisplayMeshNodes(scene.GetMeshNodes());
-		ImGui::NewLine();
-		DisplayLightNodes(scene.GetLightNodes());
-		ImGui::NewLine();
-
-		DisplayMaterials();
 
 		ImGui::End();
 

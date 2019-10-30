@@ -10,13 +10,16 @@ layout(set = 0, binding = 0) uniform sampler2D renderTarget;
 layout(push_constant) uniform PushConstants
 {
 	vec2 inverseScreenSize;
+	int toneMapping;
 	float exposure;
 	float FXAAPercent;
-	int useFXAA;
+	int debugFXAA;
+	float FXAAContrastThreshold;
+	float FXAARelativeThreshold;
 };
 
-#define EDGE_THRESHOLD_MIN 0.0312
-#define EDGE_THRESHOLD_MAX 0.125
+//#define EDGE_THRESHOLD_MIN 0.0312
+//#define EDGE_THRESHOLD_MAX 0.125
 #define ITERATIONS 12
 #define SUBPIXEL_QUALITY 0.75
 
@@ -30,10 +33,15 @@ float Quality(int i);
 
 void main() 
 {
-	outColor = textureCoordinate.x > FXAAPercent ? vec4(FXAA(), 1.0) : vec4(ToneMapGammaCorrect(texture(renderTarget, textureCoordinate).rgb), 1.0);
+	outColor =  vec4(FXAA(), 1.0);
 
-	if (textureCoordinate.x < FXAAPercent + 0.001 && textureCoordinate.x > FXAAPercent - 0.001)
-		outColor = vec4(1.0);
+	if (debugFXAA == 1)
+	{
+		outColor = textureCoordinate.x > FXAAPercent ? outColor : vec4(ToneMapGammaCorrect(texture(renderTarget, textureCoordinate).rgb), 1.0);
+
+		if (textureCoordinate.x < FXAAPercent + 0.001 && textureCoordinate.x > FXAAPercent - 0.001)
+			outColor = vec4(1.0);
+	}
 }
 
 vec3 Reinhard(vec3 x)
@@ -66,7 +74,21 @@ vec3 Uncharted2Tonemap(vec3 x)
 
 vec3 ToneMapGammaCorrect(vec3 color)
 {
-	return pow(ACESFilm(0.6 * color * exposure), vec3(1.0/2.2));
+	switch(toneMapping)
+	{
+		case 0: 
+		{
+			return pow(ACESFilm(0.6 * color * exposure), vec3(1.0/2.2));
+		}
+		case 1: 
+		{
+			return pow(Uncharted2Tonemap(color * exposure), vec3(1.0/2.2));
+		}
+		case 2:
+		{
+			return pow(Reinhard(color * exposure), vec3(1.0/2.2));
+		}
+	}
 }
 
 vec3 FXAA()
@@ -85,7 +107,7 @@ vec3 FXAA()
 
 	float deltaLuma = lumaMax - lumaMin;
 
-	if (deltaLuma < max(EDGE_THRESHOLD_MIN, lumaMax * EDGE_THRESHOLD_MAX))
+	if (deltaLuma < max(FXAAContrastThreshold, lumaMax * FXAARelativeThreshold))
 		return colorCenter;
 
 	float lumaDownLeft = RGBToLuma(ToneMapGammaCorrect(textureOffset(renderTarget, textureCoordinate, ivec2(-1, -1)).rgb));
@@ -258,13 +280,12 @@ float Quality(int i)
 		case 2: return 1.0;
 		case 3: return 1.0;
 		case 4: return 1.0;
-		case 5: return 1.5;
-		case 6: return 2.0;
-		case 7: return 2.0;
-		case 8: return 2.0;
-		case 9: return 2.0;
-		case 10: return 4.0;
-		case 11: return 8.0;
+		case 5: return 1.0;
+		case 6: return 1.0;
+		case 7: return 1.0;
+		case 8: return 1.0;
+		case 9: return 1.0;
+		case 10: return 1.0;
+		case 11: return 1.0;
 	}
-
 }
