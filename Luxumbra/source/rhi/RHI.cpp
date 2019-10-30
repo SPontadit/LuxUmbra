@@ -786,7 +786,7 @@ namespace lux::rhi
 		// Albedo
 		VkDescriptorImageInfo materialAlbedoDescriptorImageInfo = {};
 		materialAlbedoDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		materialAlbedoDescriptorImageInfo.sampler = forward.sampler;
+		materialAlbedoDescriptorImageInfo.sampler = material.albedo->sampler;
 		materialAlbedoDescriptorImageInfo.imageView = material.albedo->image.imageView;
 
 		VkWriteDescriptorSet writeMaterialAlbedoDescriptorSet = {};
@@ -801,7 +801,7 @@ namespace lux::rhi
 		// Normal
 		VkDescriptorImageInfo materialNormalDescriptorImageInfo = {};
 		materialNormalDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		materialNormalDescriptorImageInfo.sampler = forward.sampler;
+		materialNormalDescriptorImageInfo.sampler = material.normal->sampler;
 		materialNormalDescriptorImageInfo.imageView = material.normal->image.imageView;
 
 		VkWriteDescriptorSet writeMaterialNormalDescriptorSet = {};
@@ -817,7 +817,7 @@ namespace lux::rhi
 
 		VkDescriptorImageInfo materialMetallicRoughnessDescriptorImageInfo = {};
 		materialMetallicRoughnessDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		materialMetallicRoughnessDescriptorImageInfo.sampler = forward.sampler;
+		materialMetallicRoughnessDescriptorImageInfo.sampler = material.metallicRoughness->sampler;
 		materialMetallicRoughnessDescriptorImageInfo.imageView = material.metallicRoughness->image.imageView;
 
 		VkWriteDescriptorSet writeMaterialMetallicRoughnessDescriptorSet = {};
@@ -832,7 +832,7 @@ namespace lux::rhi
 		// Ambient Occlusion
 		VkDescriptorImageInfo materialAmbientOcclusionDescriptorImageInfo = {};
 		materialAmbientOcclusionDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		materialAmbientOcclusionDescriptorImageInfo.sampler = forward.sampler;
+		materialAmbientOcclusionDescriptorImageInfo.sampler = material.ambientOcclusion->sampler;
 		materialAmbientOcclusionDescriptorImageInfo.imageView = material.ambientOcclusion->image.imageView;
 
 		VkWriteDescriptorSet writeMaterialAmbientOcclusionDescriptorSet = {};
@@ -975,7 +975,7 @@ namespace lux::rhi
 		EndSingleTimeCommandBuffer(commandBuffer);
 	}
 
-	void RHI::CommandTransitionImageLayout(VkCommandBuffer commandBuffer, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t layerCount, uint32_t levelCount) noexcept
+	void RHI::CommandTransitionImageLayout(VkCommandBuffer commandBuffer, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t layerCount, uint32_t levelCount, uint32_t baseMipLevel) noexcept
 	{
 		VkImageMemoryBarrier imageMemoryBarrier = {};
 		imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -984,7 +984,7 @@ namespace lux::rhi
 		imageMemoryBarrier.image = image;
 		imageMemoryBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		imageMemoryBarrier.subresourceRange.levelCount = levelCount;
-		imageMemoryBarrier.subresourceRange.baseMipLevel = 0;
+		imageMemoryBarrier.subresourceRange.baseMipLevel = baseMipLevel;
 		imageMemoryBarrier.subresourceRange.layerCount = layerCount;
 		imageMemoryBarrier.subresourceRange.baseArrayLayer = 0;
 		imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;

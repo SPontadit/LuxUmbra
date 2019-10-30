@@ -42,8 +42,8 @@ namespace lux::resource
 		//BuildPrimitiveMeshes();
 		LoadPrimitiveMehes();
 
-		defaultWhite = LoadTexture("data/textures/DefaultWhite.jpg", true);
-		defaultNormalMap = LoadTexture("data/textures/DefaultNormalMap.jpg", true);
+		defaultWhite = LoadTexture("data/textures/DefaultWhite.jpg", false, true);
+		defaultNormalMap = LoadTexture("data/textures/DefaultNormalMap.jpg", false, true);
 	}
 
 	std::shared_ptr<Material> ResourceManager::GetMaterial(const std::string& materialName) noexcept
@@ -350,7 +350,7 @@ namespace lux::resource
 		return mesh;
 	}
 
-	std::shared_ptr<Texture> ResourceManager::LoadTexture(const std::string& filename, bool isPrimitive) noexcept
+	std::shared_ptr<Texture> ResourceManager::LoadTexture(const std::string& filename, bool generateMipMap, bool isPrimitive) noexcept
 	{
 		std::shared_ptr<Texture> texture = std::make_shared<Texture>();
 
@@ -367,12 +367,13 @@ namespace lux::resource
 		imageCI.arrayLayers = 1;
 		imageCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		imageCI.subresourceRangeLayerCount = 1;
-		imageCI.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		imageCI.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 		imageCI.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
 		imageCI.imageData = textureData;
 		imageCI.imageSize = imageSize;
+		imageCI.mipmapCount = static_cast<uint32_t>(std::floor(std::log2(std::max(textureWidth, textureHeight)))) + 1;
 
-		rhi.CreateImage(imageCI, texture->image);
+		rhi.CreateImage(imageCI, texture->image, &texture->sampler);
 
 		stbi_image_free(textureData);
 	
@@ -422,13 +423,13 @@ namespace lux::resource
 
 		for (; it != itE; ++it)
 		{
-			rhi.DestroyImage(it->second->image);
+			rhi.DestroyImage(it->second->image, &it->second->sampler);
 		}
 
 		textures.clear();
 
-		rhi.DestroyImage(defaultWhite->image);
-		rhi.DestroyImage(defaultNormalMap->image);
+		rhi.DestroyImage(defaultWhite->image, &defaultWhite->sampler);
+		rhi.DestroyImage(defaultNormalMap->image, &defaultNormalMap->sampler);
 
 		if (cubemap != nullptr)
 		{

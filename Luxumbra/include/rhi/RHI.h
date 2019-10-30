@@ -62,8 +62,11 @@ namespace lux::rhi
 		void DestroyBuffer(Buffer& buffer) noexcept;
 		
 		void CreateImage(const ImageCreateInfo& luxImageCI, Image& image) noexcept;
+		void CreateImage(const ImageCreateInfo& luxImageCI, Image& image, VkSampler* sampler) noexcept;
+		void GenerateMipChain(const ImageCreateInfo& luxImageCI, Image& image) noexcept;
 		void FillImage(const ImageCreateInfo& luxImageCI, Image& image) noexcept;
 		void DestroyImage(Image& image) noexcept;
+		void DestroyImage(Image& image, VkSampler* sampler) noexcept;
 
 		void CreateEnvMapDescriptorSet(Image& image) noexcept;
 		
@@ -184,7 +187,7 @@ namespace lux::rhi
 		VkCommandBuffer BeginSingleTimeCommandBuffer() const noexcept;
 		void EndSingleTimeCommandBuffer(VkCommandBuffer commandBuffer) const noexcept;
 
-		void CommandTransitionImageLayout(VkCommandBuffer, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t layerCount = 1, uint32_t levelCount = 1) noexcept;
+		void CommandTransitionImageLayout(VkCommandBuffer, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t layerCount = 1, uint32_t levelCount = 1, uint32_t baseMipLevel = 0) noexcept;
 		void CommandTransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) noexcept;
 
 		void CreateGraphicsPipeline(const GraphicsPipelineCreateInfo& luxGraphicsPipelineCI, GraphicsPipeline& graphicsPipeline) noexcept;

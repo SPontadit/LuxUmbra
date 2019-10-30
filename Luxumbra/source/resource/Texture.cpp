@@ -6,6 +6,7 @@ namespace lux::resource
 	using namespace lux;
 
 	Texture::Texture() noexcept
+		: sampler(VK_NULL_HANDLE)
 	{
 
 	}
