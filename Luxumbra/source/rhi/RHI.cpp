@@ -254,7 +254,7 @@ namespace lux::rhi
 				foundGraphicsQueue = true;
 			}
 
-			if (!foundComputeQueue && (queueFamilyProperties.queueFlags & VK_QUEUE_COMPUTE_BIT) && ((queueFamilyProperties.queueFlags & VK_QUEUE_COMPUTE_BIT) == 0))
+			if (!foundComputeQueue && (queueFamilyProperties.queueFlags & VK_QUEUE_COMPUTE_BIT) && ((queueFamilyProperties.queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0))
 			{
 				computeQueueIndex = i;
 				foundComputeQueue = true;
@@ -987,6 +987,8 @@ namespace lux::rhi
 		imageMemoryBarrier.subresourceRange.baseMipLevel = 0;
 		imageMemoryBarrier.subresourceRange.layerCount = layerCount;
 		imageMemoryBarrier.subresourceRange.baseArrayLayer = 0;
+		imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
 		VkPipelineStageFlagBits srcStageMask;
 		VkPipelineStageFlagBits dstStageMask;
@@ -1045,7 +1047,8 @@ namespace lux::rhi
 
 		case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
 			imageMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-			dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+			//dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+			dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 			break;
 
 		case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
