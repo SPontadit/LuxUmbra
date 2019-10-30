@@ -110,6 +110,7 @@ namespace lux::rhi
 		std::vector<VkSemaphore> acquireSemaphores;
 
 		std::vector<VkFence> fences;
+		VkFence IBLResourcesFence;
 
 		VkDescriptorPool imguiDescriptorPool;
 		VkDescriptorPool materialDescriptorPool;
@@ -152,6 +153,7 @@ namespace lux::rhi
 		void InitShadowMapperDescriptorPool() noexcept;
 		void InitShadowMapperDescriptorSets() noexcept;
 
+		void TMP_DestroyIBLResource() noexcept;
 		void GenerateIrradianceFromCubemapFS(const Image& cubemapSource, Image& irradiance) noexcept;
 		void GenerateIrradianceFromCubemapCS(const Image& cubemapSource, Image& irradiance) noexcept;
 		void GeneratePrefilteredFromCubemapFS(const Image& cubemapSource, Image& prefiltered) noexcept;

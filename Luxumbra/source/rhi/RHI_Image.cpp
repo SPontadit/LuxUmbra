@@ -4,6 +4,10 @@
 
 namespace lux::rhi
 {
+	std::vector<ComputePipeline> tmp_pipelines;
+	std::vector<VkCommandBuffer> tmp_commandBuffers;
+	std::vector<VkDescriptorPool> tmp_descriptorPools;
+	std::vector<VkImageView> tmp_imageViews;
 
 	Image::Image() noexcept
 		: image(VK_NULL_HANDLE), imageView(VK_NULL_HANDLE), memory(VK_NULL_HANDLE)
@@ -103,6 +107,21 @@ namespace lux::rhi
 		CommandTransitionImageLayout(image.image, VK_FORMAT_R8G8B8A8_UINT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	
 		DestroyBuffer(stagingBuffer);
+	}
+
+	void RHI::TMP_DestroyIBLResource() noexcept
+	{
+		for (size_t i = 0; i < tmp_pipelines.size(); ++i)
+			DestroyComputePipeline(tmp_pipelines[i]);
+	
+		for(auto& commandBuffer : tmp_commandBuffers)
+			vkFreeCommandBuffers(device, computeCommandPool, 1, &commandBuffer);
+	
+		for (auto& descriptorPool : tmp_descriptorPools)
+			vkDestroyDescriptorPool(device, descriptorPool, nullptr);
+
+		for (auto& imageView : tmp_imageViews)
+			vkDestroyImageView(device, imageView, nullptr);
 	}
 
 	void RHI::GenerateCubemapFromHDR(const Image& HDRSource, Image& cubemap) noexcept
@@ -362,15 +381,13 @@ namespace lux::rhi
 		submitInfo.pCommandBuffers = &compute.commandBuffer;
 
 		CHECK_VK(vkQueueSubmit(computeQueue, 1, &submitInfo, VK_NULL_HANDLE));
-		CHECK_VK(vkQueueWaitIdle(computeQueue));
 
-		DestroyComputePipeline(compute.pipeline);
-		vkDestroyDescriptorPool(device, compute.descriptorPool, nullptr);
-		vkFreeCommandBuffers(device, computeCommandPool, 1, &compute.commandBuffer);
-
+		tmp_pipelines.push_back(compute.pipeline);
+		tmp_descriptorPools.push_back(compute.descriptorPool);
+		tmp_commandBuffers.push_back(compute.commandBuffer);
 		for (size_t i = 0; i < mipmapCount; i++)
 		{
-			vkDestroyImageView(device, compute.imageViews[i], nullptr);
+			tmp_imageViews.push_back(compute.imageViews[i]);
 		}
 	}
 
@@ -604,15 +621,13 @@ namespace lux::rhi
 		submitInfo.pCommandBuffers = &compute.commandBuffer;
 
 		CHECK_VK(vkQueueSubmit(computeQueue, 1, &submitInfo, VK_NULL_HANDLE));
-		CHECK_VK(vkQueueWaitIdle(computeQueue));
 
-		DestroyComputePipeline(compute.pipeline);
-		vkDestroyDescriptorPool(device, compute.descriptorPool, nullptr);
-		vkFreeCommandBuffers(device, computeCommandPool, 1, &compute.commandBuffer);
-
+		tmp_pipelines.push_back(compute.pipeline);
+		tmp_descriptorPools.push_back(compute.descriptorPool);
+		tmp_commandBuffers.push_back(compute.commandBuffer);
 		for (size_t i = 0; i < mipmapCount; i++)
 		{
-			vkDestroyImageView(device, compute.imageViews[i], nullptr);
+			tmp_imageViews.push_back(compute.imageViews[i]);
 		}
 	}
 
@@ -1207,12 +1222,11 @@ namespace lux::rhi
 		submitInfo.commandBufferCount = 1;
 		submitInfo.pCommandBuffers = &compute.commandBuffer;
 
-		CHECK_VK(vkQueueSubmit(computeQueue, 1, &submitInfo, VK_NULL_HANDLE));
-		CHECK_VK(vkQueueWaitIdle(computeQueue));
+		CHECK_VK(vkQueueSubmit(computeQueue, 1, &submitInfo, IBLResourcesFence));
 
-		DestroyComputePipeline(compute.pipeline);
-		vkDestroyDescriptorPool(device, compute.descriptorPool, nullptr);
-		vkFreeCommandBuffers(device, computeCommandPool, 1, &compute.commandBuffer);
+		tmp_pipelines.push_back(compute.pipeline);
+		tmp_descriptorPools.push_back(compute.descriptorPool);
+		tmp_commandBuffers.push_back(compute.commandBuffer);
 	}
 
 	//void RHI::GenerateBRDFLutCompute(VkFormat format, uint32_t size, Image& BRDFLut) noexcept
