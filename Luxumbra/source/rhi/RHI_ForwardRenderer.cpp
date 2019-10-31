@@ -314,9 +314,13 @@ namespace lux::rhi
 		pointLightUniformDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		pointLightUniformDescriptorPoolSize.descriptorCount = swapchainImageCount;
 
-		VkDescriptorPoolSize shadowMapsDescriptorPoolSize = {};
-		shadowMapsDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		shadowMapsDescriptorPoolSize.descriptorCount = swapchainImageCount;
+		VkDescriptorPoolSize directionalLightShadowMapsDescriptorPoolSize = {};
+		directionalLightShadowMapsDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		directionalLightShadowMapsDescriptorPoolSize.descriptorCount = swapchainImageCount * DIRECTIONAL_LIGHT_MAX_COUNT;
+
+		VkDescriptorPoolSize pointLightShadowMapsDescriptorPoolSize = {};
+		pointLightShadowMapsDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		pointLightShadowMapsDescriptorPoolSize.descriptorCount = swapchainImageCount * POINT_LIGHT_MAX_COUNT;
 
 		VkDescriptorPoolSize irradianceMapDescriptorPoolSize = {};
 		irradianceMapDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -338,13 +342,14 @@ namespace lux::rhi
 		envMapUniformDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		envMapUniformDescriptorPoolSize.descriptorCount = swapchainImageCount;
 
-		std::array<VkDescriptorPoolSize, 10> descriptorPoolSizes = 
+		std::array<VkDescriptorPoolSize, 11> descriptorPoolSizes = 
 		{ 
 			blitInputDescriptorPoolSize, 
 			rtViewProjUniformDescriptorPoolSize, 
 			directionalLightUniformDescriptorPoolSize,
 			pointLightUniformDescriptorPoolSize,
-			shadowMapsDescriptorPoolSize,
+			directionalLightShadowMapsDescriptorPoolSize,
+			pointLightShadowMapsDescriptorPoolSize,
 			irradianceMapDescriptorPoolSize,
 			prefilteredMapDescriptorPoolSize,
 			BRDFLutMapDescriptorPoolSize,
@@ -408,41 +413,47 @@ namespace lux::rhi
 		rtViewProjDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		rtViewProjDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-		VkDescriptorSetLayoutBinding directionalLightDescriptorSetLayoutBinding = {};
-		directionalLightDescriptorSetLayoutBinding.binding = 1;
-		directionalLightDescriptorSetLayoutBinding.descriptorCount = 1;
-		directionalLightDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		directionalLightDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		VkDescriptorSetLayoutBinding directionalLightUniformDescriptorSetLayoutBinding = {};
+		directionalLightUniformDescriptorSetLayoutBinding.binding = 1;
+		directionalLightUniformDescriptorSetLayoutBinding.descriptorCount = 1;
+		directionalLightUniformDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		directionalLightUniformDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-		VkDescriptorSetLayoutBinding pointLightDescriptorSetLayoutBinding = {};
-		pointLightDescriptorSetLayoutBinding.binding = 2;
-		pointLightDescriptorSetLayoutBinding.descriptorCount = 1;
-		pointLightDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		pointLightDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		VkDescriptorSetLayoutBinding pointLightUniformDescriptorSetLayoutBinding = {};
+		pointLightUniformDescriptorSetLayoutBinding.binding = 2;
+		pointLightUniformDescriptorSetLayoutBinding.descriptorCount = 1;
+		pointLightUniformDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		pointLightUniformDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		VkDescriptorSetLayoutBinding directionalLightShadowMapsDescriptorSetLayoutBinding = {};
+		directionalLightShadowMapsDescriptorSetLayoutBinding.binding = 3;
+		directionalLightShadowMapsDescriptorSetLayoutBinding.descriptorCount = DIRECTIONAL_LIGHT_MAX_COUNT;
+		directionalLightShadowMapsDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		directionalLightShadowMapsDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		VkDescriptorSetLayoutBinding pointLightShadowMapsDescriptorSetLayoutBinding = {};
+		pointLightShadowMapsDescriptorSetLayoutBinding.binding = 4;
+		pointLightShadowMapsDescriptorSetLayoutBinding.descriptorCount = POINT_LIGHT_MAX_COUNT;
+		pointLightShadowMapsDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		pointLightShadowMapsDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 		VkDescriptorSetLayoutBinding irradianceMapDescriptorSetLayoutBinding = {};
-		irradianceMapDescriptorSetLayoutBinding.binding = 3;
+		irradianceMapDescriptorSetLayoutBinding.binding = 5;
 		irradianceMapDescriptorSetLayoutBinding.descriptorCount = 1;
 		irradianceMapDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		irradianceMapDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 		VkDescriptorSetLayoutBinding prefilteredMapDescriptorSetLayoutBinding = {};
-		prefilteredMapDescriptorSetLayoutBinding.binding = 4;
+		prefilteredMapDescriptorSetLayoutBinding.binding = 6;
 		prefilteredMapDescriptorSetLayoutBinding.descriptorCount = 1;
 		prefilteredMapDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		prefilteredMapDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 		VkDescriptorSetLayoutBinding BRDFLutDescriptorSetLayoutBinding = {};
-		BRDFLutDescriptorSetLayoutBinding.binding = 5;
+		BRDFLutDescriptorSetLayoutBinding.binding = 7;
 		BRDFLutDescriptorSetLayoutBinding.descriptorCount = 1;
 		BRDFLutDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		BRDFLutDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-		VkDescriptorSetLayoutBinding directionalShadowMapsDescriptorSetLayoutBinding = {};
-		directionalShadowMapsDescriptorSetLayoutBinding.binding = 6;
-		directionalShadowMapsDescriptorSetLayoutBinding.descriptorCount = DIRECTIONAL_LIGHT_MAX_COUNT;
-		directionalShadowMapsDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		directionalShadowMapsDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 		// Material Layout
 		VkDescriptorSetLayoutBinding materialParametersDescriptorSetLayoutBinding = {};
@@ -499,12 +510,13 @@ namespace lux::rhi
 		rtGraphicsPipelineCI.viewDescriptorSetLayoutBindings = 
 		{ 
 			rtViewProjDescriptorSetLayoutBinding, 
-			directionalLightDescriptorSetLayoutBinding, 
-			pointLightDescriptorSetLayoutBinding,
+			directionalLightUniformDescriptorSetLayoutBinding,
+			pointLightUniformDescriptorSetLayoutBinding,
+			directionalLightShadowMapsDescriptorSetLayoutBinding,
+			pointLightShadowMapsDescriptorSetLayoutBinding,
 			irradianceMapDescriptorSetLayoutBinding, 
 			prefilteredMapDescriptorSetLayoutBinding,
-			BRDFLutDescriptorSetLayoutBinding,
-			directionalShadowMapsDescriptorSetLayoutBinding
+			BRDFLutDescriptorSetLayoutBinding
 		};
 
 		rtGraphicsPipelineCI.materialDescriptorSetLayoutBindings = { materialParametersDescriptorSetLayoutBinding, materialAlbedoDescriptorSetLayoutBinding, materialNormalDescriptorSetLayoutBinding };
@@ -712,24 +724,6 @@ namespace lux::rhi
 		writePointLightDescriptorSet.dstArrayElement = 0;
 		writePointLightDescriptorSet.pBufferInfo = &pointLightDescriptorBufferInfo;
 
-		// Shadow map sampler
-		std::array<VkDescriptorImageInfo, DIRECTIONAL_LIGHT_MAX_COUNT> directionalShadowMapsImageDescriptorInfo;
-		for (size_t i = 0; i < DIRECTIONAL_LIGHT_MAX_COUNT; i++)
-		{
-			directionalShadowMapsImageDescriptorInfo[i].imageView = VK_NULL_HANDLE;
-			directionalShadowMapsImageDescriptorInfo[i].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-			directionalShadowMapsImageDescriptorInfo[i].sampler = forward.sampler;
-		}
-
-		VkWriteDescriptorSet writeShadowMapDescriptorSet = {};
-		writeShadowMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writeShadowMapDescriptorSet.descriptorCount = DIRECTIONAL_LIGHT_MAX_COUNT;
-		writeShadowMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		writeShadowMapDescriptorSet.dstBinding = 5;
-		writeShadowMapDescriptorSet.dstArrayElement = 0;
-		writeShadowMapDescriptorSet.pImageInfo = directionalShadowMapsImageDescriptorInfo.data();
-
-
 		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
 			rtViewProjDescriptorBufferInfo.buffer = forward.viewProjUniformBuffers[i].buffer;
@@ -741,13 +735,10 @@ namespace lux::rhi
 			pointLightDescriptorBufferInfo.buffer = pointLightUniformBuffers[i].buffer;
 			writePointLightDescriptorSet.dstSet = forward.rtViewDescriptorSets[i];
 
-			writeShadowMapDescriptorSet.dstSet = forward.rtViewDescriptorSets[i];
-
-			std::array<VkWriteDescriptorSet, 4> writeDescriptorSets = {
+			std::array<VkWriteDescriptorSet, 3> writeDescriptorSets = {
 				rtWriteViewProjDescriptorSet,
 				writeDirectionalLightDescriptorSet,
-				writePointLightDescriptorSet,
-				writeShadowMapDescriptorSet
+				writePointLightDescriptorSet
 			};
 
 			vkUpdateDescriptorSets(device, TO_UINT32_T(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
@@ -784,45 +775,6 @@ namespace lux::rhi
 		{
 			UpdateBuffer(materials[i]->buffer[currentFrame], &materials[i]->parameter);
 		}
-	}
-
-	void RHI::UpdateShadowMappingDescriptorInfo(int imageIndex, const std::vector<scene::LightNode*>& lights) noexcept
-	{
-		std::array<VkDescriptorImageInfo, DIRECTIONAL_LIGHT_MAX_COUNT> directionalShadowMapsImageDescriptorInfo;
-
-		size_t directionalLightCount = 0;
-
-		for(size_t i = 0; i < lights.size() && i < DIRECTIONAL_LIGHT_MAX_COUNT; i++)
-		{
-			scene::LightNode* light = lights[i];
-
-			if (light->GetType() == scene::LightType::LIGHT_TYPE_DIRECTIONAL)
-			{
-				directionalShadowMapsImageDescriptorInfo[directionalLightCount].imageView = shadowMapper.directionalShadowMaps[TO_SIZE_T(light->GetShadowMappingResourceIndex())].imageView;
-				directionalShadowMapsImageDescriptorInfo[directionalLightCount].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-				directionalShadowMapsImageDescriptorInfo[directionalLightCount].sampler = forward.sampler;
-
-				directionalLightCount++;
-			}
-		}
-
-		for (size_t i = directionalLightCount; i < DIRECTIONAL_LIGHT_MAX_COUNT; i++)
-		{
-			directionalShadowMapsImageDescriptorInfo[i].imageView = VK_NULL_HANDLE;
-			directionalShadowMapsImageDescriptorInfo[i].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-			directionalShadowMapsImageDescriptorInfo[i].sampler = forward.sampler;
-		}
-
-		VkWriteDescriptorSet writeDirectionalShadowMapsDescriptorSet = {};
-		writeDirectionalShadowMapsDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writeDirectionalShadowMapsDescriptorSet.descriptorCount = DIRECTIONAL_LIGHT_MAX_COUNT;
-		writeDirectionalShadowMapsDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		writeDirectionalShadowMapsDescriptorSet.dstBinding = 6;
-		writeDirectionalShadowMapsDescriptorSet.dstArrayElement = 0;
-		writeDirectionalShadowMapsDescriptorSet.pImageInfo = directionalShadowMapsImageDescriptorInfo.data();
-		writeDirectionalShadowMapsDescriptorSet.dstSet = forward.rtViewDescriptorSets[imageIndex];
-
-		vkUpdateDescriptorSets(device, 1, &writeDirectionalShadowMapsDescriptorSet, 0, nullptr);
 	}
 
 	void RHI::RenderForward(VkCommandBuffer commandBuffer, int imageIndex, const scene::CameraNode* camera, const std::vector<scene::MeshNode*>& meshes, const std::vector<scene::LightNode*>& lights) noexcept

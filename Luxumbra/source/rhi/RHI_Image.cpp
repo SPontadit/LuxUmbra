@@ -141,7 +141,7 @@ namespace lux::rhi
 		writeIrradianceMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		writeIrradianceMapDescriptorSet.descriptorCount = 1;
 		writeIrradianceMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		writeIrradianceMapDescriptorSet.dstBinding = 3;
+		writeIrradianceMapDescriptorSet.dstBinding = 5;
 		writeIrradianceMapDescriptorSet.dstArrayElement = 0;
 		writeIrradianceMapDescriptorSet.pImageInfo = &irradianceMapDescriptorImageInfo;
 
@@ -175,7 +175,7 @@ namespace lux::rhi
 		writePrefilteredMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		writePrefilteredMapDescriptorSet.descriptorCount = 1;
 		writePrefilteredMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		writePrefilteredMapDescriptorSet.dstBinding = 4;
+		writePrefilteredMapDescriptorSet.dstBinding = 6;
 		writePrefilteredMapDescriptorSet.dstArrayElement = 0;
 		writePrefilteredMapDescriptorSet.pImageInfo = &prefilteredMapDescriptorImageInfo;
 
@@ -633,7 +633,7 @@ namespace lux::rhi
 		writeBRDFLutDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		writeBRDFLutDescriptorSet.descriptorCount = 1;
 		writeBRDFLutDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		writeBRDFLutDescriptorSet.dstBinding = 5;
+		writeBRDFLutDescriptorSet.dstBinding = 7;
 		writeBRDFLutDescriptorSet.dstArrayElement = 0;
 		writeBRDFLutDescriptorSet.pImageInfo = &BRDFLutDescriptorImageInfo;
 

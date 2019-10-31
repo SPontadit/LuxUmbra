@@ -20,7 +20,6 @@
 
 namespace lux::rhi
 {
-//#define LIGHT_MAX_COUNT 64
 #define DIRECTIONAL_LIGHT_MAX_COUNT 4
 #define POINT_LIGHT_MAX_COUNT 64
 #define MATERIAL_MAX_SET 128
@@ -154,7 +153,7 @@ namespace lux::rhi
 		void InitForwardDescriptorSets() noexcept;
 		void InitForwardUniformBuffers() noexcept;
 
-		void RenderShadowMaps(VkCommandBuffer commandBuffer, int imageIndex, const std::vector<scene::LightNode*> lights, const std::vector<scene::MeshNode*>& meshes) noexcept;
+		void RenderShadowMaps(VkCommandBuffer commandBuffer/*, int imageIndex*/, const std::vector<scene::LightNode*> lights, const std::vector<scene::MeshNode*>& meshes) noexcept;
 		void RenderForward(VkCommandBuffer commandBuffer, int imageIndex, const scene::CameraNode* camera, const std::vector<scene::MeshNode*>& meshes, const std::vector<scene::LightNode*>& lights) noexcept;
 
 		void BuildLightUniformBuffers(size_t lightCount) noexcept;
@@ -163,7 +162,6 @@ namespace lux::rhi
 
 		void UpdateForwardUniformBuffers(const scene::CameraNode* camera, const std::vector<resource::Material*>& materials) noexcept;
 		void UpdateLightsUniformBuffers(const std::vector<scene::LightNode*>& lights) noexcept;
-		void UpdateShadowMappingDescriptorInfo(int imageIndex, const std::vector<scene::LightNode*>& lights) noexcept;
 
 		void DestroySwapchainRelatedResources() noexcept;
 		void DestroyShadowMapper() noexcept;

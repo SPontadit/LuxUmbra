@@ -17,7 +17,7 @@ layout(location = 0) out VsOut
 } vsOut;
 
 
-layout(binding = 0) uniform ViewProj
+layout(set = 0, binding = 0) uniform ViewProj
 {
 	mat4 view;
 	mat4 proj;

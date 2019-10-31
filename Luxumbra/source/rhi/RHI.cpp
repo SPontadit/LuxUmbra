@@ -508,7 +508,7 @@ namespace lux::rhi
 
 		CHECK_VK(vkBeginCommandBuffer(commandBuffer, &commandBufferBI));
 
-		RenderShadowMaps(commandBuffer, imageIndex, lights, meshes);
+		RenderShadowMaps(commandBuffer/*, imageIndex*/, lights, meshes);
 
 		RenderForward(commandBuffer, imageIndex, camera, meshes, lights);
 

@@ -138,9 +138,10 @@ namespace lux::rhi
 		vkDestroyRenderPass(device, shadowMapper.renderPass, nullptr);
 	}
 
-	void RHI::RenderShadowMaps(VkCommandBuffer commandBuffer, int imageIndex, const std::vector<scene::LightNode*> lights, const std::vector<scene::MeshNode*>& meshes) noexcept
+	void RHI::RenderShadowMaps(VkCommandBuffer commandBuffer/*, int imageIndex*/, const std::vector<scene::LightNode*> lights, const std::vector<scene::MeshNode*>& meshes) noexcept
 	{
 		std::array<DirectionalLightBuffer, DIRECTIONAL_LIGHT_MAX_COUNT> directionalLightBuffer;
+		std::array<VkDescriptorImageInfo, DIRECTIONAL_LIGHT_MAX_COUNT> directionalShadowMapsImageDescriptorInfo;
 
 		size_t directionalLightIndex = 0;
 		size_t pointLightIndex = 0;
@@ -217,8 +218,13 @@ namespace lux::rhi
 				DirectionalShadowMappingViewProjUniform viewProjUniform;
 				viewProjUniform.viewProj = lightsBuffer.viewProj;
 
-
 				UpdateBuffer(shadowMapper.directionalUniformBuffers[resourceIndex], &viewProjUniform);
+
+				// Update shadow maps descriptor
+
+				directionalShadowMapsImageDescriptorInfo[directionalLightIndex].imageView = shadowMapper.directionalShadowMaps[TO_SIZE_T(light->GetShadowMappingResourceIndex())].imageView;
+				directionalShadowMapsImageDescriptorInfo[directionalLightIndex].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+				directionalShadowMapsImageDescriptorInfo[directionalLightIndex].sampler = forward.sampler;
 
 				VkClearValue depthClearValue = {};
 				depthClearValue.depthStencil.depth = 1.f;
@@ -260,7 +266,21 @@ namespace lux::rhi
 			}
 		}
 
-		/**/
+		UpdateBuffer(directionalLightUniformBuffers[currentFrame], directionalLightBuffer.data());
+
+		VkWriteDescriptorSet writeDirectionalShadowMapsDescriptorSet = {};
+		writeDirectionalShadowMapsDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeDirectionalShadowMapsDescriptorSet.descriptorCount = TO_UINT32_T(directionalLightIndex);
+		writeDirectionalShadowMapsDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		writeDirectionalShadowMapsDescriptorSet.dstBinding = 3;
+		writeDirectionalShadowMapsDescriptorSet.dstArrayElement = 0;
+		writeDirectionalShadowMapsDescriptorSet.pImageInfo = directionalShadowMapsImageDescriptorInfo.data();
+		writeDirectionalShadowMapsDescriptorSet.dstSet = forward.rtViewDescriptorSets[currentFrame];
+
+		vkUpdateDescriptorSets(device, 1, &writeDirectionalShadowMapsDescriptorSet, 0, nullptr);
+
+		lightCountsPushConstant.directionalLightCount = TO_UINT32_T(directionalLightIndex);
+		lightCountsPushConstant.pointLightCount = 0;
 	}
 
 	int16_t RHI::CreateLightShadowMappingResources(scene::LightType lightType) noexcept
@@ -269,7 +289,7 @@ namespace lux::rhi
 		{
 		case scene::LightType::LIGHT_TYPE_DIRECTIONAL:
 		{
-			size_t newResourceIndex = shadowMapper.directionalShadowMaps.size() + 1;
+			size_t newResourceIndex = shadowMapper.directionalShadowMaps.size();
 
 			if (newResourceIndex > DIRECTIONAL_LIGHT_MAX_COUNT)
 				return -1;
