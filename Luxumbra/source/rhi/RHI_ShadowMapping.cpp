@@ -222,7 +222,7 @@ namespace lux::rhi
 
 				// Update shadow maps descriptor
 
-				directionalShadowMapsImageDescriptorInfo[directionalLightIndex].imageView = shadowMapper.directionalShadowMaps[TO_SIZE_T(light->GetShadowMappingResourceIndex())].imageView;
+				directionalShadowMapsImageDescriptorInfo[directionalLightIndex].imageView = shadowMapper.directionalShadowMaps[resourceIndex].imageView;
 				directionalShadowMapsImageDescriptorInfo[directionalLightIndex].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 				directionalShadowMapsImageDescriptorInfo[directionalLightIndex].sampler = forward.sampler;
 
