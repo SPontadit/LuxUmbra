@@ -2,6 +2,7 @@
 
 #include <array>
 #include <map>
+#include <chrono>
 
 #include "glm\gtc\matrix_transform.hpp"
 
@@ -378,8 +379,9 @@ namespace lux::rhi
 		CHECK_VK(vkCreateDescriptorPool(device, &descriptorPoolCI, nullptr, &forward.descriptorPool));
 	}
 
-	void RHI::InitForwardGraphicsPipelines() noexcept
+	void RHI::InitForwardGraphicsPipelines(bool useCache) noexcept
 	{
+
 		// Blit Graphics Pipeline
 		VkDescriptorSetLayoutBinding blitDescriptorSetLayoutBinding = {};
 		blitDescriptorSetLayoutBinding.binding = 0;
@@ -399,6 +401,7 @@ namespace lux::rhi
 		blitGraphicsPipelineCI.subpassIndex = 0;
 		blitGraphicsPipelineCI.binaryVertexFilePath = "data/shaders/blit/blit.vert.spv";
 		blitGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/blit/blit.frag.spv";
+		blitGraphicsPipelineCI.cacheFilePath = "data/pipelineCache/blitGraphics.bin";
 		blitGraphicsPipelineCI.vertexLayout = lux::VertexLayout::NO_VERTEX_LAYOUT;
 		blitGraphicsPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 		blitGraphicsPipelineCI.viewportWidth = TO_FLOAT(swapchainExtent.width);
@@ -507,6 +510,7 @@ namespace lux::rhi
 		rtGraphicsPipelineCI.subpassIndex = ForwardRenderer::FORWARD_SUBPASS_RENDER_TO_TARGET;
 		rtGraphicsPipelineCI.binaryVertexFilePath = "data/shaders/cameraSpaceLight/cameraSpaceLight.vert.spv";
 		rtGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/cameraSpaceLight/cameraSpaceLight.frag.spv";
+		rtGraphicsPipelineCI.cacheFilePath = "data/pipelineCache/rtGraphics.bin";
 		rtGraphicsPipelineCI.vertexLayout = lux::VertexLayout::VERTEX_FULL_LAYOUT;
 		rtGraphicsPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		rtGraphicsPipelineCI.viewportWidth = TO_FLOAT(swapchainExtent.width);
@@ -546,6 +550,7 @@ namespace lux::rhi
 
 		// Cutout Graphics Pipeline
 		rtGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/cameraSpaceLight/cameraSpaceLightCutout.frag.spv";
+		rtGraphicsPipelineCI.cacheFilePath = "data/pipelineCache/rtCutoutGraphics.bin";
 		rtGraphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_NONE;
 		rtGraphicsPipelineCI.disableColorWriteMask = true;
 		rtGraphicsPipelineCI.enableBlend = true;
@@ -555,6 +560,7 @@ namespace lux::rhi
 
 		// Front Face Transparent Graphics Pipeline
 		rtGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/cameraSpaceLight/cameraSpaceLight.frag.spv";
+		rtGraphicsPipelineCI.cacheFilePath = "data/pipelineCache/rtTransparentFrontGraphics.bin";
 		rtGraphicsPipelineCI.disableColorWriteMask = false;
 		rtGraphicsPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
 		rtGraphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_BACK_BIT;
@@ -564,6 +570,7 @@ namespace lux::rhi
 
 		// Back Face Transparent Graphics Pipeline
 		rtGraphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_FRONT_BIT;
+		rtGraphicsPipelineCI.cacheFilePath = "data/pipelineCache/rtTransparentBackGraphics.bin";
 
 		CreateGraphicsPipeline(rtGraphicsPipelineCI, forward.rtTransparentBackGraphicsPipeline);
 
@@ -586,6 +593,7 @@ namespace lux::rhi
 		envMapGraphicsPipelineCI.subpassIndex = ForwardRenderer::FORWARD_SUBPASS_RENDER_TO_TARGET;
 		envMapGraphicsPipelineCI.binaryVertexFilePath = "data/shaders/envMap/envMap.vert.spv";
 		envMapGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/envMap/envMap.frag.spv";
+		envMapGraphicsPipelineCI.cacheFilePath = "data/pipelineCache/rtEnvMapGraphics.bin";
 		envMapGraphicsPipelineCI.vertexLayout = lux::VertexLayout::VERTEX_BASIC_LAYOUT;
 		envMapGraphicsPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 		envMapGraphicsPipelineCI.viewportWidth = TO_FLOAT(swapchainExtent.width);
@@ -601,6 +609,8 @@ namespace lux::rhi
 		envMapGraphicsPipelineCI.viewDescriptorSetLayoutBindings = { envMapViewProjDescriptorSetLayoutBinding, envMapSamplerDescriptorSetLayoutBinding};
 	
 		CreateGraphicsPipeline(envMapGraphicsPipelineCI, forward.envMapGraphicsPipeline);
+
+
 	}
 
 	void RHI::InitForwardSampler() noexcept

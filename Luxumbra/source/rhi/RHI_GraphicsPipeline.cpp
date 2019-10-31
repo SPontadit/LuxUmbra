@@ -1,6 +1,7 @@
 #include "rhi\RHI.h"
 
 #include <array>
+#include <fstream>
 
 #include "utility\Utility.h"
 #include "Vertex.h"
@@ -12,7 +13,7 @@ namespace lux::rhi
 	using namespace lux;
 
 	GraphicsPipeline::GraphicsPipeline() noexcept
-		: pipeline(VK_NULL_HANDLE), pipelineLayout(VK_NULL_HANDLE), 
+		: pipeline(VK_NULL_HANDLE), cache(VK_NULL_HANDLE), pipelineLayout(VK_NULL_HANDLE), 
 		viewDescriptorSetLayout(VK_NULL_HANDLE), materialDescriptorSetLayout(VK_NULL_HANDLE), modelDescriptorSetLayout(VK_NULL_HANDLE)
 	{
 	
@@ -256,12 +257,154 @@ namespace lux::rhi
 		pipelineCI.basePipelineHandle = VK_NULL_HANDLE;
 		pipelineCI.basePipelineIndex = -1;
 
-		CHECK_VK(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineCI, nullptr, &graphicsPipeline.pipeline));
+		CreateGraphicsPipelineCache(luxGraphicsPipelineCI.cacheFilePath, graphicsPipeline);
+
+		CHECK_VK(vkCreateGraphicsPipelines(device, graphicsPipeline.cache, 1, &pipelineCI, nullptr, &graphicsPipeline.pipeline));
 	
+		GetGraphicsPipelineCache(luxGraphicsPipelineCI.cacheFilePath, graphicsPipeline);
+
 		if (useVertexShaderStage)
 			vkDestroyShaderModule(device, vertexShaderModule, nullptr);
 		if (useFragmentShaderStage)
 			vkDestroyShaderModule(device, fragmentShaderModule, nullptr);
+	}
+
+	void RHI::CreateGraphicsPipelineCache(const std::string& cacheFilePath, GraphicsPipeline& graphicsPipeline) noexcept
+	{
+		size_t startCacheSize = 0;
+		void* startCacheData = nullptr;
+
+		FILE* readFile;
+		fopen_s(&readFile, cacheFilePath.c_str(), "rb");
+
+		if (readFile)
+		{
+			fseek(readFile, 0, SEEK_END);
+			startCacheSize = ftell(readFile);
+			rewind(readFile);
+		
+			startCacheData = (char*)malloc(sizeof(char) * startCacheSize);
+			if (startCacheData == nullptr)
+			{
+				Logger::Log(LogLevel::LOG_LEVEL_WARNING, "Pipeline Cache Error");
+				return;
+			}
+
+			size_t result = fread(startCacheData, 1, startCacheSize, readFile);
+			if (result != startCacheSize)
+			{
+				free(startCacheData);
+				Logger::Log(LogLevel::LOG_LEVEL_WARNING, "Pipeline Cache Error");
+				return;
+			}
+
+			fclose(readFile);
+			Logger::Log(LogLevel::LOG_LEVEL_INFO, "Pipeline Cache Loaded");
+		}
+		else
+		{
+			Logger::Log(LogLevel::LOG_LEVEL_WARNING, "No Pipeline Cache Found");
+		}
+
+		if (startCacheData != nullptr)
+		{
+			uint32_t headerLength = 0;
+			uint32_t cacheHeaderVersion = 0;
+			uint32_t vendorID = 0;
+			uint32_t deviceID = 0;
+			uint8_t pipelineCacheUUID[VK_UUID_SIZE] = {};
+
+			memcpy(&headerLength, (uint8_t *)startCacheData + 0, 4);
+			memcpy(&cacheHeaderVersion, (uint8_t *)startCacheData + 4, 4);
+			memcpy(&vendorID, (uint8_t *)startCacheData + 8, 4);
+			memcpy(&deviceID, (uint8_t *)startCacheData + 12, 4);
+			memcpy(pipelineCacheUUID, (uint8_t *)startCacheData + 16, VK_UUID_SIZE);
+		
+			bool badCache = false;
+
+			if (headerLength <= 0)
+			{
+				badCache = true;
+				Logger::Log(LogLevel::LOG_LEVEL_WARNING, "Bad Header Lenght");
+			}
+			
+			if (cacheHeaderVersion != VK_PIPELINE_CACHE_HEADER_VERSION_ONE)
+			{
+				badCache = true;
+				Logger::Log(LogLevel::LOG_LEVEL_WARNING, "Bad Header Version");
+			}
+		
+			VkPhysicalDeviceProperties properties;
+			vkGetPhysicalDeviceProperties(physicalDevice, &properties);
+
+			if (vendorID != properties.vendorID)
+			{
+				badCache = true;
+				Logger::Log(LogLevel::LOG_LEVEL_WARNING, "Bad Vendor ID");
+			}
+
+			if (deviceID != properties.deviceID)
+			{
+				badCache = true;
+				Logger::Log(LogLevel::LOG_LEVEL_WARNING, "Bad Device ID");
+			}
+
+			if (memcmp(pipelineCacheUUID, properties.pipelineCacheUUID, sizeof(pipelineCacheUUID)) != 0)
+			{
+				badCache = true;
+				Logger::Log(LogLevel::LOG_LEVEL_WARNING, "UUID missmatch");
+			}
+
+			if (badCache)
+			{
+				free(startCacheData);
+				startCacheData = nullptr;
+				startCacheSize = 0;
+
+				if (remove(cacheFilePath.c_str()) != 0)
+				{
+					return;
+				}
+			}
+		}
+
+		VkPipelineCacheCreateInfo pipelineCacheCI = {};
+		pipelineCacheCI.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+		pipelineCacheCI.initialDataSize = startCacheSize;
+		pipelineCacheCI.pInitialData = startCacheData;
+		
+		CHECK_VK(vkCreatePipelineCache(device, &pipelineCacheCI, nullptr, &graphicsPipeline.cache));
+	}
+
+	void RHI::GetGraphicsPipelineCache(const std::string& cacheFilePath, GraphicsPipeline& graphicsPipeline) noexcept
+	{
+		if (cacheFilePath.empty())
+			return;
+
+		size_t endCacheSize = 0;
+		void* endCacheData = nullptr;
+
+		CHECK_VK(vkGetPipelineCacheData(device, graphicsPipeline.cache, &endCacheSize, nullptr));
+		endCacheData = (char*)malloc(sizeof(char) * endCacheSize);
+		CHECK_VK(vkGetPipelineCacheData(device, graphicsPipeline.cache, &endCacheSize, endCacheData));
+
+		std::ofstream file;
+		file.open(cacheFilePath, std::ios::binary | std::ios::out);
+		//FILE* writeFile;
+		//fopen_s(&writeFile, "data/pipelineCache/blitGraphics.bin", "wb");
+
+		//if (writeFile)
+		//if (file.is_open())
+		{
+			file.write((char*)endCacheData, endCacheSize);
+			file.close();
+			//fwrite(endCacheData, sizeof(char), endCacheSize, writeFile);
+			//fclose(writeFile);
+		}
+		//else
+		//{
+		//	Logger::Log(LogLevel::LOG_LEVEL_WARNING, "Failed to write pipeline cache on disk");
+		//}
 	}
 
 	void RHI::CreateShaderModule(const std::string& binaryFilePath, VkShaderModule* shaderModule) const noexcept
@@ -279,6 +422,7 @@ namespace lux::rhi
 	void RHI::DestroyGraphicsPipeline(GraphicsPipeline& graphicsPipeline) noexcept
 	{
 		vkDestroyPipeline(device, graphicsPipeline.pipeline, nullptr);
+		vkDestroyPipelineCache(device, graphicsPipeline.cache, nullptr);
 		vkDestroyPipelineLayout(device, graphicsPipeline.pipelineLayout, nullptr);
 		vkDestroyDescriptorSetLayout(device, graphicsPipeline.viewDescriptorSetLayout, nullptr);
 		vkDestroyDescriptorSetLayout(device, graphicsPipeline.materialDescriptorSetLayout, nullptr);
