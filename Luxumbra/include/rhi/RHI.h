@@ -191,7 +191,7 @@ namespace lux::rhi
 		void CommandTransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) noexcept;
 
 		void CreateGraphicsPipeline(const GraphicsPipelineCreateInfo& luxGraphicsPipelineCI, GraphicsPipeline& graphicsPipeline) noexcept;
-		void GetGraphicsPipelineCache(const std::string& cacheFilePath, GraphicsPipeline& graphicsPipeline) noexcept;
+		void WriteGraphicsPipelineCacheOnDisk(const std::string& cacheFilePath, GraphicsPipeline& graphicsPipeline) noexcept;
 		void CreateGraphicsPipelineCache(const std::string& pipelineCacheFilePath, GraphicsPipeline& graphicsPipeline) noexcept;
 		void CreateShaderModule(const std::string& binaryFilePath, VkShaderModule* shaderModule) const noexcept;
 		void DestroyGraphicsPipeline(GraphicsPipeline& graphicsPipeline) noexcept;
