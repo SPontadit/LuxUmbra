@@ -39,6 +39,7 @@ namespace lux::rhi
 
 		VkDescriptorPool descriptorPool;
 
+		Image dummyDirectionalShadowMap;
 		std::vector<Image> directionalShadowMaps;
 		std::vector<VkFramebuffer> directionalFramebuffers;
 		std::vector<Buffer> directionalUniformBuffers;

@@ -9,14 +9,40 @@ namespace lux::rhi
 	using namespace lux;
 
 	ShadowMapper::ShadowMapper() noexcept
-		: renderPass(VK_NULL_HANDLE),
-		directionalShadowMaps(0), directionalFramebuffers(0),
+		: renderPass(VK_NULL_HANDLE), directionalShadowMappingPipeline(), descriptorPool(VK_NULL_HANDLE),
+		dummyDirectionalShadowMap(), directionalShadowMaps(0), directionalFramebuffers(0),
 		directionalUniformBuffers(0), directionalUniformBufferDescriptorSets(0),
 		pointShadowMaps(0), pointFramebuffers(0),
-		pointUniformBuffers(0), pointUniformBufferDescriptorSets(0),
-		directionalShadowMappingPipeline()
+		pointUniformBuffers(0), pointUniformBufferDescriptorSets(0)
 	{
 
+	}
+
+	void RHI::InitShadowMapperDefaultResources() noexcept
+	{
+		ImageCreateInfo dummyDirectionalShadowMapImageCI = {};
+		dummyDirectionalShadowMapImageCI.format = depthImageFormat;
+		dummyDirectionalShadowMapImageCI.width = 2;
+		dummyDirectionalShadowMapImageCI.height = 2;
+		dummyDirectionalShadowMapImageCI.arrayLayers = 1;
+		dummyDirectionalShadowMapImageCI.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+		dummyDirectionalShadowMapImageCI.subresourceRangeLayerCount = 1;
+		dummyDirectionalShadowMapImageCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+		dummyDirectionalShadowMapImageCI.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
+
+		CreateImage(dummyDirectionalShadowMapImageCI, shadowMapper.dummyDirectionalShadowMap);
+
+		CommandTransitionImageLayout(shadowMapper.dummyDirectionalShadowMap.image, depthImageFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+
+		shadowMapper.directionalShadowMaps.reserve(DIRECTIONAL_LIGHT_MAX_COUNT);
+		shadowMapper.directionalFramebuffers.reserve(DIRECTIONAL_LIGHT_MAX_COUNT);
+		shadowMapper.directionalUniformBuffers.reserve(DIRECTIONAL_LIGHT_MAX_COUNT);
+		shadowMapper.directionalUniformBufferDescriptorSets.reserve(DIRECTIONAL_LIGHT_MAX_COUNT);
+
+		shadowMapper.pointShadowMaps.reserve(POINT_LIGHT_MAX_COUNT);
+		shadowMapper.pointFramebuffers.reserve(POINT_LIGHT_MAX_COUNT);
+		shadowMapper.pointUniformBuffers.reserve(POINT_LIGHT_MAX_COUNT);
+		shadowMapper.pointUniformBufferDescriptorSets.reserve(POINT_LIGHT_MAX_COUNT);
 	}
 
 	void RHI::InitShadowMapperRenderPass() noexcept
@@ -51,16 +77,6 @@ namespace lux::rhi
 
 	void RHI::InitShadowMapperPipelines() noexcept
 	{
-		shadowMapper.directionalShadowMaps.reserve(DIRECTIONAL_LIGHT_MAX_COUNT);
-		shadowMapper.directionalFramebuffers.reserve(DIRECTIONAL_LIGHT_MAX_COUNT);
-		shadowMapper.directionalUniformBuffers.reserve(DIRECTIONAL_LIGHT_MAX_COUNT);
-		shadowMapper.directionalUniformBufferDescriptorSets.reserve(DIRECTIONAL_LIGHT_MAX_COUNT);
-
-		shadowMapper.pointShadowMaps.reserve(POINT_LIGHT_MAX_COUNT);
-		shadowMapper.pointFramebuffers.reserve(POINT_LIGHT_MAX_COUNT);
-		shadowMapper.pointUniformBuffers.reserve(POINT_LIGHT_MAX_COUNT);
-		shadowMapper.pointUniformBufferDescriptorSets.reserve(POINT_LIGHT_MAX_COUNT);
-
 		VkDescriptorSetLayoutBinding viewProjUniformBufferDescriptorSetLayoutBinding = {};
 		viewProjUniformBufferDescriptorSetLayoutBinding.binding = 0;
 		viewProjUniformBufferDescriptorSetLayoutBinding.descriptorCount = 1;
@@ -175,7 +191,6 @@ namespace lux::rhi
 				glm::mat4 inverseLightTransform = glm::inverse(lightTransform);
 
 				for (size_t j = 0; j < meshCount; j++)
-				//for (size_t j = 1; j < meshCount; j += 2)
 				{
 					scene::MeshNode* meshNode = meshes[j];
 
@@ -183,21 +198,9 @@ namespace lux::rhi
 
 					AABB meshAABB = meshNode->GetMesh().aabb;
 
-					//scene::MeshNode* meshAABBDebugBox = meshes[TO_SIZE_T(j + 1)];
-					//
-					//glm::vec3 aabbCenter = (meshAABB.min + meshAABB.max) * 0.5f;
-					//meshAABBDebugBox->SetLocalPosition(meshNode->GetLocalPosition() + ::glm::rotate(glm::quat(meshNode->GetLocalRotation()), aabbCenter));
-					//meshAABBDebugBox->SetLocalRotation(meshNode->GetLocalRotation());
-					//
-					//float aabbx = meshAABB.max.x - meshAABB.min.x;
-					//float aabby = meshAABB.max.y - meshAABB.min.y;
-					//float aabbz = meshAABB.max.z - meshAABB.min.z;
-					//meshAABBDebugBox->SetLocalScale(glm::vec3(aabbx, aabby, aabbz) * meshNode->GetLocalScale() * aabbDebugBoxScaleFactor);
-
 					meshAABB.Transform(localtoLightTransform);
 
 					if (j == 0)
-					//if (j == 1)
 						lightAABB = meshAABB;
 					else
 						lightAABB.MakeFit(meshAABB);
@@ -209,9 +212,6 @@ namespace lux::rhi
 				float aabby = (lightAABB.max.y - lightAABB.min.y) * 0.5f;
 				float aabbz = (lightAABB.max.z - lightAABB.min.z) * 0.5f;
 
-				//scene::MeshNode* lightAABBDebugBox = meshes[0];
-				//lightAABBDebugBox->SetLocalScale(glm::vec3(aabbx, aabby, aabbz) * aabbDebugBoxScaleFactor * 2.f);
-
 				glm::mat4 proj = glm::ortho(-aabbx, aabbx, -aabby, aabby, -aabbz, aabbz);
 				proj[1][1] *= -1.f;
 
@@ -219,9 +219,6 @@ namespace lux::rhi
 
 				glm::vec3 lightPos = (lightTransform * glm::vec4((lightAABB.min + lightAABB.max) * 0.5f, 1.0f)).xyz;
 				glm::vec3 lightDir = (lightTransform * glm::vec4(0.f, 0.f, -1.f, 1.f)).xyz;
-
-				//lightAABBDebugBox->SetLocalPosition(lightPos);
-				//lightAABBDebugBox->SetLocalRotation(light->GetLocalRotation());
 
 				glm::mat4 view = glm::lookAt(lightPos, lightPos + lightDir, glm::vec3(0.f, 1.f, 0.f));
 
@@ -244,9 +241,10 @@ namespace lux::rhi
 
 				// Update shadow maps descriptor
 
-				directionalShadowMapsImageDescriptorInfo[directionalLightIndex].imageView = shadowMapper.directionalShadowMaps[resourceIndex].imageView;
-				directionalShadowMapsImageDescriptorInfo[directionalLightIndex].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-				directionalShadowMapsImageDescriptorInfo[directionalLightIndex].sampler = forward.sampler;
+				VkDescriptorImageInfo& shadowMapDescriptorInfo = directionalShadowMapsImageDescriptorInfo[directionalLightIndex];
+				shadowMapDescriptorInfo.imageView = shadowMapper.directionalShadowMaps[resourceIndex].imageView;
+				shadowMapDescriptorInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+				shadowMapDescriptorInfo.sampler = forward.sampler;
 
 				VkClearValue depthClearValue = {};
 				depthClearValue.depthStencil.depth = 1.f;
@@ -290,9 +288,10 @@ namespace lux::rhi
 
 		for (; directionalLightIndex < DIRECTIONAL_LIGHT_MAX_COUNT; directionalLightIndex++)
 		{
-			directionalLightBuffer[directionalLightIndex] = directionalLightBuffer[0];
-
-			directionalShadowMapsImageDescriptorInfo[directionalLightIndex] = directionalShadowMapsImageDescriptorInfo[0];
+			VkDescriptorImageInfo& shadowMapDescriptorInfo = directionalShadowMapsImageDescriptorInfo[directionalLightIndex];
+			shadowMapDescriptorInfo.imageView = shadowMapper.dummyDirectionalShadowMap.imageView;
+			shadowMapDescriptorInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+			shadowMapDescriptorInfo.sampler = forward.sampler;
 		}
 
 		UpdateBuffer(directionalLightUniformBuffers[currentFrame], directionalLightBuffer.data());

@@ -141,6 +141,7 @@ namespace lux::rhi
 		void InitSwapchain() noexcept;
 		void InitCommandBuffer() noexcept;
 
+		void InitShadowMapperDefaultResources() noexcept;
 		void InitShadowMapperRenderPass() noexcept;
 		void InitShadowMapperPipelines() noexcept;
 		void InitShadowMapperDescriptorPool() noexcept;
