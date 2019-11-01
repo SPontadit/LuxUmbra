@@ -57,16 +57,22 @@ int main(int ac, char* av[])
 
 	scene.AddCameraNode(nullptr, { 0.f, 1.f, 5.f }, { 0.f, 0.f, 0.f }, false, 45.f, 0.01f, 1000.f, true);
 
+	//scene.AddMeshNode(nullptr, { 0.f, 0.f, 0.f }, { 0.f, 0.f, 0.f }, false, lux::resource::MeshPrimitive::MESH_CUBE_PRIMITIVE, "debug_box");
+
 	lux::scene::MeshNode* plane = scene.AddMeshNode(nullptr, glm::vec3(0.f, 1.f, -2.f), glm::radians(glm::vec3(0.f, 90.f, 0.f)), false, "data/models/Plane.fbx", "White");
 	plane->SetLocalScale(glm::vec3(0.01f, 0.01f, 0.01f));
+	//scene.AddMeshNode(nullptr, { 0.f, 0.f, 0.f }, { 0.f, 0.f, 0.f }, false, lux::resource::MeshPrimitive::MESH_CUBE_PRIMITIVE, "debug_box");
 
 	plane = scene.AddMeshNode(nullptr, glm::vec3(-2.f, 1.f, 0.f), glm::radians(glm::vec3(0.f, 180.f, 0.f)), false, "data/models/Plane.fbx", "White");
 	plane->SetLocalScale(glm::vec3(0.01f, 0.01f, 0.01f));
+	//scene.AddMeshNode(nullptr, { 0.f, 0.f, 0.f }, { 0.f, 0.f, 0.f }, false, lux::resource::MeshPrimitive::MESH_CUBE_PRIMITIVE, "debug_box");
 
 	plane = scene.AddMeshNode(nullptr, glm::vec3(2.f, 1.f, 0.f), glm::radians(glm::vec3(0.f, 0.f, 0.f)), false, "data/models/Plane.fbx", "White");
 	plane->SetLocalScale(glm::vec3(0.01f, 0.01f, 0.01f));
+	//scene.AddMeshNode(nullptr, { 0.f, 0.f, 0.f }, { 0.f, 0.f, 0.f }, false, lux::resource::MeshPrimitive::MESH_CUBE_PRIMITIVE, "debug_box");
 
 	scene.AddMeshNode(nullptr, glm::vec3(0.f), glm::vec3(0.f), false, "data/models/ironman.fbx", "ironman");
+	//scene.AddMeshNode(nullptr, { 0.f, 0.f, 0.f }, { 0.f, 0.f, 0.f }, false, lux::resource::MeshPrimitive::MESH_CUBE_PRIMITIVE, "debug_box");
 
 	scene.AddLightNode(nullptr, { 0.0f, 0.0f, -1.0f }, { 0.f, 0.f, 0.f }, false, lux::scene::LightType::LIGHT_TYPE_DIRECTIONAL, { 1.0f, 1.0f, 1.0f });
 

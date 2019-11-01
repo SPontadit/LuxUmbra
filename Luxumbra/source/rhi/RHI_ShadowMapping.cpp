@@ -151,6 +151,8 @@ namespace lux::rhi
 
 		VkDeviceSize vertexBufferOffsets[] = { 0 };
 
+		//float aabbDebugBoxScaleFactor = 1.f / 1.28f;
+
 		for (size_t i = 0; i < lightCount; i++)
 		{
 			scene::LightNode* light = lights[i];
@@ -173,15 +175,29 @@ namespace lux::rhi
 				glm::mat4 inverseLightTransform = glm::inverse(lightTransform);
 
 				for (size_t j = 0; j < meshCount; j++)
+				//for (size_t j = 1; j < meshCount; j += 2)
 				{
 					scene::MeshNode* meshNode = meshes[j];
 
 					glm::mat4 localtoLightTransform = inverseLightTransform * meshNode->GetWorldTransform();
 
 					AABB meshAABB = meshNode->GetMesh().aabb;
+
+					//scene::MeshNode* meshAABBDebugBox = meshes[TO_SIZE_T(j + 1)];
+					//
+					//glm::vec3 aabbCenter = (meshAABB.min + meshAABB.max) * 0.5f;
+					//meshAABBDebugBox->SetLocalPosition(meshNode->GetLocalPosition() + ::glm::rotate(glm::quat(meshNode->GetLocalRotation()), aabbCenter));
+					//meshAABBDebugBox->SetLocalRotation(meshNode->GetLocalRotation());
+					//
+					//float aabbx = meshAABB.max.x - meshAABB.min.x;
+					//float aabby = meshAABB.max.y - meshAABB.min.y;
+					//float aabbz = meshAABB.max.z - meshAABB.min.z;
+					//meshAABBDebugBox->SetLocalScale(glm::vec3(aabbx, aabby, aabbz) * meshNode->GetLocalScale() * aabbDebugBoxScaleFactor);
+
 					meshAABB.Transform(localtoLightTransform);
 
-					if (i == 0)
+					if (j == 0)
+					//if (j == 1)
 						lightAABB = meshAABB;
 					else
 						lightAABB.MakeFit(meshAABB);
@@ -189,9 +205,12 @@ namespace lux::rhi
 
 				// Compute ortho proj from light to ndc space
 
-				float aabbx = (lightAABB.max.x - lightAABB.min.x) * 0.5f + 1.f;
-				float aabby = (lightAABB.max.y - lightAABB.min.y) * 0.5f + 1.f;
-				float aabbz = (lightAABB.max.z - lightAABB.min.z) * 0.5f + 1.f;
+				float aabbx = (lightAABB.max.x - lightAABB.min.x) * 0.5f;
+				float aabby = (lightAABB.max.y - lightAABB.min.y) * 0.5f;
+				float aabbz = (lightAABB.max.z - lightAABB.min.z) * 0.5f;
+
+				//scene::MeshNode* lightAABBDebugBox = meshes[0];
+				//lightAABBDebugBox->SetLocalScale(glm::vec3(aabbx, aabby, aabbz) * aabbDebugBoxScaleFactor * 2.f);
 
 				glm::mat4 proj = glm::ortho(-aabbx, aabbx, -aabby, aabby, -aabbz, aabbz);
 				proj[1][1] *= -1.f;
@@ -200,6 +219,9 @@ namespace lux::rhi
 
 				glm::vec3 lightPos = (lightTransform * glm::vec4((lightAABB.min + lightAABB.max) * 0.5f, 1.0f)).xyz;
 				glm::vec3 lightDir = (lightTransform * glm::vec4(0.f, 0.f, -1.f, 1.f)).xyz;
+
+				//lightAABBDebugBox->SetLocalPosition(lightPos);
+				//lightAABBDebugBox->SetLocalRotation(light->GetLocalRotation());
 
 				glm::mat4 view = glm::lookAt(lightPos, lightPos + lightDir, glm::vec3(0.f, 1.f, 0.f));
 
@@ -245,7 +267,7 @@ namespace lux::rhi
 
 				ShadowMappingModelConstant shadowMappingModelConstant = {};
 
-				for (size_t j = 0; j < meshCount; j++)
+				for (size_t j = 1; j < meshCount; j += 2)
 				{
 					scene::MeshNode* meshNode = meshes[j];
 
@@ -266,11 +288,18 @@ namespace lux::rhi
 			}
 		}
 
+		for (; directionalLightIndex < DIRECTIONAL_LIGHT_MAX_COUNT; directionalLightIndex++)
+		{
+			directionalLightBuffer[directionalLightIndex] = directionalLightBuffer[0];
+
+			directionalShadowMapsImageDescriptorInfo[directionalLightIndex] = directionalShadowMapsImageDescriptorInfo[0];
+		}
+
 		UpdateBuffer(directionalLightUniformBuffers[currentFrame], directionalLightBuffer.data());
 
 		VkWriteDescriptorSet writeDirectionalShadowMapsDescriptorSet = {};
 		writeDirectionalShadowMapsDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writeDirectionalShadowMapsDescriptorSet.descriptorCount = TO_UINT32_T(directionalLightIndex);
+		writeDirectionalShadowMapsDescriptorSet.descriptorCount = DIRECTIONAL_LIGHT_MAX_COUNT;
 		writeDirectionalShadowMapsDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		writeDirectionalShadowMapsDescriptorSet.dstBinding = 3;
 		writeDirectionalShadowMapsDescriptorSet.dstArrayElement = 0;

@@ -63,16 +63,6 @@ layout(set = 1, binding = 0) uniform Material
 layout(set = 1, binding = 1) uniform sampler2D albedo;
 layout(set = 1, binding = 2) uniform sampler2D normalMap;
 
-//#define BASE_COLOR material.color.xyz
-//#define METALLIC material.color.w
-//#define PERCEPTUAL_ROUGHNESS material.parameter.x
-//#define REFLECTANCE material.parameter.y
-//layout(binding = 2) uniform Material
-//{
-//	vec4 color;
-//	vec4 parameter;
-//} material;
-
 const float PI = 3.1415926;
 
 float DirectionalShadow(vec4 shadowCoord, int shadowMapIndex);
@@ -97,10 +87,6 @@ void main()
 
 	float inv = gl_FrontFacing ? 1.0 : -1.0;
 
-//	vec3 viewWS = -fsIn.viewMatrix[3].xyz;
-//	vec3 viewDir = normalize(-fsIn.positionWS);
-//	viewDir = mat3(fsIn.viewMatrix) * viewDir;
-//	viewDir = normalize(viewDir);
 	vec3 viewDir = vec3(0.0, 0.0, 1.0);
 
 	vec3 normal = texture(normalMap, fsIn.textureCoordinateLS).rgb;
