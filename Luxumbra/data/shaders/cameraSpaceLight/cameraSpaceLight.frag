@@ -42,6 +42,8 @@ layout(set = 1, binding = 0) uniform Material
 	float metallic;
 	float perceptualRoughness;
 	float reflectance;
+	float clearCoat;
+	float clearCoatPerceptualRoughness;
 	int useTextureMask;
 } material;
 
@@ -73,6 +75,7 @@ vec3 RemapDiffuseColor(vec3 baseColor, float metallic);
 vec3 GetF0(float reflectance, float metallic, vec3 baseColor);
 float D_GGX(float VdotH, float roughness);
 float V_SmithGGXCorrelated(float NdotV, float NdotL, float roughness);
+float V_Kelement(float LdotH);
 vec3 F_Schlick(float NdotH, vec3 f0);
 float F_Schlick(float NdotH, float f0, float f90);
 vec3 F_SchlickRoughness(float VdotH, vec3 f0, float roughness);
@@ -179,10 +182,33 @@ vec4 CameraSpace()
 		vec3 specular = (D * V) * F;
 		vec3 Kdiff = vec3(1.0) - (F0 + (vec3(1.0) - F0) * pow(1.0 - NdotL, 5.0));
 
-		//vec3 directDiffuseColor = diffuseColor * Kdiff * Fd_Burley(NdotV, NdotL, LdotH, roughness);
-		vec3 directDiffuseColor = diffuseColor * Kdiff * Fd_Lambert();
+		vec3 directDiffuseColor = diffuseColor * Fd_Burley(NdotV, NdotL, LdotH, roughness);
+		//vec3 directDiffuseColor = diffuseColor * Kdiff * Fd_Lambert();
 
+
+		// Clear Coat
+		float clearCoatPerceptualRoughness = clamp(material.clearCoatPerceptualRoughness, 0.045, 1.0);
+		float clearCoatRoughness = clearCoatPerceptualRoughness * clearCoatPerceptualRoughness;
+
+		vec3 normalVS = normalize(mat3(fsIn.viewMatrix) * fsIn.normalWS);
+		float clearCoadtNdotH = max(dot(normalVS, h), 0.001);
+		float Dc = D_GGX(clearCoadtNdotH, clearCoatRoughness);
+		float Fc = F_Schlick(LdotH, 0.04, 1.0) * material.clearCoat;
+		float Vc = V_Kelement(LdotH);
+		
+		
+		float clearCoat = (Dc * Vc) * Fc;
+		float attenuation  = 1.0 - Fc;
+
+//		vec3 tmp_directColor = (directDiffuseColor + specular) * attenuation * clearCoat;
+//		float clearCoatNdotL = max(dot(normalVS, lightDir), 0.001);
+//		tmp_directColor += clearCoat * clearCoatNdotL;
+
+//		vec3 cc = ((diffuseColor + specular * (1.0 - Fc)) * (1.0 - Fc) + clearCoat);
 		directColor += (directDiffuseColor + specular) * radiance * NdotL;
+
+//		directColor += (tmp_directColor * radiance * NdotL);
+	
 	}
 
 	float shadow = Shadow(fsIn.shadowCoord / fsIn.shadowCoord.w);
@@ -257,6 +283,11 @@ float V_SmithGGXCorrelated(float NdotV, float NdotL, float roughness)
 	float lambdaL = NdotV * sqrt((-NdotL * a2 + NdotL) * NdotL + a2);
 
 	return 0.5 / (lambdaV + lambdaL);
+}
+
+float V_Kelement(float LdotH)
+{
+	return 0.25 / (LdotH * LdotH);
 }
 
 vec3 F_Schlick(float VdotH, vec3 f0)

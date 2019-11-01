@@ -30,6 +30,8 @@ namespace lux::resource
 		float metallic;
 		float perceptualRoughness;
 		float reflectance;
+		float clearCoat = 0.0f;
+		float clearCoatPerceptualRoughness = 0.045f;
 		bool isTransparent;
 		int textureMask;
 	};
@@ -40,6 +42,8 @@ namespace lux::resource
 		float metallic;
 		float perceptualRoughness;
 		float reflectance;
+		float clearCoat;
+		float clearCoatPerceptualRoughness;
 		int textureMask;
 	};
 

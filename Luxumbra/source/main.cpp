@@ -164,5 +164,6 @@ void TestSphere(lux::Engine& luxUmbra) noexcept
 	scene.AddLightNode(nullptr, { 0.0f, 1.0f, -1.0f }, { 0.f, 0.f, 0.f }, false, lux::scene::LightType::LIGHT_TYPE_POINT, { 0.0f, 0.0f, 0.0f });
 	scene.AddLightNode(nullptr, { 0.0f, 0.0f, 1.0f }, { 0.f, 0.f, 0.f }, false, lux::scene::LightType::LIGHT_TYPE_DIRECTIONAL, { 0.0f, 0.0f, 0.0f });
 
-	scene.AddCameraNode(nullptr, { 6.f, 3.f, 11.f }, { 0.f, 0.f, 0.f }, false, 45.f, 0.01f, 1000.f, true);
+	//scene.AddCameraNode(nullptr, { 6.f, 3.f, 11.f }, { 0.f, 0.f, 0.f }, false, 45.f, 0.01f, 1000.f, true);
+	scene.AddCameraNode(nullptr, { 1.f, 0.f, 3.f }, { 0.f, 0.f, 0.f }, false, 45.f, 0.01f, 1000.f, true);
 }
