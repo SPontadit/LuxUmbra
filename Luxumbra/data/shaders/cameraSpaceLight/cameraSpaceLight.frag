@@ -65,6 +65,7 @@ layout(set = 1, binding = 2) uniform sampler2D normalMap;
 
 const float PI = 3.1415926;
 
+vec3 DirectColor(vec3 lightDir, vec3 radiance, vec3 normal, float roughness, vec3 F0, float NdotV, vec3 diffuseColor, vec3 radiance, float shadow);
 float DirectionalShadow(vec4 shadowCoord, int shadowMapIndex);
 
 // PBR
@@ -102,48 +103,35 @@ void main()
 	vec3 diffuseColor = RemapDiffuseColor(baseColor, material.metallic);
 	vec3 F0 = GetF0(material.reflectance, material.metallic, baseColor);
 
-	for(int i = 0; i < pushConsts.directionalLightCount; ++i)
+	vec3 lightDir;
+	vec3 radiance;
+	float shadow;
+
+	// Directional lights
+	for(int i = 0; i < pushConsts.directionalLightCount; i++)
 	{
-		vec3 lightDir;
-		vec3 radiance;
-		float shadow;
+		lightDir = normalize(mat3(fsIn.viewMatrix) * -directionalLights[i].direction);
+		radiance = directionalLights[i].color;
 
-		// Directional
-		//if(lights[i].parameter.w == 0.0)
-		{
-			lightDir = normalize(mat3(fsIn.viewMatrix) * -directionalLights[i].direction);
-			radiance = directionalLights[i].color;
+		vec4 shadowFragCord = directionalLights[i].viewProj * vec4(fsIn.positionWS, 1.0);
+		shadow = DirectionalShadow(shadowFragCord / shadowFragCord.w, i);
 
-			vec4 shadowFragCord = directionalLights[i].viewProj * vec4(fsIn.positionWS, 1.0);
-			shadow = DirectionalShadow(shadowFragCord / shadowFragCord.w, i);
-		}
-		/*else
-		{
-			vec3 lightPosVS = mat3(fsIn.viewMatrix) * (lights[i].parameter.xyz - fsIn.positionWS);
-			lightDir = normalize(lightPosVS);
-			float distance = length(lightPosVS);
-			float attenuation = 1.0 / (distance * distance);
-			
-			radiance = lights[i].color * attenuation;
-		}*/
+		directColor += DirectColor(lightDir, viewDir, normal, roughness, F0, NdotV, diffuseColor, radiance, shadow);
+	}
 
-		vec3 h = normalize(viewDir + lightDir);
-		float NdotH = max(dot(normal, h), 0.001);
-		float NdotL = max(dot(normal, lightDir), 0.001);
-		float LdotH = max(dot(lightDir, h), 0.001);
-		float VdotH = max(dot(viewDir, h), 0.001);
+	// Point lights
+	for (int i = 0; i < pushConsts.pointLightCount; i++)
+	{
+		vec3 lightPosVS = mat3(fsIn.viewMatrix) * (pointLights[i].position - fsIn.positionWS);
+		lightDir = normalize(lightPosVS);
+		float distance = length(lightPosVS);
+		float attenuation = 1.0 / (distance * distance);
+		
+		radiance = pointLights[i].color * attenuation;
 
-		float D = D_GGX(NdotH, roughness);
-		vec3 F = F_Schlick(LdotH, F0);
-		float V = V_SmithGGXCorrelated(NdotV, NdotL, roughness);
+		shadow = 1.0;
 
-		vec3 specular = (D * V) * F;
-		vec3 Kdiff = vec3(1.0) - (F0 + (vec3(1.0) - F0) * pow(1.0 - NdotL, 5.0));
-
-		//vec3 directDiffuseColor = diffuseColor * Kdiff * Fd_Burley(NdotV, NdotL, LdotH, roughness);
-		vec3 directDiffuseColor = diffuseColor * Kdiff * Fd_Lambert();
-
-		directColor += (directDiffuseColor + specular) * radiance * NdotL * shadow;
+		directColor += DirectColor(lightDir, viewDir, normal, roughness, F0, NdotV, diffuseColor, radiance, shadow);
 	}
 
 	viewDir = -fsIn.viewMatrix[3].xyz  * mat3(fsIn.viewMatrix);
@@ -187,6 +175,27 @@ vec3 getNormalFromMap()
     mat3 TBN = mat3(T, B, N);
 
     return normalize(TBN  * tangentNormal);
+}
+
+vec3 DirectColor(vec3 lightDir, vec3 viewDir, vec3 normal, float roughness, vec3 F0, float NdotV, vec3 diffuseColor, vec3 radiance, float shadow)
+{
+		vec3 h = normalize(viewDir + lightDir);
+		float NdotH = max(dot(normal, h), 0.001);
+		float NdotL = max(dot(normal, lightDir), 0.001);
+		float LdotH = max(dot(lightDir, h), 0.001);
+		float VdotH = max(dot(viewDir, h), 0.001);
+
+		float D = D_GGX(NdotH, roughness);
+		vec3 F = F_Schlick(LdotH, F0);
+		float V = V_SmithGGXCorrelated(NdotV, NdotL, roughness);
+
+		vec3 specular = (D * V) * F;
+		vec3 Kdiff = vec3(1.0) - (F0 + (vec3(1.0) - F0) * pow(1.0 - NdotL, 5.0));
+
+		//vec3 directDiffuseColor = diffuseColor * Kdiff * Fd_Burley(NdotV, NdotL, LdotH, roughness);
+		vec3 directDiffuseColor = diffuseColor * Kdiff * Fd_Lambert();
+
+		return (directDiffuseColor + specular) * radiance * NdotL * shadow;
 }
 
 float DirectionalShadow(vec4 shadowCoord, int shadowMapIndex)

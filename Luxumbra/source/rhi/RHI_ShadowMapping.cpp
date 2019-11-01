@@ -25,7 +25,7 @@ namespace lux::rhi
 		dummyDirectionalShadowMapImageCI.width = 2;
 		dummyDirectionalShadowMapImageCI.height = 2;
 		dummyDirectionalShadowMapImageCI.arrayLayers = 1;
-		dummyDirectionalShadowMapImageCI.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+		dummyDirectionalShadowMapImageCI.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 		dummyDirectionalShadowMapImageCI.subresourceRangeLayerCount = 1;
 		dummyDirectionalShadowMapImageCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 		dummyDirectionalShadowMapImageCI.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
@@ -121,6 +121,7 @@ namespace lux::rhi
 
 		VkDescriptorPoolCreateInfo descriptorPoolCI = {};
 		descriptorPoolCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		descriptorPoolCI.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 		descriptorPoolCI.poolSizeCount = 1;
 		descriptorPoolCI.pPoolSizes = &shadowMappingUniformBuffersDescriptorPoolSize;
 		descriptorPoolCI.maxSets = lightMaxCount;
@@ -152,12 +153,17 @@ namespace lux::rhi
 		DestroyGraphicsPipeline(shadowMapper.directionalShadowMappingPipeline);
 
 		vkDestroyRenderPass(device, shadowMapper.renderPass, nullptr);
+
+		DestroyImage(shadowMapper.dummyDirectionalShadowMap);
 	}
 
 	void RHI::RenderShadowMaps(VkCommandBuffer commandBuffer/*, int imageIndex*/, const std::vector<scene::LightNode*> lights, const std::vector<scene::MeshNode*>& meshes) noexcept
 	{
 		std::array<DirectionalLightBuffer, DIRECTIONAL_LIGHT_MAX_COUNT> directionalLightBuffer;
 		std::array<VkDescriptorImageInfo, DIRECTIONAL_LIGHT_MAX_COUNT> directionalShadowMapsImageDescriptorInfo;
+
+		std::array<PointLightBuffer, POINT_LIGHT_MAX_COUNT> pointLightBuffer;
+		//std::array<VkDescriptorImageInfo, POINT_LIGHT_MAX_COUNT> pointShadowMapsImageDescriptorInfo;
 
 		size_t directionalLightIndex = 0;
 		size_t pointLightIndex = 0;
@@ -181,7 +187,7 @@ namespace lux::rhi
 				if (directionalLightIndex > DIRECTIONAL_LIGHT_MAX_COUNT)
 					break;
 
-				DirectionalLightBuffer& lightsBuffer(directionalLightBuffer[directionalLightIndex]);
+				DirectionalLightBuffer& lightBufferEntry = directionalLightBuffer[directionalLightIndex];
 
 				// Compute AABB in light space that bounds the entire scene
 
@@ -224,9 +230,9 @@ namespace lux::rhi
 
 				// Update light UBO
 
-				lightsBuffer.direction = lightDir;
-				lightsBuffer.color = light->GetColor();
-				lightsBuffer.viewProj = proj * view;
+				lightBufferEntry.direction = lightDir;
+				lightBufferEntry.color = light->GetColor();
+				lightBufferEntry.viewProj = proj * view;
 
 				// RNEDER SHADOW MAP
 
@@ -235,7 +241,7 @@ namespace lux::rhi
 				// Update shadow mapping UBO
 
 				DirectionalShadowMappingViewProjUniform viewProjUniform;
-				viewProjUniform.viewProj = lightsBuffer.viewProj;
+				viewProjUniform.viewProj = lightBufferEntry.viewProj;
 
 				UpdateBuffer(shadowMapper.directionalUniformBuffers[resourceIndex], &viewProjUniform);
 
@@ -282,9 +288,25 @@ namespace lux::rhi
 
 				directionalLightIndex++;
 			}
+			break;
 
+			case scene::LightType::LIGHT_TYPE_POINT:
+			{
+				PointLightBuffer& lightBufferEntry = pointLightBuffer[pointLightIndex];
+
+				// Update light UBO
+
+				lightBufferEntry.position = light->GetWorldPosition();
+				lightBufferEntry.color = light->GetColor();
+
+				pointLightIndex++;
+			}
+			break;
 			}
 		}
+
+		lightCountsPushConstant.directionalLightCount = TO_UINT32_T(directionalLightIndex);
+		lightCountsPushConstant.pointLightCount = TO_UINT32_T(pointLightIndex);
 
 		for (; directionalLightIndex < DIRECTIONAL_LIGHT_MAX_COUNT; directionalLightIndex++)
 		{
@@ -295,6 +317,7 @@ namespace lux::rhi
 		}
 
 		UpdateBuffer(directionalLightUniformBuffers[currentFrame], directionalLightBuffer.data());
+		UpdateBuffer(pointLightUniformBuffers[currentFrame], pointLightBuffer.data());
 
 		VkWriteDescriptorSet writeDirectionalShadowMapsDescriptorSet = {};
 		writeDirectionalShadowMapsDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -306,9 +329,6 @@ namespace lux::rhi
 		writeDirectionalShadowMapsDescriptorSet.dstSet = forward.rtViewDescriptorSets[currentFrame];
 
 		vkUpdateDescriptorSets(device, 1, &writeDirectionalShadowMapsDescriptorSet, 0, nullptr);
-
-		lightCountsPushConstant.directionalLightCount = TO_UINT32_T(directionalLightIndex);
-		lightCountsPushConstant.pointLightCount = 0;
 	}
 
 	int16_t RHI::CreateLightShadowMappingResources(scene::LightType lightType) noexcept
