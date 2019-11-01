@@ -20,6 +20,7 @@ namespace lux::resource
 	{
 		MESH_SPHERE_PRIMITIVE = 0,
 		MESH_CUBE_PRIMITIVE = 1,
+		MESH_PLANE_PRIMITIVE = 2,
 		MESH_PRIMITIVE_COUNT
 	};
 
@@ -57,7 +58,7 @@ namespace lux::resource
 		void GenerateSphere(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, uint16_t horizSegments, uint16_t vertiSegments, float sphereScale = 1.f);
 
 		std::shared_ptr<Mesh> LoadMesh(const std::string& filename, float scale = 1.0f,  bool isPrimitive = false) noexcept;
-		std::shared_ptr<Texture> LoadTexture(const std::string& filename, bool isPrimitive = false) noexcept;
+		std::shared_ptr<Texture> LoadTexture(const std::string& filename, bool generateMipMap = true, bool isPrimitive = false) noexcept;
 
 		rhi::RHI& rhi;
 		

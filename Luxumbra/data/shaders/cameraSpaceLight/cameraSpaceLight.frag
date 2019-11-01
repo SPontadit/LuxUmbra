@@ -58,10 +58,16 @@ layout(set = 1, binding = 0) uniform Material
 	float metallic;
 	float perceptualRoughness;
 	float reflectance;
+	int useTextureMask;
 } material;
 
 layout(set = 1, binding = 1) uniform sampler2D albedo;
 layout(set = 1, binding = 2) uniform sampler2D normalMap;
+layout(set = 1, binding = 3) uniform sampler2D metallicRoughnessMap;
+layout(set = 1, binding = 4) uniform sampler2D ambientOcclusionMap;
+
+#define ROUGHNESS_MASK 0x01
+#define METALLIC_MASK 0x02
 
 const float PI = 3.1415926;
 
@@ -99,9 +105,11 @@ void main()
 	vec3 baseColor = pow(textureColor.rgb * material.baseColor, vec3(2.2));
 	baseColor *= textureColor.a;
 
-	float roughness = material.perceptualRoughness * material.perceptualRoughness;
-	vec3 diffuseColor = RemapDiffuseColor(baseColor, material.metallic);
-	vec3 F0 = GetF0(material.reflectance, material.metallic, baseColor);
+	float perceptualRoughness = (material.useTextureMask & ROUGHNESS_MASK) == ROUGHNESS_MASK ? texture(metallicRoughnessMap, fsIn.textureCoordinateLS).g : material.perceptualRoughness;
+	float roughness = perceptualRoughness * perceptualRoughness;
+	float metallic = (material.useTextureMask & METALLIC_MASK) == METALLIC_MASK ? texture(metallicRoughnessMap, fsIn.textureCoordinateLS).b : material.metallic;
+	vec3 diffuseColor = RemapDiffuseColor(baseColor, metallic);
+	vec3 F0 = GetF0(material.reflectance, metallic, baseColor);
 
 	vec3 lightDir;
 	vec3 radiance;
@@ -149,13 +157,16 @@ void main()
 	vec3 irradiance = texture(irradianceMap, normal).xyz;
 	
 	vec3 F = F_SchlickRoughness(NdotV, F0, roughness);
-	vec3 indirectSpecularColor = reflection * mix(BRDF.xxx, BRDF.yyy, F0);
 	//vec3 indirectSpecularColor = reflection * (F * BRDF.x + BRDF.y);
+	vec3 indirectSpecularColor = reflection * mix(BRDF.xxx, BRDF.yyy, F0);
 
 	vec3 Kdiff = 1.0 - F;
 	vec3 indirectDiffuseColor = irradiance * diffuseColor * Kdiff;
-
 	vec3 indirectColor = indirectDiffuseColor + indirectSpecularColor;
+	
+	float ao = texture(ambientOcclusionMap, fsIn.textureCoordinateLS).r;
+
+	indirectColor *= ao;
 
 	outColor = vec4(directColor + indirectColor, textureColor.a);
 }

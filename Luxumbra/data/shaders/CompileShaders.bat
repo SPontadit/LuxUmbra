@@ -17,9 +17,12 @@ C:/VulkanSDK/1.1.114.0/Bin32/glslangValidator.exe -V generateCubeMap/generateCub
 C:/VulkanSDK/1.1.114.0/Bin32/glslangValidator.exe -V generateCubeMap/generateCubeMap.frag -o generateCubeMap/generateCubeMap.frag.spv
 C:/VulkanSDK/1.1.114.0/Bin32/glslangValidator.exe -V generateIrradianceMap/generateIrradianceMap.vert -o generateIrradianceMap/generateIrradianceMap.vert.spv
 C:/VulkanSDK/1.1.114.0/Bin32/glslangValidator.exe -V generateIrradianceMap/generateIrradianceMap.frag -o generateIrradianceMap/generateIrradianceMap.frag.spv
+C:/VulkanSDK/1.1.114.0/Bin32/glslangValidator.exe -V generateIrradianceMap/generateIrradianceMap.comp -o generateIrradianceMap/generateIrradianceMap.comp.spv
 C:/VulkanSDK/1.1.114.0/Bin32/glslangValidator.exe -V generatePrefilteredMap/generatePrefilteredMap.vert -o generatePrefilteredMap/generatePrefilteredMap.vert.spv
 C:/VulkanSDK/1.1.114.0/Bin32/glslangValidator.exe -V generatePrefilteredMap/generatePrefilteredMap.frag -o generatePrefilteredMap/generatePrefilteredMap.frag.spv
+C:/VulkanSDK/1.1.114.0/Bin32/glslangValidator.exe -V generatePrefilteredMap/generatePrefilteredMap.comp -o generatePrefilteredMap/generatePrefilteredMap.comp.spv
 C:/VulkanSDK/1.1.114.0/Bin32/glslangValidator.exe -V generateBRDFLut/generateBRDFLut.vert -o generateBRDFLut/generateBRDFLut.vert.spv
 C:/VulkanSDK/1.1.114.0/Bin32/glslangValidator.exe -V generateBRDFLut/generateBRDFLut.frag -o generateBRDFLut/generateBRDFLut.frag.spv
+C:/VulkanSDK/1.1.114.0/Bin32/glslangValidator.exe -V generateBRDFLut/generateBRDFLut.comp -o generateBRDFLut/generateBRDFLut.comp.spv
 C:/VulkanSDK/1.1.114.0/Bin32/glslangValidator.exe -V shadowMapping/directionalShadowMapping.vert -o shadowMapping/directionalShadowMapping.vert.spv
 pause

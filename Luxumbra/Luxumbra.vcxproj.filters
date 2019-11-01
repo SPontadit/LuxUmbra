@@ -171,6 +171,9 @@
     <ClCompile Include="source\AABB.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\rhi\RHI_ComputePipeline.cpp">
+      <Filter>Source Files\RHI</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\rhi\RHI.h">
@@ -269,6 +272,9 @@
     <ClInclude Include="include\AABB.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\rhi\ComputePipeline.h">
+      <Filter>Header Files\RHI</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="include\Logger.inl">
@@ -348,6 +354,15 @@
     </None>
     <None Include="data\shaders\CompileShaders.bat">
       <Filter>Resource Files</Filter>
+    </None>
+    <None Include="data\shaders\generateIrradianceMap\generateIrradianceMap.comp">
+      <Filter>Resource Files\generateIrradianceMap</Filter>
+    </None>
+    <None Include="data\shaders\generatePrefilteredMap\generatePrefilteredMap.comp">
+      <Filter>Resource Files\generatePrefilteredMap</Filter>
+    </None>
+    <None Include="data\shaders\generateBRDFLut\generateBRDFLut.comp">
+      <Filter>Resource Files\generateBRDFLut</Filter>
     </None>
   </ItemGroup>
 </Project>

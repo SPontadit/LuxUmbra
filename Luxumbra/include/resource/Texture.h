@@ -22,6 +22,7 @@ namespace lux::resource
 		Texture& operator=(Texture&&) = delete;
 
 		rhi::Image image;
+		VkSampler sampler;
 	};
 
 } // namespace lux::resource

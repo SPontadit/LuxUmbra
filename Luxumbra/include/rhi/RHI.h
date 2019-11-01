@@ -8,6 +8,7 @@
 #include "rhi\LuxVkImpl.h"
 #include "Window.h"
 #include "rhi\GraphicsPipeline.h"
+#include "rhi\ComputePipeline.h"
 #include "rhi\ForwardRenderer.h"
 #include "rhi\ShadowMapper.h"
 #include "rhi\Image.h"
@@ -25,7 +26,6 @@ namespace lux::rhi
 #define MATERIAL_MAX_SET 128
 
 	using namespace lux;
-
 
 	struct DirectionalLightBuffer
 	{
@@ -71,15 +71,18 @@ namespace lux::rhi
 		void DestroyBuffer(Buffer& buffer) noexcept;
 		
 		void CreateImage(const ImageCreateInfo& luxImageCI, Image& image) noexcept;
+		void CreateImage(const ImageCreateInfo& luxImageCI, Image& image, VkSampler* sampler) noexcept;
+		void GenerateMipChain(const ImageCreateInfo& luxImageCI, Image& image) noexcept;
 		void FillImage(const ImageCreateInfo& luxImageCI, Image& image) noexcept;
 		void DestroyImage(Image& image) noexcept;
+		void DestroyImage(Image& image, VkSampler* sampler) noexcept;
 
 		void CreateEnvMapDescriptorSet(Image& image) noexcept;
 		
 		void GenerateCubemapFromHDR(const Image& HDRSource, Image& cubemap) noexcept;
 		void GenerateIrradianceFromCubemap(const Image& cubemapSource, Image& irradiance) noexcept;
 		void GeneratePrefilteredFromCubemap(const Image& cubemapSource, Image& prefiltered) noexcept;
-		void GenerateBRDFLut(VkFormat format, uint32_t size, Image& BRDFLut) noexcept;
+		void GenerateBRDFLut(Image& BRDFLut) noexcept;
 
 		int16_t CreateLightShadowMappingResources(scene::LightType lightType) noexcept;
 
@@ -100,8 +103,10 @@ namespace lux::rhi
 
 		uint32_t graphicsQueueIndex;
 		uint32_t presentQueueIndex;
+		uint32_t computeQueueIndex;
 		VkQueue graphicsQueue;
 		VkQueue presentQueue;
+		VkQueue computeQueue;
 
 		VkSampleCountFlagBits msaaSamples;
 
@@ -131,6 +136,12 @@ namespace lux::rhi
 		std::vector<Buffer> pointLightUniformBuffers;
 		LightCountsPushConstant lightCountsPushConstant;
 
+		VkCommandPool computeCommandPool;
+		//VkCommandBuffer computeCommandBuffer;
+		//VkDescriptorPool computeDescriptorPool;
+		//VkDescriptorSet generateIrradianceDescriptorSet;
+
+
 		std::shared_ptr<resource::Mesh> cube;
 		uint32_t frameCount;
 		uint32_t currentFrame;
@@ -148,14 +159,22 @@ namespace lux::rhi
 
 		void InitForwardRenderPass() noexcept;
 		void InitForwardFramebuffers() noexcept;
-		void InitForwardGraphicsPipelines() noexcept;
+		void InitForwardGraphicsPipelines(bool useCache = true) noexcept;
 		void InitForwardSampler() noexcept;
 		void InitForwardDescriptorPool() noexcept;
 		void InitForwardDescriptorSets() noexcept;
 		void InitForwardUniformBuffers() noexcept;
 
-		void RenderShadowMaps(VkCommandBuffer commandBuffer/*, int imageIndex*/, const std::vector<scene::LightNode*> lights, const std::vector<scene::MeshNode*>& meshes) noexcept;
+		void GenerateIrradianceFromCubemapFS(const Image& cubemapSource, Image& irradiance) noexcept;
+		void GenerateIrradianceFromCubemapCS(const Image& cubemapSource, Image& irradiance) noexcept;
+		void GeneratePrefilteredFromCubemapFS(const Image& cubemapSource, Image& prefiltered) noexcept;
+		void GeneratePrefilteredFromCubemapCS(const Image& cubemapSource, Image& prefiltered) noexcept;
+		void GenerateBRDFLutFS(Image& BRDFLut) noexcept;
+		void GenerateBRDFLutCS(Image& BRDFLut) noexcept;
+
+		void RenderShadowMaps(VkCommandBuffer commandBuffer, const std::vector<scene::LightNode*>& lights,const std::vector<scene::MeshNode*>& meshes) noexcept;
 		void RenderForward(VkCommandBuffer commandBuffer, int imageIndex, const scene::CameraNode* camera, const std::vector<scene::MeshNode*>& meshes, const std::vector<scene::LightNode*>& lights) noexcept;
+		void RenderPostProcess(VkCommandBuffer commandBuffer, int imageIndex) noexcept;
 
 		void BuildLightUniformBuffers(size_t lightCount) noexcept;
 
@@ -165,6 +184,7 @@ namespace lux::rhi
 		void UpdateLightsUniformBuffers(const std::vector<scene::LightNode*>& lights) noexcept;
 
 		void DestroySwapchainRelatedResources() noexcept;
+		void DestroyComputeRelatedResources() noexcept;
 		void DestroyShadowMapper() noexcept;
 		void DestroyForwardRenderer() noexcept;
 		void DestroyForwardGraphicsPipeline() noexcept;
@@ -178,12 +198,17 @@ namespace lux::rhi
 		VkCommandBuffer BeginSingleTimeCommandBuffer() const noexcept;
 		void EndSingleTimeCommandBuffer(VkCommandBuffer commandBuffer) const noexcept;
 
-		void CommandTransitionImageLayout(VkCommandBuffer, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t layerCount = 1, uint32_t levelCount = 1) noexcept;
+		void CommandTransitionImageLayout(VkCommandBuffer, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t layerCount = 1, uint32_t levelCount = 1, uint32_t baseMipLevel = 0) noexcept;
 		void CommandTransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) noexcept;
 
 		void CreateGraphicsPipeline(const GraphicsPipelineCreateInfo& luxGraphicsPipelineCI, GraphicsPipeline& graphicsPipeline) noexcept;
+		void WriteGraphicsPipelineCacheOnDisk(const std::string& cacheFilePath, GraphicsPipeline& graphicsPipeline) noexcept;
+		void CreateGraphicsPipelineCache(const std::string& pipelineCacheFilePath, GraphicsPipeline& graphicsPipeline) noexcept;
 		void CreateShaderModule(const std::string& binaryFilePath, VkShaderModule* shaderModule) const noexcept;
 		void DestroyGraphicsPipeline(GraphicsPipeline& graphicsPipeline) noexcept;
+
+		void CreateComputePipeline(const ComputePipelineCreateInfo& luxComputePipelineCI, ComputePipeline& computePipeline) noexcept;
+		void DestroyComputePipeline(ComputePipeline& computePipeline) noexcept;
 
 #ifdef VULKAN_ENABLE_VALIDATION
 		VkDebugReportCallbackEXT debugReportCallback;

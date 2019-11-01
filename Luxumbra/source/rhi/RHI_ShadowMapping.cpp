@@ -157,7 +157,7 @@ namespace lux::rhi
 		DestroyImage(shadowMapper.dummyDirectionalShadowMap);
 	}
 
-	void RHI::RenderShadowMaps(VkCommandBuffer commandBuffer/*, int imageIndex*/, const std::vector<scene::LightNode*> lights, const std::vector<scene::MeshNode*>& meshes) noexcept
+	void RHI::RenderShadowMaps(VkCommandBuffer commandBuffer, const std::vector<scene::LightNode*>& lights, const std::vector<scene::MeshNode*>& meshes) noexcept
 	{
 		std::array<DirectionalLightBuffer, DIRECTIONAL_LIGHT_MAX_COUNT> directionalLightBuffer;
 		std::array<VkDescriptorImageInfo, DIRECTIONAL_LIGHT_MAX_COUNT> directionalShadowMapsImageDescriptorInfo;

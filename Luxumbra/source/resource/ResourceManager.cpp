@@ -9,6 +9,7 @@
 
 #include "glm\gtc\type_ptr.hpp"
 
+#include "Logger.h"
 
 namespace lux::resource
 {
@@ -41,8 +42,8 @@ namespace lux::resource
 		//BuildPrimitiveMeshes();
 		LoadPrimitiveMehes();
 
-		defaultWhite = LoadTexture("data/textures/DefaultWhite.jpg", true);
-		defaultNormalMap = LoadTexture("data/textures/DefaultNormalMap.jpg", true);
+		defaultWhite = LoadTexture("data/textures/DefaultWhite.jpg", false, true);
+		defaultNormalMap = LoadTexture("data/textures/DefaultNormalMap.jpg", false, true);
 	}
 
 	std::shared_ptr<Material> ResourceManager::GetMaterial(const std::string& materialName) noexcept
@@ -176,6 +177,7 @@ namespace lux::resource
 	{
 		primitiveMeshes[TO_UINT32_T(MeshPrimitive::MESH_SPHERE_PRIMITIVE)] = LoadMesh("data/models/Sphere.fbx", 0.75f, true);
 		primitiveMeshes[TO_UINT32_T(MeshPrimitive::MESH_CUBE_PRIMITIVE)] = LoadMesh("data/models/Cube.fbx", 0.5f, true);
+		primitiveMeshes[TO_UINT32_T(MeshPrimitive::MESH_PLANE_PRIMITIVE)] = LoadMesh("data/models/Plane.fbx", 1.0f, true);
 
 		rhi.SetCubeMesh(primitiveMeshes[TO_UINT32_T(MeshPrimitive::MESH_CUBE_PRIMITIVE)]);
 	}
@@ -187,6 +189,15 @@ namespace lux::resource
 
 		if (materialCI.normal == nullptr)
 			materialCI.normal = defaultNormalMap;
+
+		if (materialCI.metallicRoughness == nullptr)
+		{
+			materialCI.textureMask = 0;
+			materialCI.metallicRoughness = defaultWhite;
+		}
+
+		if (materialCI.ambientOcclusion == nullptr)
+			materialCI.ambientOcclusion = defaultWhite;
 
 		std::shared_ptr<Material> material = std::make_shared<Material>(name, materialCI);
 
@@ -229,39 +240,11 @@ namespace lux::resource
 		rhi.CreateImage(imageCI, source);
 
 
-		// Create Cubemap Image
-		imageCI.arrayLayers = 6;
-		imageCI.subresourceRangeLayerCount = 6;
-		imageCI.imageViewType = VK_IMAGE_VIEW_TYPE_CUBE;
-		imageCI.imageData = nullptr;
-		imageCI.imageSize = 0;
-		imageCI.width = CUBEMAP_TEXTURE_SIZE;
-		imageCI.height = CUBEMAP_TEXTURE_SIZE;
-		imageCI.mipmapCount = TO_UINT32_T(floor(log2(CUBEMAP_TEXTURE_SIZE))) + 1;
-
-		rhi.CreateImage(imageCI, cubemap->image);
-
-
-		// Create Irradiance Image
-		imageCI.width = IRRADIANCE_TEXTURE_SIZE;
-		imageCI.height = IRRADIANCE_TEXTURE_SIZE;
-		imageCI.mipmapCount = TO_UINT32_T(floor(log2(IRRADIANCE_TEXTURE_SIZE))) + 1;
-		rhi.CreateImage(imageCI, irradiance->image);
-
-
-		// Create Prefiltered Image
-		imageCI.width = PREFILTERED_TEXTURE_SIZE;
-		imageCI.height = PREFILTERED_TEXTURE_SIZE;
-		imageCI.mipmapCount = TO_UINT32_T(floor(log2(PREFILTERED_TEXTURE_SIZE))) + 1;
-		rhi.CreateImage(imageCI, prefiltered->image);
-
-
-
 		// Generate Cubemap
 		rhi.GenerateCubemapFromHDR(source, cubemap->image);
 		rhi.GenerateIrradianceFromCubemap(cubemap->image, irradiance->image);
 		rhi.GeneratePrefilteredFromCubemap(cubemap->image, prefiltered->image);
-		rhi.GenerateBRDFLut(VK_FORMAT_R32G32B32A32_SFLOAT, BRDF_LUT_TEXTURE_SIZE, BRDFLut->image);
+		rhi.GenerateBRDFLut(BRDFLut->image);
 
 		rhi.CreateEnvMapDescriptorSet(cubemap->image);
 
@@ -276,7 +259,9 @@ namespace lux::resource
 		importer.SetPropertyFloat(AI_CONFIG_GLOBAL_SCALE_FACTOR_KEY, scale);
 
 		unsigned int postProcessFlags = aiProcess_GenBoundingBoxes | aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals | aiProcess_PreTransformVertices | aiProcess_CalcTangentSpace;
-		postProcessFlags |= scale == 1.0f ? 0 : aiProcess_GlobalScale;
+		
+		if (isPrimitive)
+			postProcessFlags |= aiProcess_GlobalScale;
 		
 		const aiScene* scene = importer.ReadFile(filename, postProcessFlags);
 
@@ -365,7 +350,7 @@ namespace lux::resource
 		return mesh;
 	}
 
-	std::shared_ptr<Texture> ResourceManager::LoadTexture(const std::string& filename, bool isPrimitive) noexcept
+	std::shared_ptr<Texture> ResourceManager::LoadTexture(const std::string& filename, bool generateMipMap, bool isPrimitive) noexcept
 	{
 		std::shared_ptr<Texture> texture = std::make_shared<Texture>();
 
@@ -382,12 +367,13 @@ namespace lux::resource
 		imageCI.arrayLayers = 1;
 		imageCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		imageCI.subresourceRangeLayerCount = 1;
-		imageCI.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		imageCI.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 		imageCI.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
 		imageCI.imageData = textureData;
 		imageCI.imageSize = imageSize;
+		imageCI.mipmapCount = static_cast<uint32_t>(std::floor(std::log2(std::max(textureWidth, textureHeight)))) + 1;
 
-		rhi.CreateImage(imageCI, texture->image);
+		rhi.CreateImage(imageCI, texture->image, &texture->sampler);
 
 		stbi_image_free(textureData);
 	
@@ -437,13 +423,13 @@ namespace lux::resource
 
 		for (; it != itE; ++it)
 		{
-			rhi.DestroyImage(it->second->image);
+			rhi.DestroyImage(it->second->image, &it->second->sampler);
 		}
 
 		textures.clear();
 
-		rhi.DestroyImage(defaultWhite->image);
-		rhi.DestroyImage(defaultNormalMap->image);
+		rhi.DestroyImage(defaultWhite->image, &defaultWhite->sampler);
+		rhi.DestroyImage(defaultNormalMap->image, &defaultNormalMap->sampler);
 
 		if (cubemap != nullptr)
 		{

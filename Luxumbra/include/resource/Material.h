@@ -14,15 +14,24 @@ namespace lux::resource
 {
 	using namespace lux;
 
+	enum TextureMask
+	{
+		ROUGHNESS_TEXTURE_MASK = 1,
+		METALLIC_TEXTURE_MASK = 2
+	};
+
 	struct MaterialCreateInfo
 	{
 		std::shared_ptr<Texture> albedo;
 		std::shared_ptr<Texture> normal;
+		std::shared_ptr<Texture> metallicRoughness;
+		std::shared_ptr<Texture> ambientOcclusion;
 		glm::vec3 baseColor;
 		float metallic;
 		float perceptualRoughness;
 		float reflectance;
 		bool isTransparent;
+		int textureMask;
 	};
 
 	struct MaterialParameters
@@ -31,6 +40,7 @@ namespace lux::resource
 		float metallic;
 		float perceptualRoughness;
 		float reflectance;
+		int textureMask;
 	};
 
 
@@ -55,7 +65,8 @@ namespace lux::resource
 		MaterialParameters parameter;
 		std::shared_ptr<Texture> albedo;
 		std::shared_ptr<Texture> normal;
-
+		std::shared_ptr<Texture> metallicRoughness;
+		std::shared_ptr<Texture> ambientOcclusion;
 		
 		std::vector<rhi::Buffer> buffer;
 		std::vector<VkDescriptorSet> descriptorSet;
