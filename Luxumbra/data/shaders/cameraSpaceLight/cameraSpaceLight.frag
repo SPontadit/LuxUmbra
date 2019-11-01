@@ -138,6 +138,7 @@ vec4 CameraSpace()
 	baseColor *= textureColor.a;
 
 	float perceptualRoughness = (material.useTextureMask & ROUGHNESS_MASK) == ROUGHNESS_MASK ? texture(metallicRoughnessMap, fsIn.textureCoordinateLS).g : material.perceptualRoughness;
+	perceptualRoughness = clamp(perceptualRoughness, 0.045, 1.0);
 	float roughness = perceptualRoughness * perceptualRoughness;
 	float metallic = (material.useTextureMask & METALLIC_MASK) == METALLIC_MASK ? texture(metallicRoughnessMap, fsIn.textureCoordinateLS).b : material.metallic;
 	vec3 diffuseColor = RemapDiffuseColor(baseColor, metallic);
