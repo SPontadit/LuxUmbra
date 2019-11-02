@@ -14,6 +14,8 @@ layout(location = 0) in FsIn
 } fsIn;
 
 layout(location = 0) out vec4 outColor;
+layout(location = 1) out vec4 outPositionVS;
+layout(location = 2) out vec4 outNormalWS;
 
 struct Light
 {
@@ -30,6 +32,7 @@ layout(set = 0, binding = 2) uniform samplerCube irradianceMap;
 layout(set = 0, binding = 3) uniform samplerCube prefilteredMap;
 layout(set = 0, binding = 4) uniform sampler2D BRDFLut;
 layout(set = 0, binding = 5) uniform sampler2D shadowMap;
+layout(set = 0, binding = 6, rgba32f) writeonly uniform image2D positionMap;
 
 layout(push_constant) uniform PushConsts
 {
@@ -80,28 +83,21 @@ float Fd_Lambert();
 float Fd_Burley(float NdotV, float NdotL, float LdotH, float roughness);
 vec3 PrefilteredReflection(vec3 R, float roughness);
 
+#define NEAR_PLANE 0.1
+#define FAR_PLANE 50.0
+
+float linearDepth(float depth)
+{
+	float z = depth * 2.0f - 1.0f; 
+	return (2.0f * NEAR_PLANE * FAR_PLANE) / (FAR_PLANE + NEAR_PLANE - z * (FAR_PLANE - NEAR_PLANE));	
+}
 
 void main() 
 {
+	outPositionVS = vec4(mat3(fsIn.viewMatrix) * fsIn.positionWS, linearDepth(gl_FragCoord.z));
 	outColor = CameraSpace();
 }
 
-vec3 getNormalFromMap()
-{
-    vec3 tangentNormal = texture(normalMap, fsIn.textureCoordinateLS).xyz * 2.0 - 1.0;
-
-    vec3 Q1  = dFdx(fsIn.positionWS);
-    vec3 Q2  = dFdy(fsIn.positionWS);
-    vec2 st1 = dFdx(fsIn.textureCoordinateLS);
-    vec2 st2 = dFdy(fsIn.textureCoordinateLS);
-
-    vec3 N   = normalize(fsIn.normalWS);
-    vec3 T  = normalize(Q1*st2.t - Q2*st1.t);
-    vec3 B  = -normalize(cross(N, T));
-    mat3 TBN = mat3(T, B, N);
-
-    return normalize(TBN  * tangentNormal);
-}
 
 float Shadow(vec4 shadowCoord)
 {
@@ -117,6 +113,7 @@ float Shadow(vec4 shadowCoord)
 
 vec4 CameraSpace()
 {
+
 	vec3 directColor  = vec3(0.0);
 	vec4 textureColor = texture(albedo, fsIn.textureCoordinateLS);
 
@@ -131,6 +128,7 @@ vec4 CameraSpace()
 	vec3 normal = texture(normalMap, fsIn.textureCoordinateLS).rgb;
 	normal = normalize(normal * 2.0 - 1.0) * inv;
 	normal = normalize(fsIn.textureToViewMatrix * normal);
+	outNormalWS  = vec4(normal * 0.5 + 0.5, 1.0);
 
 	float NdotV = max(dot(normal, viewDir), 0.001);
 	

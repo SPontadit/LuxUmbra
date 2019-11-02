@@ -6,6 +6,9 @@ layout(location = 0) in vec2 textureCoordinate;
 layout(location = 0) out vec4 outColor;
 
 layout(set = 0, binding = 0) uniform sampler2D renderTarget;
+layout(set = 0, binding = 1) uniform sampler2D positionMap;
+layout(set = 0, binding = 2) uniform sampler2D normalMap;
+layout(set = 0, binding = 3) uniform sampler2D depthMap;
 
 layout(push_constant) uniform PushConstants
 {
@@ -33,6 +36,10 @@ float Quality(int i);
 
 void main() 
 {
+	outColor = texture(positionMap, textureCoordinate);
+	outColor = texture(normalMap, textureCoordinate);
+	outColor = vec4(vec3(texture(positionMap, textureCoordinate).a), 1.0);
+
 	outColor =  vec4(FXAA(), 1.0);
 
 	if (debugFXAA == 1)

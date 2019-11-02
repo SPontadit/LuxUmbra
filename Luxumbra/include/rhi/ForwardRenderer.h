@@ -8,6 +8,7 @@
 #include "glm\glm.hpp"
 
 #include "LuxVkImpl.h"
+#include "rhi\Image.h"
 #include "resource\Mesh.h"
 
 
@@ -81,9 +82,18 @@ namespace lux::rhi
 		VkImageView rtResolveColorAttachmentImageView;
 		VkDeviceMemory rtResolveColorAttachmentMemory;
 
+
 		VkImage rtDepthAttachmentImage;
 		VkImageView rtDepthAttachmentImageView;
 		VkDeviceMemory rtDepthAttachmentMemory;
+
+		Image rtPositionMap;
+		Image rtResolvePositionMap;
+
+		Image rtNormalMap;
+		Image rtResolveNormalMap;
+
+		Image rtResolveDepth;
 
 		VkSampler sampler;
 		VkSampler cubemapSampler;
@@ -96,7 +106,8 @@ namespace lux::rhi
 		{
 			FORWARD_RT_COLOR_ATTACHMENT_BIND_POINT = 0,
 			FORWARD_RT_DEPTH_ATTACHMENT_BIND_POINT,
-			FORWARD_RT_RESOLVE_COLOR_ATTACHMENT_BIND_POINT,
+			FORWARD_RT_POSITION_ATTACHMENT_BIND_POINT,
+			FORWARD_RT_NORMAL_ATTACHMENT_BIND_POINT,
 			FORWARD_RT_ATTACHMENT_BIND_POINT_COUNT
 		};
 

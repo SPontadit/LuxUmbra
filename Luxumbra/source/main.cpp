@@ -105,7 +105,7 @@ void TexturedPBR(lux::Engine& luxUmbra) noexcept
 	resourceManager.CreateMaterial("Helmet", defaultMaterialCI);
 
 
-	scene.AddCameraNode(nullptr, { 0.f, 1.f, 5.f }, { 0.f, 0.f, 0.f }, false, 45.f, 0.01f, 1000.f, true);
+	scene.AddCameraNode(nullptr, { 0.f, 1.f, 5.f }, { 0.f, 0.f, 0.f }, false, 45.f, 0.1f, 50.f, true);
 
 	lux::scene::MeshNode* plane = scene.AddMeshNode(nullptr, glm::vec3(0.f, 1.f, -2.f), glm::radians(glm::vec3(0.f, 90.f, 0.f)), false, lux::resource::MeshPrimitive::MESH_PLANE_PRIMITIVE, "White");
 	plane = scene.AddMeshNode(nullptr, glm::vec3(-2.f, 1.f, 0.f), glm::radians(glm::vec3(0.f, 180.f, 0.f)), false, lux::resource::MeshPrimitive::MESH_PLANE_PRIMITIVE, "White");
