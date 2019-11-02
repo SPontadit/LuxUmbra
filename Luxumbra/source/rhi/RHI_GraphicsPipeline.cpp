@@ -174,12 +174,14 @@ namespace lux::rhi
 		colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 		colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 
+		std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments(TO_SIZE_T(luxGraphicsPipelineCI.colorBlendAttachmentStateCount), colorBlendAttachment);
+
 		VkPipelineColorBlendStateCreateInfo colorBlendStateCI = {};
 		colorBlendStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 		colorBlendStateCI.logicOpEnable = VK_FALSE;
 		colorBlendStateCI.logicOp = VK_LOGIC_OP_COPY;
-		colorBlendStateCI.attachmentCount = 1;
-		colorBlendStateCI.pAttachments = &colorBlendAttachment;
+		colorBlendStateCI.attachmentCount = luxGraphicsPipelineCI.colorBlendAttachmentStateCount;
+		colorBlendStateCI.pAttachments = colorBlendAttachments.data();
 		colorBlendStateCI.blendConstants[0] = 0.0f;
 		colorBlendStateCI.blendConstants[1] = 0.0f;
 		colorBlendStateCI.blendConstants[2] = 0.0f;
