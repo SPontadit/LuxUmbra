@@ -22,7 +22,7 @@ namespace lux::rhi
 		imageCI.extent.depth = 1;
 		imageCI.mipLevels = luxImageCI.mipmapCount;
 		imageCI.arrayLayers = luxImageCI.arrayLayers;
-		imageCI.samples = VK_SAMPLE_COUNT_1_BIT;
+		imageCI.samples = luxImageCI.sampleCount;
 		imageCI.tiling = VK_IMAGE_TILING_OPTIMAL;
 		imageCI.usage = luxImageCI.usage;
 		imageCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
