@@ -21,6 +21,9 @@ struct DirectionalLight
 	vec3 direction;
 	vec3 color;
 	mat4 viewProj;
+	float shadowMapTexelSize;
+	float pcfExtent;
+	float pcfKernelSize;
 };
 
 struct PointLight
@@ -209,16 +212,30 @@ vec3 DirectColor(vec3 lightDir, vec3 viewDir, vec3 normal, float roughness, vec3
 		return (directDiffuseColor + specular) * radiance * NdotL * shadow;
 }
 
-float DirectionalShadow(vec4 shadowCoord, int shadowMapIndex)
+float DirectionalShadow(vec4 shadowCoord, int lightIndex)
 {
 	if (abs(shadowCoord.x) > 1.0 || abs(shadowCoord.y) > 1.0 || abs(shadowCoord.z) > 1.0)
 		return 0.0;
 
 	vec2 shadowUV = shadowCoord.xy * 0.5 + 0.5;
-	if (shadowCoord.z > texture(directionalShadowMaps[shadowMapIndex], shadowUV).x)
-		return 0.0;
 
-	return 1.0;
+	float shadowMapTexelSize = directionalLights[lightIndex].shadowMapTexelSize;
+	float pcfExtent = directionalLights[lightIndex].pcfExtent;
+
+	float lightedCount = 0.0;
+
+	for (float x = -pcfExtent; x <= pcfExtent; x += 1.0)
+	{
+		for (float y = -pcfExtent; y <= pcfExtent; y += 1.0)
+		{
+			vec2 pcfUV = shadowUV + vec2(x, y) * shadowMapTexelSize;
+
+			if (shadowCoord.z <= texture(directionalShadowMaps[lightIndex], pcfUV).x)
+				lightedCount += 1.0;
+		}
+	}
+
+	return lightedCount / directionalLights[lightIndex].pcfKernelSize;
 }
 
 vec3 PrefilteredReflection(vec3 R, float roughness)

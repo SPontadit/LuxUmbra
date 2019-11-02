@@ -233,6 +233,10 @@ namespace lux::rhi
 				lightBufferEntry.direction = lightDir;
 				lightBufferEntry.color = light->GetColor();
 				lightBufferEntry.viewProj = proj * view;
+				lightBufferEntry.shadowMapTexelSize = 1.f / SHADOW_MAP_TEXTURE_SIZE;
+				lightBufferEntry.pcfExtent = 1.f;
+				lightBufferEntry.pcfKernelSize = lightBufferEntry.pcfExtent * 2.0f + 1.f;
+				lightBufferEntry.pcfKernelSize *= lightBufferEntry.pcfKernelSize;
 
 				// RNEDER SHADOW MAP
 

@@ -32,6 +32,9 @@ namespace lux::rhi
 		alignas(16) glm::vec3 direction;
 		alignas(16) glm::vec3 color;
 		alignas(16) glm::mat4 viewProj;
+		float shadowMapTexelSize;
+		float pcfExtent;
+		float pcfKernelSize;
 	};
 
 	struct PointLightBuffer
