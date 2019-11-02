@@ -130,14 +130,14 @@ namespace lux
 						// Low
 						if (newFXAAQuality == 0)
 						{
-							postProcess.FXAAContrastThreshold = 0.0833;
+							postProcess.FXAAContrastThreshold = 0.0833f;
 							postProcess.FXAARelativeThreshold = 0.250f;
 
 						}
 						// Medium
 						else if (newFXAAQuality == 1)
 						{
-							postProcess.FXAAContrastThreshold = 0.0625;
+							postProcess.FXAAContrastThreshold = 0.0625f;
 							postProcess.FXAARelativeThreshold = 0.166f;
 
 						}
@@ -293,7 +293,7 @@ namespace lux
 						ImGui::Checkbox("Metallic", &metallic);
 						matParameters.metallic = metallic;
 
-						if (matParameters.metallic == false)
+						if (matParameters.metallic == 0.f)
 						{
 							ImGui::SliderFloat("Reflectance", &matParameters.reflectance, 0.0f, 1.0f, "%.3f");
 						}
