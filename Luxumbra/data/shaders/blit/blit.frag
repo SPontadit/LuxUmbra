@@ -9,9 +9,19 @@ layout(set = 0, binding = 0) uniform sampler2D renderTarget;
 layout(set = 0, binding = 1) uniform sampler2D positionMap;
 layout(set = 0, binding = 2) uniform sampler2D normalMap;
 layout(set = 0, binding = 3) uniform sampler2D depthMap;
+layout(set = 0, binding = 5) uniform sampler2D SSAONoise;
+
+#define SSAO_KERNEL_SIZE  32
+#define SSAO_RADIUS 0.5
+
+layout(set = 0, binding = 4) uniform SSAOKernels
+{
+	vec4 samples[SSAO_KERNEL_SIZE];
+};
 
 layout(push_constant) uniform PushConstants
 {
+	mat4 proj;
 	vec2 inverseScreenSize;
 	int toneMapping;
 	float exposure;
@@ -31,6 +41,7 @@ vec3 Uncharted2Tonemap(vec3 x);
 vec3 Reinhard(vec3 x);
 vec3 ToneMapGammaCorrect(vec3 color);
 vec3 FXAA();
+float SSAO();
 float RGBToLuma(vec3 rgb);
 float Quality(int i);
 
@@ -40,7 +51,12 @@ void main()
 	outColor = texture(normalMap, textureCoordinate);
 	outColor = vec4(vec3(texture(positionMap, textureCoordinate).a), 1.0);
 
-	outColor =  vec4(FXAA(), 1.0);
+	vec3 color = vec3(SSAO());
+	
+	outColor = vec4(color, 1.0);
+	return;
+
+	outColor =  vec4(FXAA() * SSAO(), 1.0);
 
 	if (debugFXAA == 1)
 	{
@@ -49,6 +65,44 @@ void main()
 		if (textureCoordinate.x < FXAAPercent + 0.001 && textureCoordinate.x > FXAAPercent - 0.001)
 			outColor = vec4(1.0);
 	}
+}
+
+float SSAO()
+{
+	vec3 fragPosition = texture(positionMap, textureCoordinate).rgb;
+	vec3 normal = normalize(texture(normalMap, textureCoordinate).rgb * 2.0 - 1.0);
+
+	ivec2 textureDimension = textureSize(positionMap, 0);
+	ivec2 noiseTextureDimension = textureSize(SSAONoise, 0);
+
+	vec2 noiseUV = vec2(float(textureDimension.x) / float(noiseTextureDimension.x), float(textureDimension.y) / float(noiseTextureDimension.y)) * textureCoordinate;
+	vec3 randomVec = texture(SSAONoise, noiseUV).xyz *  2.0 - 1.0;
+
+	vec3 tangent = normalize(randomVec - normal * dot(randomVec, normal));
+	vec3 bitangent = cross(tangent, normal);
+	mat3 TBN = mat3(tangent, bitangent, normal);
+
+	float occlusion = 0.0;
+
+	for(int i = 0; i < SSAO_KERNEL_SIZE; ++i)
+	{
+		vec3 samplePosition = TBN * samples[i].xyz;
+		samplePosition = fragPosition + samplePosition * SSAO_RADIUS;
+
+		vec4 offset = vec4(samplePosition, 1.0);
+		offset = proj * offset;
+		offset.xyz /= offset.w;
+		offset.xyz = offset.xyz * 0.5 + 0.5;
+
+		float sampleDepth = -texture(positionMap, offset.xy).w;
+		float rangeCheck = smoothstep(0.0, 1.0, SSAO_RADIUS / abs(fragPosition.z - sampleDepth));
+
+		occlusion += (sampleDepth >= samplePosition.z ? 1.0 : 0.0) * rangeCheck;
+	}
+
+	occlusion = 1.0 - (occlusion / float(SSAO_KERNEL_SIZE));
+
+	return occlusion;
 }
 
 vec3 Reinhard(vec3 x)

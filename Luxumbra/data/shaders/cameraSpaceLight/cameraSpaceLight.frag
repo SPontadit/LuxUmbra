@@ -6,6 +6,7 @@
 layout(location = 0) in FsIn
 {
 	vec3 positionWS;
+	vec3 positionVS;
 	vec2 textureCoordinateLS;
 	vec3 normalWS;
 	mat4 viewMatrix;
@@ -15,7 +16,7 @@ layout(location = 0) in FsIn
 
 layout(location = 0) out vec4 outColor;
 layout(location = 1) out vec4 outPositionVS;
-layout(location = 2) out vec4 outNormalWS;
+layout(location = 2) out vec4 outNormalVS;
 
 struct Light
 {
@@ -94,7 +95,13 @@ float linearDepth(float depth)
 
 void main() 
 {
-	outPositionVS = vec4(mat3(fsIn.viewMatrix) * fsIn.positionWS, linearDepth(gl_FragCoord.z));
+	// fonctionne
+	outPositionVS = vec4(fsIn.positionVS, linearDepth(gl_FragCoord.z));
+	
+	// Fonctionne pas 
+//	vec3 positionVS = mat3(fsIn.viewMatrix) * fsIn.positionWS;
+//	outPositionVS = vec4(positionVS, linearDepth(gl_FragCoord.z));
+	
 	outColor = CameraSpace();
 }
 
@@ -128,7 +135,7 @@ vec4 CameraSpace()
 	vec3 normal = texture(normalMap, fsIn.textureCoordinateLS).rgb;
 	normal = normalize(normal * 2.0 - 1.0) * inv;
 	normal = normalize(fsIn.textureToViewMatrix * normal);
-	outNormalWS  = vec4(normal * 0.5 + 0.5, 1.0);
+	outNormalVS  = vec4(normal * 0.5 + 0.5, 1.0);
 
 	float NdotV = max(dot(normal, viewDir), 0.001);
 	

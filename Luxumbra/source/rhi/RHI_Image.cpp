@@ -133,6 +133,54 @@ namespace lux::rhi
 			GenerateMipChain(luxImageCI, image);
 	}
 	
+	void RHI::CreateImageFromBuffer(ImageCreateInfo& luxImageCI, void* data, uint32_t size, Image& image) noexcept
+	{
+		BufferCreateInfo stagingBufferCI = {};
+		stagingBufferCI.size = size;
+		stagingBufferCI.data = data;
+		stagingBufferCI.usageFlags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+		stagingBufferCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		stagingBufferCI.memoryProperty = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+	
+		Buffer stagingBuffer;
+		CreateBuffer(stagingBufferCI, stagingBuffer);
+
+
+		if ((luxImageCI.usage & VK_IMAGE_USAGE_TRANSFER_DST_BIT) == false)
+		{
+			luxImageCI.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+		}
+
+		CreateImage(luxImageCI, image);
+
+
+		VkCommandBuffer commandBuffer = BeginSingleTimeCommandBuffer();
+
+		CommandTransitionImageLayout(commandBuffer, image.image, luxImageCI.format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+
+		VkBufferImageCopy bufferCopyRegion = {};
+		bufferCopyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		bufferCopyRegion.imageSubresource.mipLevel = 0;
+		bufferCopyRegion.imageSubresource.baseArrayLayer = 0;
+		bufferCopyRegion.imageSubresource.layerCount = 1;
+		bufferCopyRegion.imageExtent.width = luxImageCI.width;
+		bufferCopyRegion.imageExtent.height = luxImageCI.height;
+		bufferCopyRegion.imageExtent.depth = 1;
+		bufferCopyRegion.bufferOffset = 0;
+
+		vkCmdCopyBufferToImage(commandBuffer, stagingBuffer.buffer, image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &bufferCopyRegion);
+
+		CommandTransitionImageLayout(commandBuffer, image.image, luxImageCI.format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+
+		EndSingleTimeCommandBuffer(commandBuffer);
+
+
+		DestroyBuffer(stagingBuffer);
+	}
+
+
 	void RHI::GenerateMipChain(const ImageCreateInfo& luxImageCI, Image& image) noexcept
 	{
 		VkCommandBuffer commandBuffer = BeginSingleTimeCommandBuffer();

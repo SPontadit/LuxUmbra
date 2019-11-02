@@ -99,6 +99,8 @@ namespace lux::rhi
 
 		InitForwardDescriptorSets();
 
+		GenerateSSAOKernels();
+
 		// End
 
 		InitImgui();

@@ -10,6 +10,7 @@ layout(location = 4) in vec3 inBitangent;
 layout(location = 0) out VsOut
 {
 	vec3 positionWS;
+	vec3 positionVS;
 	vec2 textureCoordinateLS;
 	vec3 normalWS;
 	mat4 viewMatrix;
@@ -36,7 +37,9 @@ void main()
     gl_Position = vp.proj * vp.view * fragPosition;
 
 	vsOut.positionWS = fragPosition.xyz;
+	vsOut.positionVS = (vp.view * fragPosition).xyz;
 	vsOut.viewMatrix =  vp.view;
+
 	vsOut.textureCoordinateLS = inTextureCoordinate;
 
 	mat3 normalMatrix = transpose(inverse(mat3(m.model)));

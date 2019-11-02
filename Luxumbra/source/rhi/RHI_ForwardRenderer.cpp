@@ -2,10 +2,11 @@
 
 #include <array>
 #include <map>
-#include <chrono>
+#include <random>
 
 #include "glm\gtc\matrix_transform.hpp"
 
+#include "utility\Utility.h"
 
 namespace lux::rhi
 {
@@ -368,9 +369,13 @@ namespace lux::rhi
 
 	void RHI::InitForwardDescriptorPool() noexcept
 	{
-		VkDescriptorPoolSize blitDescriptorPoolSize = {};
-		blitDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		blitDescriptorPoolSize.descriptorCount = swapchainImageCount * 4;
+		VkDescriptorPoolSize blitSamplersDescriptorPoolSize = {};
+		blitSamplersDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		blitSamplersDescriptorPoolSize.descriptorCount = swapchainImageCount * 5;
+
+		VkDescriptorPoolSize blitSSAOKernelDescriptorPoolSize = {};
+		blitSSAOKernelDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		blitSSAOKernelDescriptorPoolSize.descriptorCount = swapchainImageCount;
 
 		VkDescriptorPoolSize rtViewProjUniformDescriptorPoolSize = {};
 		rtViewProjUniformDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -404,9 +409,10 @@ namespace lux::rhi
 		envMapUniformDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		envMapUniformDescriptorPoolSize.descriptorCount = swapchainImageCount;
 
-		std::array<VkDescriptorPoolSize, 9> descriptorPoolSizes = 
+		std::array<VkDescriptorPoolSize, 10> descriptorPoolSizes = 
 		{ 
-			blitDescriptorPoolSize,
+			blitSamplersDescriptorPoolSize,
+			blitSSAOKernelDescriptorPoolSize,
 			rtViewProjUniformDescriptorPoolSize, 
 			lightsUniformDescriptorPoolSize, 
 			shadowMapsDescriptorPoolSize,
@@ -454,6 +460,18 @@ namespace lux::rhi
 		depthMapDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		depthMapDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
+		VkDescriptorSetLayoutBinding SSAOKernelsDescriptorSetLayoutBinding = {};
+		SSAOKernelsDescriptorSetLayoutBinding.binding = 4;
+		SSAOKernelsDescriptorSetLayoutBinding.descriptorCount = 1;
+		SSAOKernelsDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		SSAOKernelsDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		VkDescriptorSetLayoutBinding SSAONoiseDescriptorSetLayoutBinding = {};
+		SSAONoiseDescriptorSetLayoutBinding.binding = 5;
+		SSAONoiseDescriptorSetLayoutBinding.descriptorCount = 1;
+		SSAONoiseDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		SSAONoiseDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
 		VkPushConstantRange blitPostProcessParameterPushConstantRange = {};
 		blitPostProcessParameterPushConstantRange.offset = 0;
 		blitPostProcessParameterPushConstantRange.size = sizeof(PostProcessParameters);
@@ -485,7 +503,9 @@ namespace lux::rhi
 			blitDescriptorSetLayoutBinding,
 			positionMapDescriptorSetLayoutBinding,
 			normalMapDescriptorSetLayoutBinding,
-			depthMapDescriptorSetLayoutBinding
+			depthMapDescriptorSetLayoutBinding,
+			SSAOKernelsDescriptorSetLayoutBinding,
+			SSAONoiseDescriptorSetLayoutBinding
 		};
 		
 		blitGraphicsPipelineCI.pushConstants = { blitPostProcessParameterPushConstantRange };
@@ -708,11 +728,24 @@ namespace lux::rhi
 		CHECK_VK(vkCreateSampler(device, &samplerCI, nullptr, &forward.sampler));
 
 
+		samplerCI.magFilter = VK_FILTER_NEAREST;
+		samplerCI.minFilter = VK_FILTER_NEAREST;
+		samplerCI.compareOp = VK_COMPARE_OP_NEVER;
+		samplerCI.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerCI.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerCI.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+
+		CHECK_VK(vkCreateSampler(device, &samplerCI, nullptr, &forward.SSAONoiseSampler));
+
+
+		samplerCI.magFilter = VK_FILTER_LINEAR;
+		samplerCI.minFilter = VK_FILTER_LINEAR;
 		samplerCI.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 		samplerCI.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 		samplerCI.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 		samplerCI.borderColor = VK_BORDER_COLOR_INT_OPAQUE_WHITE;
 		samplerCI.maxLod = TO_FLOAT(floor(log2(CUBEMAP_TEXTURE_SIZE))) + 1.0f;
+		samplerCI.compareOp = VK_COMPARE_OP_ALWAYS;
 
 		CHECK_VK(vkCreateSampler(device, &samplerCI, nullptr, &forward.cubemapSampler));
 
@@ -791,6 +824,7 @@ namespace lux::rhi
 		writeDepthMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		writeDepthMapDescriptorSet.dstBinding = 3;
 		writeDepthMapDescriptorSet.pImageInfo = &depthMapDescriptorImageInfo;
+
 		
 		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
@@ -909,6 +943,105 @@ namespace lux::rhi
 		}
 	}
 
+	void RHI::GenerateSSAOKernels() noexcept
+	{
+		uint32_t ssaoKernelSize = 32;
+		uint32_t ssaoNoiseDimension = 4;
+		float ssaoRadius = 0.5f;
+
+		std::uniform_real_distribution<float> randomFloats(0.0f, 1.0f);
+		std::default_random_engine generator;
+		std::vector<glm::vec4> ssaoKernel(ssaoKernelSize);
+		std::vector<glm::vec4> ssaoNoise(ssaoNoiseDimension * ssaoNoiseDimension);
+
+		for (size_t i = 0; i < ssaoKernelSize; i++)
+		{
+			float x = randomFloats(generator) * 2.0f - 1.0f;
+			float y = randomFloats(generator) * 2.0f - 1.0f;
+			float z = randomFloats(generator);
+			
+			glm::vec3 sample(x, y, z);
+			sample = glm::normalize(sample);
+			sample *= randomFloats(generator);
+
+			float scale = TO_FLOAT(i) / TO_FLOAT(ssaoKernelSize);
+			scale = utility::Lerp(0.1f, 1.0f, scale * scale);
+
+			ssaoKernel[i] = glm::vec4(sample * scale, 0.0);
+		}
+
+
+		BufferCreateInfo SSAOKernelBufferCI = {};
+		SSAOKernelBufferCI.usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+		SSAOKernelBufferCI.size = ssaoKernel.size() * sizeof(glm::vec4);
+		SSAOKernelBufferCI.data = ssaoKernel.data();
+		SSAOKernelBufferCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		SSAOKernelBufferCI.memoryProperty = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+
+		CreateBuffer(SSAOKernelBufferCI, forward.SSAOKernelsUniformBuffer);
+
+
+		for (size_t i = 0; i < ssaoNoise.size(); i++)
+		{
+			float x = randomFloats(generator) * 2.0f - 1.0f;
+			float y = randomFloats(generator) * 2.0f - 1.0f;
+			ssaoNoise[i] = glm::vec4(x, y, 0.0f, 0.0f);
+		}
+
+		ImageCreateInfo ssaoNoiseImageCI = {};
+		ssaoNoiseImageCI.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+		ssaoNoiseImageCI.width = ssaoNoiseDimension;
+		ssaoNoiseImageCI.height = ssaoNoiseDimension;
+		ssaoNoiseImageCI.arrayLayers = 1;
+		ssaoNoiseImageCI.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+		ssaoNoiseImageCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		ssaoNoiseImageCI.subresourceRangeLayerCount = 1;
+		ssaoNoiseImageCI.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
+
+		CreateImageFromBuffer(ssaoNoiseImageCI, ssaoNoise.data(), ssaoNoise.size() * sizeof(glm::vec4), forward.SSAONoiseImage);
+
+
+		VkDescriptorBufferInfo SSAOKernelsDescriptorBufferInfo = {};
+		SSAOKernelsDescriptorBufferInfo.offset = 0;
+		SSAOKernelsDescriptorBufferInfo.range = ssaoKernel.size() * sizeof(glm::vec4);
+		SSAOKernelsDescriptorBufferInfo.buffer = forward.SSAOKernelsUniformBuffer.buffer;
+
+		VkWriteDescriptorSet writeSSAOKernelsDescriptorSet = {};
+		writeSSAOKernelsDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeSSAOKernelsDescriptorSet.descriptorCount = 1;
+		writeSSAOKernelsDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		writeSSAOKernelsDescriptorSet.dstBinding = 4;
+		writeSSAOKernelsDescriptorSet.pBufferInfo = &SSAOKernelsDescriptorBufferInfo;
+
+
+		VkDescriptorImageInfo SSAONoiseDescriptorImageInfo = {};
+		SSAONoiseDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		SSAONoiseDescriptorImageInfo.sampler = forward.SSAONoiseSampler;
+		SSAONoiseDescriptorImageInfo.imageView = forward.SSAONoiseImage.imageView;
+
+		VkWriteDescriptorSet writeSSAONoiseDescriptorSet = {};
+		writeSSAONoiseDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeSSAONoiseDescriptorSet.descriptorCount = 1;
+		writeSSAONoiseDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		writeSSAONoiseDescriptorSet.dstBinding = 5;
+		writeSSAONoiseDescriptorSet.pImageInfo = &SSAONoiseDescriptorImageInfo;
+
+
+		for (size_t i = 0; i < swapchainImageCount; i++)
+		{
+			writeSSAOKernelsDescriptorSet.dstSet = forward.blitDescriptorSets[i];
+			writeSSAONoiseDescriptorSet.dstSet = forward.blitDescriptorSets[i];
+
+			std::array<VkWriteDescriptorSet, 2> writeDescriptorSets = 
+			{
+				writeSSAOKernelsDescriptorSet,
+				writeSSAONoiseDescriptorSet
+			};
+
+			vkUpdateDescriptorSets(device, TO_UINT32_T(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
+		}
+	}
+
 	void RHI::UpdateForwardUniformBuffers(const scene::CameraNode* camera, const std::vector<resource::Material*>& materials, const std::vector<scene::LightNode*>& lights) noexcept
 	{
 		size_t lightCount = std::min(lights.size(), TO_SIZE_T(LIGHT_MAX_COUNT));
@@ -921,6 +1054,7 @@ namespace lux::rhi
 
 		forward.rtViewProjUniform.view = camera->GetViewTransform();
 		forward.rtViewProjUniform.projection = camera->GetPerspectiveProjectionTransform();
+		forward.postProcessParameters.proj = camera->GetPerspectiveProjectionTransform();
 
 		UpdateBuffer(forward.viewProjUniformBuffers[currentFrame], &forward.rtViewProjUniform);
 
@@ -1172,6 +1306,7 @@ namespace lux::rhi
 		vkDestroySampler(device, forward.cubemapSampler, nullptr);
 		vkDestroySampler(device, forward.irradianceSampler, nullptr);
 		vkDestroySampler(device, forward.prefilteredSampler, nullptr);
+		vkDestroySampler(device, forward.SSAONoiseSampler, nullptr);
 
 		vkDestroyImage(device, forward.rtResolveColorAttachmentImage, nullptr);
 		vkDestroyImageView(device, forward.rtResolveColorAttachmentImageView, nullptr);
@@ -1183,6 +1318,8 @@ namespace lux::rhi
 
 		DestroyImage(forward.rtPositionMap);
 		DestroyImage(forward.rtNormalMap);
+		DestroyImage(forward.SSAONoiseImage);
+		DestroyBuffer(forward.SSAOKernelsUniformBuffer);
 
 		vkDestroyRenderPass(device, forward.rtRenderPass, nullptr);
 		vkDestroyRenderPass(device, forward.blitRenderPass, nullptr);

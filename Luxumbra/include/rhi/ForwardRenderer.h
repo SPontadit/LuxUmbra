@@ -28,6 +28,7 @@ namespace lux::rhi
 
 	struct PostProcessParameters
 	{
+		glm::mat4 proj;
 		glm::vec2 inverseScreenSize;
 		int toneMapping;
 		float exposure = 1.0f;
@@ -53,6 +54,8 @@ namespace lux::rhi
 
 		GraphicsPipeline blitGraphicsPipeline;
 		std::vector<VkDescriptorSet> blitDescriptorSets;
+		Buffer SSAOKernelsUniformBuffer;
+		Image SSAONoiseImage;
 
 		VkFormat rtImageFormat;
 
@@ -73,6 +76,7 @@ namespace lux::rhi
 		RtModelConstant modelConstant;
 		RtViewProjUniform rtViewProjUniform;
 		std::vector<Buffer> viewProjUniformBuffers;
+
 
 		std::vector<VkImage> rtColorAttachmentImages;
 		std::vector<VkImageView> rtColorAttachmentImageViews;
@@ -99,6 +103,7 @@ namespace lux::rhi
 		VkSampler cubemapSampler;
 		VkSampler irradianceSampler;
 		VkSampler prefilteredSampler;
+		VkSampler SSAONoiseSampler;
 
 		PostProcessParameters postProcessParameters;
 

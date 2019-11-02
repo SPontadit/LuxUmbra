@@ -1,6 +1,6 @@
 #include "Engine.h"
 
-void CornellBox(lux::Engine& luxUmbra) noexcept;
+void SSAOTest(lux::Engine& luxUmbra) noexcept;
 void ShadowTest(lux::Engine& luxUmbra) noexcept;
 void TexturedPBR(lux::Engine& luxUmbra) noexcept;
 
@@ -24,6 +24,7 @@ int main(int ac, char* av[])
 
 	//scene.AddCameraNode(nullptr, { 2.5f, 5.f, 20.f }, { 0.f, 0.f, 0.f }, false, 45.f, 0.01f, 1000.f, true);
 	TexturedPBR(luxUmbra);
+	//SSAOTest(luxUmbra);
 
 
 	luxUmbra.Run();
@@ -116,8 +117,27 @@ void TexturedPBR(lux::Engine& luxUmbra) noexcept
 	scene.AddLightNode(nullptr, { 0.0f, 0.0f, -1.0f }, { 0.f, 0.f, 0.f }, false, lux::scene::LightType::LIGHT_TYPE_DIRECTIONAL, { 1.0f, 1.0f, 1.0f });
 }
 
-void CornellBox(lux::Engine& luxUmbra) noexcept
+void SSAOTest(lux::Engine& luxUmbra) noexcept
 {
+	lux::scene::Scene& scene = luxUmbra.GetScene();
+	lux::resource::ResourceManager& resourceManager = luxUmbra.GetResourceManager();
+
+	resourceManager.UseCubemap("data/envmaps/Ridgecrest_Road_Ref.hdr");
+
+	lux::resource::MaterialCreateInfo defaultMaterialCI;
+	defaultMaterialCI.baseColor = glm::vec3(1.0f);
+	defaultMaterialCI.metallic = false;
+	defaultMaterialCI.perceptualRoughness = 0.0f;
+	defaultMaterialCI.reflectance = 0.5f;
+	defaultMaterialCI.isTransparent = false;
+	defaultMaterialCI.textureMask = 0;
+	resourceManager.CreateMaterial("White", defaultMaterialCI);
+
+	
+	scene.AddMeshNode(nullptr, glm::vec3(0.f), glm::vec3(0.f), false, "data/models/sibenik.dae", "White");
+
+	scene.AddCameraNode(nullptr, { -13.f, -13.f, 0.f }, glm::radians(glm::vec3(0.f, -90.f, 0.f )), false, 45.f, 0.1f, 50.f, true);
+	scene.AddLightNode(nullptr, { 0.0f, 0.0f, -1.0f }, { 0.f, 0.f, 0.f }, false, lux::scene::LightType::LIGHT_TYPE_DIRECTIONAL, { 1.0f, 1.0f, 1.0f });
 
 }
 

@@ -63,6 +63,7 @@ namespace lux::rhi
 		
 		void CreateImage(const ImageCreateInfo& luxImageCI, Image& image) noexcept;
 		void CreateImage(const ImageCreateInfo& luxImageCI, Image& image, VkSampler* sampler) noexcept;
+		void CreateImageFromBuffer(ImageCreateInfo& luxImageCI, void* data, uint32_t size, Image& image) noexcept;
 		void GenerateMipChain(const ImageCreateInfo& luxImageCI, Image& image) noexcept;
 		void FillImage(const ImageCreateInfo& luxImageCI, Image& image) noexcept;
 		void DestroyImage(Image& image) noexcept;
@@ -161,6 +162,8 @@ namespace lux::rhi
 		void GeneratePrefilteredFromCubemapCS(const Image& cubemapSource, Image& prefiltered) noexcept;
 		void GenerateBRDFLutFS(Image& BRDFLut) noexcept;
 		void GenerateBRDFLutCS(Image& BRDFLut) noexcept;
+
+		void GenerateSSAOKernels() noexcept;
 
 		void RenderShadowMaps(VkCommandBuffer commandBuffer, int imageIndex, scene::LightNode* shadowCastingDirectional, const std::vector<scene::MeshNode*>& meshes) noexcept;
 		void RenderForward(VkCommandBuffer commandBuffer, int imageIndex, const scene::CameraNode* camera, const std::vector<scene::MeshNode*>& meshes, const std::vector<scene::LightNode*>& lights) noexcept;
