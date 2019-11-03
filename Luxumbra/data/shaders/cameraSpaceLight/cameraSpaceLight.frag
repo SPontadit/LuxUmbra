@@ -30,6 +30,7 @@ struct PointLight
 {
 	vec3 position;
 	vec3 color;
+	float radius;
 };
 
 layout(set = 0, binding = 1) uniform DirectionalLightBuffer
@@ -74,10 +75,16 @@ layout(set = 1, binding = 4) uniform sampler2D ambientOcclusionMap;
 
 const float PI = 3.1415926;
 
+// Lights and shadows
+
 vec3 DirectColor(vec3 lightDir, vec3 radiance, vec3 normal, float roughness, vec3 F0, float NdotV, vec3 diffuseColor, vec3 radiance, float shadow);
-float DirectionalShadow(vec4 shadowCoord, int shadowMapIndex);
+
+float DirectionalShadow(vec4 shadowCoord, int lightIndex);
+float PointShadow(vec3 lightDir, float sqrLightDist, int lightIndex);
+
 
 // PBR
+
 vec3 RemapDiffuseColor(vec3 baseColor, float metallic);
 vec3 GetF0(float reflectance, float metallic, vec3 baseColor);
 float D_GGX(float VdotH, float roughness);
@@ -89,6 +96,7 @@ float Fd_Lambert();
 float Fd_Burley(float NdotV, float NdotL, float LdotH, float roughness);
 vec3 PrefilteredReflection(vec3 R, float roughness);
 
+// Main
 
 void main() 
 {
@@ -133,14 +141,16 @@ void main()
 	// Point lights
 	for (int i = 0; i < pushConsts.pointLightCount; i++)
 	{
-		vec3 lightPosVS = mat3(fsIn.viewMatrix) * (pointLights[i].position - fsIn.positionWS);
-		lightDir = normalize(lightPosVS);
-		float distance = length(lightPosVS);
-		float attenuation = 1.0 / (distance * distance);
-		
-		radiance = pointLights[i].color * attenuation;
+		vec3 unnormalizedLightDir = pointLights[i].position - fsIn.positionWS;
 
-		shadow = 1.0;
+		vec3 lightPosVS = mat3(fsIn.viewMatrix) * unnormalizedLightDir;
+		lightDir = normalize(lightPosVS);
+
+		float sqrLightDist = dot(unnormalizedLightDir, unnormalizedLightDir);
+		float attenuation = 1.0; // / sqrLightDist;
+		radiance = pointLights[i].color; // * attenuation;
+
+		shadow = PointShadow(normalize(unnormalizedLightDir), sqrLightDist, i);
 
 		directColor += DirectColor(lightDir, viewDir, normal, roughness, F0, NdotV, diffuseColor, radiance, shadow);
 	}
@@ -236,6 +246,20 @@ float DirectionalShadow(vec4 shadowCoord, int lightIndex)
 	}
 
 	return lightedCount / directionalLights[lightIndex].pcfKernelSize;
+}
+
+float PointShadow(vec3 lightDir, float sqrLightDist, int lightIndex)
+{
+	float radius = pointLights[lightIndex].radius;
+
+	if (sqrLightDist > radius * radius)
+		return 0.0;
+
+	float sampledDist = texture(pointLightShadowMaps[lightIndex], lightDir).r;
+	if (sqrLightDist > sampledDist * sampledDist)
+		return 0.0;
+
+	return 1.0;
 }
 
 vec3 PrefilteredReflection(vec3 R, float roughness)
