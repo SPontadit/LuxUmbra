@@ -9,10 +9,13 @@
 #include "rhi\Buffer.h"
 #include "rhi\Image.h"
 
+#define DIRECTIONAL_SHADOW_MAP_TEXTURE_SIZE 2048
+#define POINT_SHADOW_MAP_TEXTURE_SIZE 512
+
 namespace lux::rhi
 {
 
-	struct DirectionalShadowMappingViewProjUniform
+	struct ShadowMappingViewProjUniform
 	{
 		glm::mat4 viewProj;
 	};
@@ -35,18 +38,21 @@ namespace lux::rhi
 
 		VkRenderPass renderPass;
 
-		GraphicsPipeline directionalShadowMappingPipeline;
+		GraphicsPipeline shadowMappingPipeline;
 
 		VkDescriptorPool descriptorPool;
 
+		Image directionalShadowMapIntermediate;
 		Image dummyDirectionalShadowMap;
+		VkFramebuffer directionalFramebuffer;
 		std::vector<Image> directionalShadowMaps;
-		std::vector<VkFramebuffer> directionalFramebuffers;
 		std::vector<Buffer> directionalUniformBuffers;
 		std::vector<VkDescriptorSet> directionalUniformBufferDescriptorSets;
 
+		Image pointShadowMapIntermediate;
+		Image dummyPointShadowMap;
+		VkFramebuffer pointFramebuffer;
 		std::vector<Image> pointShadowMaps;
-		std::vector<VkFramebuffer> pointFramebuffers;
 		std::vector<Buffer> pointUniformBuffers;
 		std::vector<VkDescriptorSet> pointUniformBufferDescriptorSets;
 	};

@@ -41,6 +41,7 @@ namespace lux::rhi
 	{
 		alignas(16) glm::vec3 position;
 		alignas(16) glm::vec3 color;
+		float radius;
 	};
 
 	struct LightCountsPushConstant
@@ -155,10 +156,10 @@ namespace lux::rhi
 		void InitSwapchain() noexcept;
 		void InitCommandBuffer() noexcept;
 
-		void InitShadowMapperDefaultResources() noexcept;
 		void InitShadowMapperRenderPass() noexcept;
 		void InitShadowMapperPipelines() noexcept;
 		void InitShadowMapperDescriptorPool() noexcept;
+		void InitShadowMapperDefaultResources() noexcept;
 
 		void InitForwardRenderPass() noexcept;
 		void InitForwardFramebuffers() noexcept;
@@ -184,7 +185,6 @@ namespace lux::rhi
 		void GenerateCubemap(const CubeMapCreateInfo& luxCubemapCI, const Image& source, Image& image) noexcept;
 
 		void UpdateForwardUniformBuffers(const scene::CameraNode* camera, const std::vector<resource::Material*>& materials) noexcept;
-		void UpdateLightsUniformBuffers(const std::vector<scene::LightNode*>& lights) noexcept;
 
 		void DestroySwapchainRelatedResources() noexcept;
 		void DestroyComputeRelatedResources() noexcept;
@@ -202,7 +202,7 @@ namespace lux::rhi
 		void EndSingleTimeCommandBuffer(VkCommandBuffer commandBuffer) const noexcept;
 
 		void CommandTransitionImageLayout(VkCommandBuffer, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t layerCount = 1, uint32_t levelCount = 1, uint32_t baseMipLevel = 0) noexcept;
-		void CommandTransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) noexcept;
+		void CommandTransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t layerCount = 1, uint32_t levelCount = 1, uint32_t baseMipLevel = 0) noexcept;
 
 		void CreateGraphicsPipeline(const GraphicsPipelineCreateInfo& luxGraphicsPipelineCI, GraphicsPipeline& graphicsPipeline) noexcept;
 		void WriteGraphicsPipelineCacheOnDisk(const std::string& cacheFilePath, GraphicsPipeline& graphicsPipeline) noexcept;

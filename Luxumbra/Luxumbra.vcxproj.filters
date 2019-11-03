@@ -349,9 +349,6 @@
     <None Include="data\shaders\generateBRDFLut\generateBRDFLut.vert">
       <Filter>Resource Files\generateBRDFLut</Filter>
     </None>
-    <None Include="data\shaders\shadowMapping\directionalShadowMapping.vert">
-      <Filter>Resource Files\shadowMapping</Filter>
-    </None>
     <None Include="data\shaders\CompileShaders.bat">
       <Filter>Resource Files</Filter>
     </None>
@@ -363,6 +360,9 @@
     </None>
     <None Include="data\shaders\generateBRDFLut\generateBRDFLut.comp">
       <Filter>Resource Files\generateBRDFLut</Filter>
+    </None>
+    <None Include="data\shaders\shadowMapping\shadowMapping.vert">
+      <Filter>Resource Files\shadowMapping</Filter>
     </None>
   </ItemGroup>
 </Project>
