@@ -97,6 +97,48 @@ namespace lux
 			{
 				lux::rhi::PostProcessParameters& postProcess = rhi.forward.postProcessParameters;
 				
+				if (ImGui::CollapsingHeader("Debug:", ImGuiTreeNodeFlags_DefaultOpen))
+				{
+					ImGui::Spacing();
+
+					int splitViewMask = postProcess.splitViewMask;
+
+					bool showToneMapping = splitViewMask & lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_TONE_MAPPING_MASK;
+					bool showFXAA = splitViewMask & lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_FXAA_MASK;
+					bool showSSAO = splitViewMask & lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_SSAO_MASK;
+					bool newShowToneMapping = showToneMapping;
+					bool newShowFXAA = showFXAA;
+					bool newShowSSAO = showSSAO;
+
+					ImGui::Checkbox("Show Tone Mapping", &newShowToneMapping);
+					ImGui::Checkbox("Show FXAA", &newShowFXAA);
+					ImGui::Checkbox("Show SSAO", &newShowSSAO);
+
+					int newSplitViewMask = 0;
+
+					newSplitViewMask |= newShowToneMapping ? lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_TONE_MAPPING_MASK : 0;
+					newSplitViewMask |= newShowFXAA ? lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_FXAA_MASK : 0;
+					newSplitViewMask |= newShowSSAO ? lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_SSAO_MASK : 0;
+
+					if (newSplitViewMask != splitViewMask)
+						postProcess.splitViewMask = newSplitViewMask;
+
+					if (newSplitViewMask != 0)
+					{
+						ImGui::Spacing();
+
+						// FXAA Percent
+						float splitViewRatio = postProcess.splitViewRatio;
+						float newSplitViewRatio = splitViewRatio;
+						ImGui::SliderFloat("Percent", &newSplitViewRatio, 0.0f, 1.0f, "%.2f");
+
+						if (newSplitViewRatio != splitViewRatio)
+							postProcess.splitViewRatio = newSplitViewRatio;
+					}
+
+					ImGui::NewLine();
+				}
+
 				if (ImGui::CollapsingHeader("ToneMapping:", ImGuiTreeNodeFlags_DefaultOpen))
 				{
 					ImGui::Spacing();
@@ -159,43 +201,6 @@ namespace lux
 						}
 					}
 
-					ImGui::Spacing();
-
-					int splitViewMask = postProcess.splitViewMask;
-
-					bool showToneMapping = splitViewMask & lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_TONE_MAPPING_MASK;
-					bool showFXAA = splitViewMask & lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_FXAA_MASK;
-					bool showSSAO = splitViewMask & lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_SSAO_MASK;
-					bool newShowToneMapping = showToneMapping;
-					bool newShowFXAA = showFXAA;
-					bool newShowSSAO = showSSAO;
-
-					ImGui::Checkbox("Show Tone Mapping", &newShowToneMapping);
-					ImGui::Checkbox("Show FXAA", &newShowFXAA);
-					ImGui::Checkbox("Show SSAO", &newShowSSAO);
-
-					int newSplitViewMask = 0;
-
-					newSplitViewMask |= newShowToneMapping ? lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_TONE_MAPPING_MASK : 0;
-					newSplitViewMask |= newShowFXAA ? lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_FXAA_MASK : 0;
-					newSplitViewMask |= newShowSSAO ? lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_SSAO_MASK : 0;
-
-					if (newSplitViewMask != splitViewMask)
-						postProcess.splitViewMask = newSplitViewMask;
-
-					if (newSplitViewMask != 0)
-					{
-						ImGui::Spacing();
-
-						// FXAA Percent
-						float splitViewRatio = postProcess.splitViewRatio;
-						float newSplitViewRatio = splitViewRatio;
-						ImGui::SliderFloat("Percent", &newSplitViewRatio, 0.0f, 1.0f, "%.2f");
-				
-						if (newSplitViewRatio != splitViewRatio)
-							postProcess.splitViewRatio = newSplitViewRatio;
-					}
-
 					ImGui::NewLine();
 				}
 
@@ -242,6 +247,8 @@ namespace lux
 
 					if (newStrenght != strenght)
 						ssaoParameters.strenght = newStrenght;
+
+					ImGui::NewLine();
 				}
 
 				ImGui::EndTabItem();
