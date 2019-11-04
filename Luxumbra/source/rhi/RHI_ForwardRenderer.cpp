@@ -195,12 +195,33 @@ namespace lux::rhi
 		SSAOSubpass.pColorAttachments = &SSAOAttachmentRef;
 		SSAOSubpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 
+		std::array<VkSubpassDependency, 2> SSAOSubpassDependencies;
+		SSAOSubpassDependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+		SSAOSubpassDependencies[0].dstSubpass = 0;
+		SSAOSubpassDependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+		SSAOSubpassDependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		SSAOSubpassDependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+		SSAOSubpassDependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		SSAOSubpassDependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+		SSAOSubpassDependencies[1].srcSubpass = 0;
+		SSAOSubpassDependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+		SSAOSubpassDependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		SSAOSubpassDependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+		SSAOSubpassDependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		SSAOSubpassDependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+		SSAOSubpassDependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+
+
 		VkRenderPassCreateInfo SSAORenderPassCI = {};
 		SSAORenderPassCI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 		SSAORenderPassCI.attachmentCount = 1;
 		SSAORenderPassCI.pAttachments = &SSAOAttachment;
 		SSAORenderPassCI.subpassCount = 1;
 		SSAORenderPassCI.pSubpasses = &SSAOSubpass;
+		SSAORenderPassCI.dependencyCount = TO_UINT32_T(SSAOSubpassDependencies.size());
+		SSAORenderPassCI.pDependencies = SSAOSubpassDependencies.data();
 
 		CHECK_VK(vkCreateRenderPass(device, &SSAORenderPassCI, nullptr, &forward.ssaoRenderPass));
 
@@ -787,7 +808,7 @@ namespace lux::rhi
 		envMapGraphicsPipelineCI.binaryVertexFilePath = "data/shaders/envMap/envMap.vert.spv";
 		envMapGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/envMap/envMap.frag.spv";
 		envMapGraphicsPipelineCI.cacheFilePath = "data/pipelineCache/rtEnvMapGraphics.bin";
-		envMapGraphicsPipelineCI.vertexLayout = lux::VertexLayout::VERTEX_BASIC_LAYOUT;
+		envMapGraphicsPipelineCI.vertexLayout = lux::VertexLayout::VERTEX_POSITION_ONLY_LAYOUT;
 		envMapGraphicsPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 		envMapGraphicsPipelineCI.viewportWidth = TO_FLOAT(swapchainExtent.width);
 		envMapGraphicsPipelineCI.viewportHeight = TO_FLOAT(swapchainExtent.height);

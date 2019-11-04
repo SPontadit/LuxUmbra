@@ -59,6 +59,9 @@ namespace lux::rhi
 		VkPipelineVertexInputStateCreateInfo vertexInputStateCI = {};
 		vertexInputStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
+		VkVertexInputBindingDescription bindingDescription = Vertex::GetBindingDescription();
+		std::vector< VkVertexInputAttributeDescription> attributesDescription;
+
 		switch (luxGraphicsPipelineCI.vertexLayout)
 		{
 		case VertexLayout::NO_VERTEX_LAYOUT:
@@ -70,20 +73,23 @@ namespace lux::rhi
 
 		case VertexLayout::VERTEX_POSITION_ONLY_LAYOUT:
 		{
-			VkVertexInputBindingDescription bindingDescription = Vertex::GetBindingDescription();
-			VkVertexInputAttributeDescription attributeDescription = Vertex::GetPositionOnlyAttributeDescription();
+			attributesDescription.push_back(Vertex::GetPositionOnlyAttributeDescription());
 
 			vertexInputStateCI.vertexBindingDescriptionCount = 1;
 			vertexInputStateCI.pVertexBindingDescriptions = &bindingDescription;
 			vertexInputStateCI.vertexAttributeDescriptionCount = 1;
-			vertexInputStateCI.pVertexAttributeDescriptions = &attributeDescription;
+			vertexInputStateCI.pVertexAttributeDescriptions = attributesDescription.data();
 			break;
 		}
 
 		case VertexLayout::VERTEX_BASIC_LAYOUT:
 		{
-			VkVertexInputBindingDescription bindingDescription = Vertex::GetBindingDescription();
-			std::array<VkVertexInputAttributeDescription, 3> attributesDescription = Vertex::GetBasicAttributeDescriptions();
+			
+			std::array<VkVertexInputAttributeDescription, 3> basicAttributesDescription = Vertex::GetBasicAttributeDescriptions();
+			for (size_t i = 0; i < basicAttributesDescription.size(); i++)
+			{
+				attributesDescription.push_back(basicAttributesDescription[i]);
+			}
 
 			vertexInputStateCI.vertexBindingDescriptionCount = 1;
 			vertexInputStateCI.pVertexBindingDescriptions = &bindingDescription;
@@ -94,8 +100,11 @@ namespace lux::rhi
 
 		case VertexLayout::VERTEX_FULL_LAYOUT:
 		{
-			VkVertexInputBindingDescription bindingDescription = Vertex::GetBindingDescription();
-			std::array<VkVertexInputAttributeDescription, 5> attributesDescription = Vertex::GetFullAttributeDescriptions();
+			std::array<VkVertexInputAttributeDescription, 5> fullAttributesDescription = Vertex::GetFullAttributeDescriptions();
+			for (size_t i = 0; i < fullAttributesDescription.size(); i++)
+			{
+				attributesDescription.push_back(fullAttributesDescription[i]);
+			}
 
 			vertexInputStateCI.vertexBindingDescriptionCount = 1;
 			vertexInputStateCI.pVertexBindingDescriptions = &bindingDescription;
