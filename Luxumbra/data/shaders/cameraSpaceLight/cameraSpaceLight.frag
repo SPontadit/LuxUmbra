@@ -85,7 +85,7 @@ float Fd_Burley(float NdotV, float NdotL, float LdotH, float roughness);
 vec3 PrefilteredReflection(vec3 R, float roughness);
 
 #define NEAR_PLANE 0.1
-#define FAR_PLANE 50.0
+#define FAR_PLANE 500.0
 
 float linearDepth(float depth)
 {

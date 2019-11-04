@@ -23,8 +23,8 @@ int main(int ac, char* av[])
 
 
 	//scene.AddCameraNode(nullptr, { 2.5f, 5.f, 20.f }, { 0.f, 0.f, 0.f }, false, 45.f, 0.01f, 1000.f, true);
-	TexturedPBR(luxUmbra);
-	//SSAOTest(luxUmbra);
+	//TexturedPBR(luxUmbra);
+	SSAOTest(luxUmbra);
 
 
 	luxUmbra.Run();
@@ -134,9 +134,9 @@ void SSAOTest(lux::Engine& luxUmbra) noexcept
 	resourceManager.CreateMaterial("White", defaultMaterialCI);
 
 	
-	scene.AddMeshNode(nullptr, glm::vec3(0.f), glm::vec3(0.f), false, "data/models/sibenik.dae", "White");
+	scene.AddMeshNode(nullptr, glm::vec3(0.f), glm::vec3(0.f), false, "data/models/ironman.fbx", "White");
 
-	scene.AddCameraNode(nullptr, { -13.f, -13.f, 0.f }, glm::radians(glm::vec3(0.f, -90.f, 0.f )), false, 45.f, 0.1f, 50.f, true);
+	scene.AddCameraNode(nullptr, { 0.9f, 1.0f, 3.0f }, glm::radians(glm::vec3(0.f, 0.f, 0.f )), false, 45.f, 0.1f, 500.f, true);
 	scene.AddLightNode(nullptr, { 0.0f, 0.0f, -1.0f }, { 0.f, 0.f, 0.f }, false, lux::scene::LightType::LIGHT_TYPE_DIRECTIONAL, { 1.0f, 1.0f, 1.0f });
 
 }

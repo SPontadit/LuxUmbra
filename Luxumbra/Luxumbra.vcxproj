@@ -231,6 +231,8 @@
     <None Include="data\shaders\mesh\mesh.frag" />
     <None Include="data\shaders\mesh\mesh.vert" />
     <None Include="data\shaders\shadowMapping\directionalShadowMapping.vert" />
+    <None Include="data\shaders\SSAO\SSAO.frag" />
+    <None Include="data\shaders\SSAO\SSAO.vert" />
     <None Include="data\shaders\texture\triangle.frag" />
     <None Include="data\shaders\texture\triangle.vert" />
     <None Include="data\shaders\CompileShaders.bat" />

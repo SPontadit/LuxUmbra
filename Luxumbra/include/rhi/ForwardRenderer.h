@@ -28,14 +28,30 @@ namespace lux::rhi
 
 	struct PostProcessParameters
 	{
-		glm::mat4 proj;
 		glm::vec2 inverseScreenSize;
 		int toneMapping;
 		float exposure = 1.0f;
-		float FXAAPercent = 0.5f;
-		int FXAADebug;
+		float splitViewRatio = 0.5f;
+		int splitViewMask;
 		float FXAAContrastThreshold = 0.0312f;
 		float FXAARelativeThreshold = 0.125f;
+	};
+
+	enum PostProcessSplitViewMask
+	{
+		SPLIT_VIEW_TONE_MAPPING_MASK = 0x1,
+		SPLIT_VIEW_FXAA_MASK = 0x2,
+		SPLIT_VIEW_SSAO_MASK = 0x4,
+		SPLIT_VIEW_MASK_COUNT = 0x8,
+	};
+
+	struct SSAOParameters
+	{
+		glm::mat4 proj;
+		int kernelSize = 16;
+		float kernelRadius = 0.5f;
+		float bias = 0.01f;
+		float strenght = 1.0f;
 	};
 
 	struct ForwardRenderer
@@ -48,6 +64,15 @@ namespace lux::rhi
 
 		const ForwardRenderer& operator=(const ForwardRenderer&) = delete;
 		const ForwardRenderer& operator=(ForwardRenderer&&) = delete;
+
+		VkRenderPass ssaoRenderPass;
+		std::vector<VkFramebuffer> ssaoFrameBuffers;
+		std::vector<Image> ssaoColorAttachments;
+
+		GraphicsPipeline ssaoGraphicsPipeline;
+		std::vector<VkDescriptorSet> ssaoDescriptorSets;
+
+
 
 		VkRenderPass blitRenderPass;
 		std::vector<VkFramebuffer> blitFrameBuffers;
@@ -106,6 +131,7 @@ namespace lux::rhi
 		VkSampler SSAONoiseSampler;
 
 		PostProcessParameters postProcessParameters;
+		SSAOParameters ssaoParameters;
 
 		enum ForwardRtAttachmentBindPoints : uint32_t
 		{

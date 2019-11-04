@@ -25,4 +25,6 @@ C:/VulkanSDK/1.1.114.0/Bin32/glslangValidator.exe -V generateBRDFLut/generateBRD
 C:/VulkanSDK/1.1.114.0/Bin32/glslangValidator.exe -V generateBRDFLut/generateBRDFLut.frag -o generateBRDFLut/generateBRDFLut.frag.spv
 C:/VulkanSDK/1.1.114.0/Bin32/glslangValidator.exe -V generateBRDFLut/generateBRDFLut.comp -o generateBRDFLut/generateBRDFLut.comp.spv
 C:/VulkanSDK/1.1.114.0/Bin32/glslangValidator.exe -V shadowMapping/directionalShadowMapping.vert -o shadowMapping/directionalShadowMapping.vert.spv
+C:/VulkanSDK/1.1.114.0/Bin32/glslangValidator.exe -V SSAO/SSAO.vert -o SSAO/SSAO.vert.spv
+C:/VulkanSDK/1.1.114.0/Bin32/glslangValidator.exe -V SSAO/SSAO.frag -o SSAO/SSAO.frag.spv
 pause

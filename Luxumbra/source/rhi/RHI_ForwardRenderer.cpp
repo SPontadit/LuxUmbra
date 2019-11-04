@@ -16,6 +16,7 @@ namespace lux::rhi
 	ForwardRenderer::ForwardRenderer() noexcept
 		: rtImageFormat(VK_FORMAT_R32G32B32A32_SFLOAT), rtRenderPass(VK_NULL_HANDLE), rtFrameBuffers(0), descriptorPool(VK_NULL_HANDLE),
 		blitRenderPass(VK_NULL_HANDLE), blitFrameBuffers(0), blitGraphicsPipeline(), blitDescriptorSets(0),
+		ssaoRenderPass(VK_NULL_HANDLE), ssaoFrameBuffers(0), ssaoColorAttachments(0),
 		rtGraphicsPipeline(), rtViewDescriptorSets(0), rtModelDescriptorSets(0), rtColorAttachmentImages(0), rtColorAttachmentImageMemories(0), rtColorAttachmentImageViews(0),
 		rtResolveColorAttachmentImage(VK_NULL_HANDLE), rtResolveColorAttachmentMemory(VK_NULL_HANDLE), rtResolveColorAttachmentImageView(VK_NULL_HANDLE),
 		rtDepthAttachmentImage(VK_NULL_HANDLE), rtDepthAttachmentMemory(VK_NULL_HANDLE), rtDepthAttachmentImageView(VK_NULL_HANDLE),
@@ -174,6 +175,35 @@ namespace lux::rhi
 
 		CHECK_VK(vkCreateRenderPass(device, &rtRenderPassCI, nullptr, &forward.rtRenderPass));
 
+		VkAttachmentDescription SSAOAttachment = {};
+		SSAOAttachment.format = VK_FORMAT_R8_UNORM;
+		SSAOAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		SSAOAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		SSAOAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		SSAOAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		SSAOAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		SSAOAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		SSAOAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		VkAttachmentReference SSAOAttachmentRef = {};
+		SSAOAttachmentRef.attachment = 0;
+		SSAOAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+
+		VkSubpassDescription SSAOSubpass = {};
+		SSAOSubpass.colorAttachmentCount = 1;
+		SSAOSubpass.pColorAttachments = &SSAOAttachmentRef;
+		SSAOSubpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+
+		VkRenderPassCreateInfo SSAORenderPassCI = {};
+		SSAORenderPassCI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+		SSAORenderPassCI.attachmentCount = 1;
+		SSAORenderPassCI.pAttachments = &SSAOAttachment;
+		SSAORenderPassCI.subpassCount = 1;
+		SSAORenderPassCI.pSubpasses = &SSAOSubpass;
+
+		CHECK_VK(vkCreateRenderPass(device, &SSAORenderPassCI, nullptr, &forward.ssaoRenderPass));
+
 
 		VkAttachmentDescription swapchainAttachment = {};
 		swapchainAttachment.format = swapchainImageFormat;
@@ -328,6 +358,25 @@ namespace lux::rhi
 
 		CreateImage(rtNormalImageCI, forward.rtNormalMap);
 
+		
+		// SSAO Image
+		ImageCreateInfo ssaoImageCI = {};
+		ssaoImageCI.format = VK_FORMAT_R8_UNORM;
+		ssaoImageCI.width = swapchainExtent.width;
+		ssaoImageCI.height = swapchainExtent.height;
+		ssaoImageCI.arrayLayers = 1;
+		ssaoImageCI.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+		ssaoImageCI.sampleCount = VK_SAMPLE_COUNT_1_BIT;
+		ssaoImageCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		ssaoImageCI.subresourceRangeLayerCount = 1;
+		ssaoImageCI.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
+
+
+		forward.ssaoColorAttachments.resize(TO_SIZE_T(swapchainImageCount));
+		for (size_t i = 0; i < swapchainImageCount; i++)
+		{
+			CreateImage(ssaoImageCI, forward.ssaoColorAttachments[i]);
+		}
 
 		// Framebuffers
 
@@ -350,12 +399,22 @@ namespace lux::rhi
 		blitFramebufferCI.layers = 1;
 		blitFramebufferCI.attachmentCount = 1;
 
+		VkFramebufferCreateInfo SSAOFramebufferCI = {};
+		SSAOFramebufferCI.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		SSAOFramebufferCI.renderPass = forward.ssaoRenderPass;
+		SSAOFramebufferCI.width = swapchainExtent.width;
+		SSAOFramebufferCI.height = swapchainExtent.height;
+		SSAOFramebufferCI.layers = 1;
+		SSAOFramebufferCI.attachmentCount = 1;
+
 		forward.rtFrameBuffers.resize(TO_SIZE_T(swapchainImageCount));
 		forward.blitFrameBuffers.resize(TO_SIZE_T(swapchainImageCount));
+		forward.ssaoFrameBuffers.resize(TO_SIZE_T(swapchainImageCount));
 
 		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
 			blitFramebufferCI.pAttachments = &swapchainImageViews[i];
+			SSAOFramebufferCI.pAttachments = &forward.ssaoColorAttachments[i].imageView;
 			attachments[TO_SIZE_T(ForwardRenderer::FORWARD_RT_COLOR_ATTACHMENT_BIND_POINT)] = forward.rtColorAttachmentImageViews[i];
 			attachments[TO_SIZE_T(ForwardRenderer::FORWARD_RT_DEPTH_ATTACHMENT_BIND_POINT)] = forward.rtDepthAttachmentImageView;
 			attachments[TO_SIZE_T(ForwardRenderer::FORWARD_RT_POSITION_ATTACHMENT_BIND_POINT)] = forward.rtPositionMap.imageView;
@@ -363,6 +422,7 @@ namespace lux::rhi
 
 			CHECK_VK(vkCreateFramebuffer(device, &rtFramebufferCI, nullptr, &forward.rtFrameBuffers[i]));
 			CHECK_VK(vkCreateFramebuffer(device, &blitFramebufferCI, nullptr, &forward.blitFrameBuffers[i]));
+			CHECK_VK(vkCreateFramebuffer(device, &SSAOFramebufferCI, nullptr, &forward.ssaoFrameBuffers[i]));
 		}
 
 	}
@@ -371,11 +431,15 @@ namespace lux::rhi
 	{
 		VkDescriptorPoolSize blitSamplersDescriptorPoolSize = {};
 		blitSamplersDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		blitSamplersDescriptorPoolSize.descriptorCount = swapchainImageCount * 5;
+		blitSamplersDescriptorPoolSize.descriptorCount = swapchainImageCount * 2;
 
-		VkDescriptorPoolSize blitSSAOKernelDescriptorPoolSize = {};
-		blitSSAOKernelDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		blitSSAOKernelDescriptorPoolSize.descriptorCount = swapchainImageCount;
+		VkDescriptorPoolSize SSAOSamplersDescriptorPoolSize = {};
+		SSAOSamplersDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		SSAOSamplersDescriptorPoolSize.descriptorCount = swapchainImageCount * 3;
+
+		VkDescriptorPoolSize SSAOKernelDescriptorPoolSize = {};
+		SSAOKernelDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		SSAOKernelDescriptorPoolSize.descriptorCount = swapchainImageCount;
 
 		VkDescriptorPoolSize rtViewProjUniformDescriptorPoolSize = {};
 		rtViewProjUniformDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -409,10 +473,11 @@ namespace lux::rhi
 		envMapUniformDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		envMapUniformDescriptorPoolSize.descriptorCount = swapchainImageCount;
 
-		std::array<VkDescriptorPoolSize, 10> descriptorPoolSizes = 
+		std::array<VkDescriptorPoolSize, 11> descriptorPoolSizes = 
 		{ 
 			blitSamplersDescriptorPoolSize,
-			blitSSAOKernelDescriptorPoolSize,
+			SSAOSamplersDescriptorPoolSize,
+			SSAOKernelDescriptorPoolSize,
 			rtViewProjUniformDescriptorPoolSize, 
 			lightsUniformDescriptorPoolSize, 
 			shadowMapsDescriptorPoolSize,
@@ -442,35 +507,11 @@ namespace lux::rhi
 		blitDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		blitDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-		VkDescriptorSetLayoutBinding positionMapDescriptorSetLayoutBinding = {};
-		positionMapDescriptorSetLayoutBinding.binding = 1;
-		positionMapDescriptorSetLayoutBinding.descriptorCount = 1;
-		positionMapDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		positionMapDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-		VkDescriptorSetLayoutBinding normalMapDescriptorSetLayoutBinding = {};
-		normalMapDescriptorSetLayoutBinding.binding = 2;
-		normalMapDescriptorSetLayoutBinding.descriptorCount = 1;
-		normalMapDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		normalMapDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-		VkDescriptorSetLayoutBinding depthMapDescriptorSetLayoutBinding = {};
-		depthMapDescriptorSetLayoutBinding.binding = 3;
-		depthMapDescriptorSetLayoutBinding.descriptorCount = 1;
-		depthMapDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		depthMapDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-		VkDescriptorSetLayoutBinding SSAOKernelsDescriptorSetLayoutBinding = {};
-		SSAOKernelsDescriptorSetLayoutBinding.binding = 4;
-		SSAOKernelsDescriptorSetLayoutBinding.descriptorCount = 1;
-		SSAOKernelsDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		SSAOKernelsDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-		VkDescriptorSetLayoutBinding SSAONoiseDescriptorSetLayoutBinding = {};
-		SSAONoiseDescriptorSetLayoutBinding.binding = 5;
-		SSAONoiseDescriptorSetLayoutBinding.descriptorCount = 1;
-		SSAONoiseDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		SSAONoiseDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		VkDescriptorSetLayoutBinding SSAOMapDescriptorSetLayoutBinding = {};
+		SSAOMapDescriptorSetLayoutBinding.binding = 1;
+		SSAOMapDescriptorSetLayoutBinding.descriptorCount = 1;
+		SSAOMapDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		SSAOMapDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 		VkPushConstantRange blitPostProcessParameterPushConstantRange = {};
 		blitPostProcessParameterPushConstantRange.offset = 0;
@@ -501,16 +542,75 @@ namespace lux::rhi
 		blitGraphicsPipelineCI.viewDescriptorSetLayoutBindings = 
 		{ 
 			blitDescriptorSetLayoutBinding,
-			positionMapDescriptorSetLayoutBinding,
-			normalMapDescriptorSetLayoutBinding,
-			depthMapDescriptorSetLayoutBinding,
-			SSAOKernelsDescriptorSetLayoutBinding,
-			SSAONoiseDescriptorSetLayoutBinding
+			SSAOMapDescriptorSetLayoutBinding
 		};
 		
 		blitGraphicsPipelineCI.pushConstants = { blitPostProcessParameterPushConstantRange };
 
 		CreateGraphicsPipeline(blitGraphicsPipelineCI, forward.blitGraphicsPipeline);
+
+
+		// SSAO
+		VkDescriptorSetLayoutBinding positionMapDescriptorSetLayoutBinding = {};
+		positionMapDescriptorSetLayoutBinding.binding = 0;
+		positionMapDescriptorSetLayoutBinding.descriptorCount = 1;
+		positionMapDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		positionMapDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		VkDescriptorSetLayoutBinding normalMapDescriptorSetLayoutBinding = {};
+		normalMapDescriptorSetLayoutBinding.binding = 1;
+		normalMapDescriptorSetLayoutBinding.descriptorCount = 1;
+		normalMapDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		normalMapDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		VkDescriptorSetLayoutBinding SSAONoiseDescriptorSetLayoutBinding = {};
+		SSAONoiseDescriptorSetLayoutBinding.binding = 2;
+		SSAONoiseDescriptorSetLayoutBinding.descriptorCount = 1;
+		SSAONoiseDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		SSAONoiseDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		VkDescriptorSetLayoutBinding SSAOKernelsDescriptorSetLayoutBinding = {};
+		SSAOKernelsDescriptorSetLayoutBinding.binding = 3;
+		SSAOKernelsDescriptorSetLayoutBinding.descriptorCount = 1;
+		SSAOKernelsDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		SSAOKernelsDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		
+		VkPushConstantRange SSAOPushConstantRange = {};
+		SSAOPushConstantRange.offset = 0;
+		SSAOPushConstantRange.size = sizeof(SSAOParameters);
+		SSAOPushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		GraphicsPipelineCreateInfo ssaoGraphicsPipelineCI = {};
+		ssaoGraphicsPipelineCI.renderPass = forward.ssaoRenderPass;
+		ssaoGraphicsPipelineCI.subpassIndex = 0;
+		ssaoGraphicsPipelineCI.binaryVertexFilePath = "data/shaders/SSAO/SSAO.vert.spv";
+		ssaoGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/SSAO/SSAO.frag.spv";
+		ssaoGraphicsPipelineCI.cacheFilePath = "data/pipelineCache/SSAO.bin";
+		ssaoGraphicsPipelineCI.vertexLayout = lux::VertexLayout::NO_VERTEX_LAYOUT;
+		ssaoGraphicsPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+		ssaoGraphicsPipelineCI.viewportWidth = TO_FLOAT(swapchainExtent.width);
+		ssaoGraphicsPipelineCI.viewportHeight = TO_FLOAT(swapchainExtent.height);
+		ssaoGraphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_BACK_BIT;
+		ssaoGraphicsPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_CLOCKWISE;
+		ssaoGraphicsPipelineCI.disableMSAA = true;
+		ssaoGraphicsPipelineCI.enableDepthTest = VK_TRUE;
+		ssaoGraphicsPipelineCI.enableDepthWrite = VK_TRUE;
+		ssaoGraphicsPipelineCI.enableDepthBias = VK_FALSE;
+		ssaoGraphicsPipelineCI.depthBiasConstantFactor = 0.f;
+		ssaoGraphicsPipelineCI.depthBiasSlopeFactor = 0.f;
+		ssaoGraphicsPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS;
+		ssaoGraphicsPipelineCI.viewDescriptorSetLayoutBindings =
+		{
+			positionMapDescriptorSetLayoutBinding,
+			normalMapDescriptorSetLayoutBinding,
+			SSAOKernelsDescriptorSetLayoutBinding,
+			SSAONoiseDescriptorSetLayoutBinding
+		};
+		ssaoGraphicsPipelineCI.pushConstants = { SSAOPushConstantRange };
+
+
+		CreateGraphicsPipeline(ssaoGraphicsPipelineCI, forward.ssaoGraphicsPipeline);
+
 
 		// Render Target Graphics Pipeline
 		
@@ -786,6 +886,48 @@ namespace lux::rhi
 		writeBlitDescriptorSet.dstBinding = 0;
 		writeBlitDescriptorSet.pImageInfo = &blitDescriptorImageInfo;
 
+		VkDescriptorImageInfo SSAOMapDescriptorImageInfo = {};
+		SSAOMapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		SSAOMapDescriptorImageInfo.sampler = forward.sampler;
+
+		VkWriteDescriptorSet writeSSAOMapDescriptorSet = {};
+		writeSSAOMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeSSAOMapDescriptorSet.descriptorCount = 1;
+		writeSSAOMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		writeSSAOMapDescriptorSet.dstBinding = 1;
+		writeSSAOMapDescriptorSet.pImageInfo = &SSAOMapDescriptorImageInfo;
+
+		
+		for (size_t i = 0; i < swapchainImageCount; i++)
+		{
+			SSAOMapDescriptorImageInfo.imageView = forward.ssaoColorAttachments[i].imageView;
+
+			blitDescriptorImageInfo.imageView = forward.rtColorAttachmentImageViews[i];
+
+			writeBlitDescriptorSet.dstSet = forward.blitDescriptorSets[i];
+			writeSSAOMapDescriptorSet.dstSet = forward.blitDescriptorSets[i];
+
+			std::array<VkWriteDescriptorSet, 2> writeDescriptorSets = 
+			{
+				writeBlitDescriptorSet,
+				writeSSAOMapDescriptorSet
+			};
+
+			vkUpdateDescriptorSets(device, TO_UINT32_T(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
+		}
+
+
+		// Allocate SSAO Descriptor Set
+		std::vector<VkDescriptorSetLayout> SSAODescriptorSetLayout(swapchainImageCount, forward.ssaoGraphicsPipeline.viewDescriptorSetLayout);
+		VkDescriptorSetAllocateInfo ssaoDescriptorSetAI = {};
+		ssaoDescriptorSetAI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		ssaoDescriptorSetAI.descriptorPool = forward.descriptorPool;
+		ssaoDescriptorSetAI.descriptorSetCount = swapchainImageCount;
+		ssaoDescriptorSetAI.pSetLayouts = SSAODescriptorSetLayout.data();
+
+		forward.ssaoDescriptorSets.resize(TO_SIZE_T(swapchainImageCount));
+		CHECK_VK(vkAllocateDescriptorSets(device, &ssaoDescriptorSetAI, forward.ssaoDescriptorSets.data()));
+
 
 		VkDescriptorImageInfo positionMapDescriptorImageInfo = {};
 		positionMapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -796,7 +938,7 @@ namespace lux::rhi
 		writePositionMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		writePositionMapDescriptorSet.descriptorCount = 1;
 		writePositionMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		writePositionMapDescriptorSet.dstBinding = 1;
+		writePositionMapDescriptorSet.dstBinding = 0;
 		writePositionMapDescriptorSet.pImageInfo = &positionMapDescriptorImageInfo;
 
 
@@ -809,43 +951,22 @@ namespace lux::rhi
 		writeNormalMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		writeNormalMapDescriptorSet.descriptorCount = 1;
 		writeNormalMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		writeNormalMapDescriptorSet.dstBinding = 2;
+		writeNormalMapDescriptorSet.dstBinding = 1;
 		writeNormalMapDescriptorSet.pImageInfo = &normalMapDescriptorImageInfo;
 
-
-		VkDescriptorImageInfo depthMapDescriptorImageInfo = {};
-		depthMapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-		depthMapDescriptorImageInfo.sampler = forward.sampler;
-		depthMapDescriptorImageInfo.imageView = forward.rtDepthAttachmentImageView;
-
-		VkWriteDescriptorSet writeDepthMapDescriptorSet = {};
-		writeDepthMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writeDepthMapDescriptorSet.descriptorCount = 1;
-		writeDepthMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		writeDepthMapDescriptorSet.dstBinding = 3;
-		writeDepthMapDescriptorSet.pImageInfo = &depthMapDescriptorImageInfo;
-
-		
 		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
-			blitDescriptorImageInfo.imageView = forward.rtColorAttachmentImageViews[i];
+			writePositionMapDescriptorSet.dstSet = forward.ssaoDescriptorSets[i];
+			writeNormalMapDescriptorSet.dstSet = forward.ssaoDescriptorSets[i];
 
-			writeBlitDescriptorSet.dstSet = forward.blitDescriptorSets[i];
-			writePositionMapDescriptorSet.dstSet = forward.blitDescriptorSets[i];
-			writeNormalMapDescriptorSet.dstSet = forward.blitDescriptorSets[i];
-			writeDepthMapDescriptorSet.dstSet = forward.blitDescriptorSets[i];
-			
-			std::array<VkWriteDescriptorSet, 4> writeDescriptorSets = 
+			std::array<VkWriteDescriptorSet, 2> writeDescriptorSets =
 			{
-				writeBlitDescriptorSet,
 				writePositionMapDescriptorSet,
-				writeNormalMapDescriptorSet,
-				writeDepthMapDescriptorSet
+				writeNormalMapDescriptorSet
 			};
 
 			vkUpdateDescriptorSets(device, TO_UINT32_T(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
 		}
-
 
 		// Allocate Render Target Descriptor Set
 		std::vector<VkDescriptorSetLayout> rtViewDescriptorSetLayout(swapchainImageCount, forward.rtGraphicsPipeline.viewDescriptorSetLayout);
@@ -1010,7 +1131,7 @@ namespace lux::rhi
 		writeSSAOKernelsDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		writeSSAOKernelsDescriptorSet.descriptorCount = 1;
 		writeSSAOKernelsDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		writeSSAOKernelsDescriptorSet.dstBinding = 4;
+		writeSSAOKernelsDescriptorSet.dstBinding = 3;
 		writeSSAOKernelsDescriptorSet.pBufferInfo = &SSAOKernelsDescriptorBufferInfo;
 
 
@@ -1023,14 +1144,14 @@ namespace lux::rhi
 		writeSSAONoiseDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		writeSSAONoiseDescriptorSet.descriptorCount = 1;
 		writeSSAONoiseDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		writeSSAONoiseDescriptorSet.dstBinding = 5;
+		writeSSAONoiseDescriptorSet.dstBinding = 2;
 		writeSSAONoiseDescriptorSet.pImageInfo = &SSAONoiseDescriptorImageInfo;
 
 
 		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
-			writeSSAOKernelsDescriptorSet.dstSet = forward.blitDescriptorSets[i];
-			writeSSAONoiseDescriptorSet.dstSet = forward.blitDescriptorSets[i];
+			writeSSAOKernelsDescriptorSet.dstSet = forward.ssaoDescriptorSets[i];
+			writeSSAONoiseDescriptorSet.dstSet = forward.ssaoDescriptorSets[i];
 
 			std::array<VkWriteDescriptorSet, 2> writeDescriptorSets = 
 			{
@@ -1054,7 +1175,6 @@ namespace lux::rhi
 
 		forward.rtViewProjUniform.view = camera->GetViewTransform();
 		forward.rtViewProjUniform.projection = camera->GetPerspectiveProjectionTransform();
-		forward.postProcessParameters.proj = camera->GetPerspectiveProjectionTransform();
 
 		UpdateBuffer(forward.viewProjUniformBuffers[currentFrame], &forward.rtViewProjUniform);
 
@@ -1236,25 +1356,48 @@ namespace lux::rhi
 		vkCmdEndRenderPass(commandBuffer);
 	}
 
-	void RHI::RenderPostProcess(VkCommandBuffer commandBuffer, int imageIndex) noexcept
+	void RHI::RenderPostProcess(VkCommandBuffer commandBuffer, int imageIndex, const scene::CameraNode* camera) noexcept
 	{
 		VkDeviceSize vertexBufferOffsets[] = { 0 };
 
-		VkClearColorValue clearColor{ 0.5f, 0.5703125f, 0.6171875f, 1.0F };
+		VkClearColorValue clearColor{ 1.0f, 1.0f, 1.0f, 1.0F };
 
 		std::array<VkClearValue, 1> clearValues = {};
 		clearValues[ForwardRenderer::FORWARD_RT_COLOR_ATTACHMENT_BIND_POINT].color = clearColor;
 
-		// Begin Render Pass
-		VkRenderPassBeginInfo renderPassBI = {};
-		renderPassBI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassBI.renderPass = forward.blitRenderPass;
-		renderPassBI.framebuffer = forward.blitFrameBuffers[imageIndex];
-		renderPassBI.renderArea.extent = swapchainExtent;
-		renderPassBI.clearValueCount = TO_UINT32_T(clearValues.size());
-		renderPassBI.pClearValues = clearValues.data();
 
-		vkCmdBeginRenderPass(commandBuffer, &renderPassBI, VK_SUBPASS_CONTENTS_INLINE);
+		// Begin SSAO Render Pass
+		VkRenderPassBeginInfo SSAOrenderPassBI = {};
+		SSAOrenderPassBI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		SSAOrenderPassBI.renderPass = forward.ssaoRenderPass;
+		SSAOrenderPassBI.framebuffer = forward.ssaoFrameBuffers[imageIndex];
+		SSAOrenderPassBI.renderArea.extent = swapchainExtent;
+		SSAOrenderPassBI.clearValueCount = TO_UINT32_T(clearValues.size());
+		SSAOrenderPassBI.pClearValues = clearValues.data();
+
+		vkCmdBeginRenderPass(commandBuffer, &SSAOrenderPassBI, VK_SUBPASS_CONTENTS_INLINE);
+
+		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.ssaoGraphicsPipeline.pipeline);
+		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.ssaoGraphicsPipeline.pipelineLayout, 0, 1, &forward.ssaoDescriptorSets[currentFrame], 0, nullptr);
+
+		forward.ssaoParameters.proj = camera->GetPerspectiveProjectionTransform();
+		vkCmdPushConstants(commandBuffer, forward.ssaoGraphicsPipeline.pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(SSAOParameters), &forward.ssaoParameters);
+
+		vkCmdDraw(commandBuffer, 4, 1, 0, 0);
+
+		vkCmdEndRenderPass(commandBuffer);
+
+
+		// Begin Blit Render Pass
+		VkRenderPassBeginInfo blitRenderPassBI = {};
+		blitRenderPassBI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		blitRenderPassBI.renderPass = forward.blitRenderPass;
+		blitRenderPassBI.framebuffer = forward.blitFrameBuffers[imageIndex];
+		blitRenderPassBI.renderArea.extent = swapchainExtent;
+		blitRenderPassBI.clearValueCount = TO_UINT32_T(clearValues.size());
+		blitRenderPassBI.pClearValues = clearValues.data();
+
+		vkCmdBeginRenderPass(commandBuffer, &blitRenderPassBI, VK_SUBPASS_CONTENTS_INLINE);
 
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.blitGraphicsPipeline.pipeline);
 		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.blitGraphicsPipeline.pipelineLayout, 0, 1, &forward.blitDescriptorSets[currentFrame], 0, nullptr);
@@ -1278,6 +1421,7 @@ namespace lux::rhi
 	void RHI::DestroyForwardGraphicsPipeline() noexcept
 	{
 		DestroyGraphicsPipeline(forward.blitGraphicsPipeline);
+		DestroyGraphicsPipeline(forward.ssaoGraphicsPipeline);
 		DestroyGraphicsPipeline(forward.rtGraphicsPipeline);
 		DestroyGraphicsPipeline(forward.rtCutoutGraphicsPipeline);
 		DestroyGraphicsPipeline(forward.rtTransparentBackGraphicsPipeline);
@@ -1300,6 +1444,9 @@ namespace lux::rhi
 			vkDestroyImage(device, forward.rtColorAttachmentImages[i], nullptr);
 			vkDestroyImageView(device, forward.rtColorAttachmentImageViews[i], nullptr);
 			vkFreeMemory(device, forward.rtColorAttachmentImageMemories[i], nullptr);
+
+			DestroyImage(forward.ssaoColorAttachments[i]);
+			vkDestroyFramebuffer(device, forward.ssaoFrameBuffers[i], nullptr);
 		}
 		
 		vkDestroySampler(device, forward.sampler, nullptr);
@@ -1323,6 +1470,7 @@ namespace lux::rhi
 
 		vkDestroyRenderPass(device, forward.rtRenderPass, nullptr);
 		vkDestroyRenderPass(device, forward.blitRenderPass, nullptr);
+		vkDestroyRenderPass(device, forward.ssaoRenderPass, nullptr);
 	}
 
 } // namespace lux::rhi

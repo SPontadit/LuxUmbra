@@ -44,6 +44,9 @@ namespace lux
 		rhi::RHI rhi;
 		scene::Scene scene;
 		resource::ResourceManager resourceManager;
+
+		float currentTime;
+		float previousTime;
 	};
 
 } // namespace lux

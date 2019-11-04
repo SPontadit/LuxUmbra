@@ -6,33 +6,28 @@ layout(location = 0) in vec2 textureCoordinate;
 layout(location = 0) out vec4 outColor;
 
 layout(set = 0, binding = 0) uniform sampler2D renderTarget;
-layout(set = 0, binding = 1) uniform sampler2D positionMap;
-layout(set = 0, binding = 2) uniform sampler2D normalMap;
-layout(set = 0, binding = 3) uniform sampler2D depthMap;
-layout(set = 0, binding = 5) uniform sampler2D SSAONoise;
+layout(set = 0, binding = 1) uniform sampler2D SSAOMap;
 
 #define SSAO_KERNEL_SIZE  32
 #define SSAO_RADIUS 0.5
 
-layout(set = 0, binding = 4) uniform SSAOKernels
-{
-	vec4 samples[SSAO_KERNEL_SIZE];
-};
-
 layout(push_constant) uniform PushConstants
 {
-	mat4 proj;
 	vec2 inverseScreenSize;
 	int toneMapping;
 	float exposure;
-	float FXAAPercent;
-	int debugFXAA;
+	float splitViewRatio;
+	int splitViewMask;
 	float FXAAContrastThreshold;
 	float FXAARelativeThreshold;
 };
 
-//#define EDGE_THRESHOLD_MIN 0.0312
-//#define EDGE_THRESHOLD_MAX 0.125
+
+
+#define SPLIT_VIEW_TONE_MAPPING_MASK 1
+#define SPLIT_VIEW_FXAA_MASK 2
+#define SPLIT_VIEW_SSAO_MASK 4
+
 #define ITERATIONS 12
 #define SUBPIXEL_QUALITY 0.75
 
@@ -40,72 +35,57 @@ vec3 ACESFilm(vec3 x);
 vec3 Uncharted2Tonemap(vec3 x);
 vec3 Reinhard(vec3 x);
 vec3 ToneMapGammaCorrect(vec3 color);
+float BlurSSAO();
 vec3 FXAA();
-float SSAO();
 float RGBToLuma(vec3 rgb);
 float Quality(int i);
 
 void main() 
 {
-	outColor = texture(positionMap, textureCoordinate);
-	outColor = texture(normalMap, textureCoordinate);
-	outColor = vec4(vec3(texture(positionMap, textureCoordinate).a), 1.0);
-
-	vec3 color = vec3(SSAO());
+	float ss = texture(SSAOMap, textureCoordinate).r;
+	float ssao = BlurSSAO();
 	
-	outColor = vec4(color, 1.0);
-	return;
+	outColor =  vec4(FXAA() * ssao, 1.0);
 
-	outColor =  vec4(FXAA() * SSAO(), 1.0);
-
-	if (debugFXAA == 1)
+	if (splitViewMask != 0)
 	{
-		outColor = textureCoordinate.x > FXAAPercent ? outColor : vec4(ToneMapGammaCorrect(texture(renderTarget, textureCoordinate).rgb), 1.0);
+		if (textureCoordinate.x < splitViewRatio)
+		{
+			if ((splitViewMask & SPLIT_VIEW_FXAA_MASK) == SPLIT_VIEW_FXAA_MASK)
+				outColor = vec4(FXAA(), 1.0);
+			else
+				outColor = vec4(ToneMapGammaCorrect(texture(renderTarget, textureCoordinate).rgb), 1.0);
 
-		if (textureCoordinate.x < FXAAPercent + 0.001 && textureCoordinate.x > FXAAPercent - 0.001)
+			ssao = (splitViewMask & SPLIT_VIEW_SSAO_MASK) == SPLIT_VIEW_SSAO_MASK ? ssao : 1.0;
+			outColor *= ssao;
+		}
+		else
+			outColor = pow(texture(renderTarget, textureCoordinate), vec4(1.0/2.2));
+
+		if (textureCoordinate.x < splitViewRatio + 0.001 && textureCoordinate.x > splitViewRatio - 0.001)
 			outColor = vec4(1.0);
 	}
 }
 
-float SSAO()
+float BlurSSAO()
 {
-	vec3 fragPosition = texture(positionMap, textureCoordinate).rgb;
-	vec3 normal = normalize(texture(normalMap, textureCoordinate).rgb * 2.0 - 1.0);
-
-	ivec2 textureDimension = textureSize(positionMap, 0);
-	ivec2 noiseTextureDimension = textureSize(SSAONoise, 0);
-
-	vec2 noiseUV = vec2(float(textureDimension.x) / float(noiseTextureDimension.x), float(textureDimension.y) / float(noiseTextureDimension.y)) * textureCoordinate;
-	vec3 randomVec = texture(SSAONoise, noiseUV).xyz *  2.0 - 1.0;
-
-	vec3 tangent = normalize(randomVec - normal * dot(randomVec, normal));
-	vec3 bitangent = cross(tangent, normal);
-	mat3 TBN = mat3(tangent, bitangent, normal);
-
-	float occlusion = 0.0;
-
-	for(int i = 0; i < SSAO_KERNEL_SIZE; ++i)
+	int blurRange = 2;
+	vec2 texelSize = 1.0 / vec2(textureSize(SSAOMap, 0));
+	float result = 0.0;
+	for (int x = -blurRange; x < blurRange; x++) 
 	{
-		vec3 samplePosition = TBN * samples[i].xyz;
-		samplePosition = fragPosition + samplePosition * SSAO_RADIUS;
-
-		vec4 offset = vec4(samplePosition, 1.0);
-		offset = proj * offset;
-		offset.xyz /= offset.w;
-		offset.xyz = offset.xyz * 0.5 + 0.5;
-
-		float sampleDepth = -texture(positionMap, offset.xy).w;
-		float rangeCheck = smoothstep(0.0, 1.0, SSAO_RADIUS / abs(fragPosition.z - sampleDepth));
-
-		occlusion += (sampleDepth >= samplePosition.z ? 1.0 : 0.0) * rangeCheck;
+		for (int y = -blurRange; y < blurRange; y++) 
+		{
+			vec2 offset = vec2(float(x), float(y)) * texelSize;
+			result += texture(SSAOMap, textureCoordinate + offset).r;
+		}
 	}
 
-	occlusion = 1.0 - (occlusion / float(SSAO_KERNEL_SIZE));
-
-	return occlusion;
+	return (result / float(blurRange * 8.0));
 }
 
-vec3 Reinhard(vec3 x)
+
+vec3 Reinhard(vec3 x) 
 {
 	return x / (x + vec3(1.0));
 }
@@ -135,21 +115,26 @@ vec3 Uncharted2Tonemap(vec3 x)
 
 vec3 ToneMapGammaCorrect(vec3 color)
 {
-	switch(toneMapping)
+	if ((splitViewMask & SPLIT_VIEW_TONE_MAPPING_MASK) == SPLIT_VIEW_TONE_MAPPING_MASK)
 	{
-		case 0: 
+		switch(toneMapping)
 		{
-			return pow(ACESFilm(0.6 * color * exposure), vec3(1.0/2.2));
-		}
-		case 1: 
-		{
-			return pow(Uncharted2Tonemap(color * exposure), vec3(1.0/2.2));
-		}
-		case 2:
-		{
-			return pow(Reinhard(color * exposure), vec3(1.0/2.2));
+			case 0: 
+			{
+				return pow(ACESFilm(0.6 * color * exposure), vec3(1.0/2.2));
+			}
+			case 1: 
+			{
+				return pow(Uncharted2Tonemap(color * exposure), vec3(1.0/2.2));
+			}
+			case 2:
+			{
+				return pow(Reinhard(color * exposure), vec3(1.0/2.2));
+			}
 		}
 	}
+	else
+		return pow(color, vec3(1.0/2.2));
 }
 
 vec3 FXAA()
@@ -211,20 +196,14 @@ vec3 FXAA()
 		lumaLocalAverage = 0.5 * (luma1 + lumaCenter);
 	}
 	else
-	{
 		lumaLocalAverage = 0.5 * (luma2 + lumaCenter);
-	}
 
 	vec2 currentUV = textureCoordinate;
 
 	if (isHorizontal)
-	{
 		currentUV.y += stepLength * 0.5;
-	}
 	else
-	{
 		currentUV.x += stepLength * 0.5;
-	}
 
 
 	vec2 offset = isHorizontal ? vec2(inverseScreenSize.x, 0.0) : vec2(0.0, inverseScreenSize.y);
@@ -243,14 +222,10 @@ vec3 FXAA()
 	bool reachedBoth = reached1 && reached2;
 
 	if(!reached1)
-	{
 		uv1 -= offset;
-	}
 	
 	if(!reached2)
-	{
 		uv2 += offset;
-	}
 
 	if(!reachedBoth)
 	{
@@ -273,19 +248,13 @@ vec3 FXAA()
 			reachedBoth = reached1 && reached2;
 
 			if (!reached1)
-			{
 				uv1 -= offset * Quality(i);
-			}
 
 			if (!reached2)
-			{
 				uv2 += offset * Quality(i);
-			}
 
 			if (reachedBoth)
-			{
 				break;
-			}
 		}
 	}
 
@@ -317,13 +286,9 @@ vec3 FXAA()
 	vec2 finalUV = textureCoordinate;
 
 	if(isHorizontal)
-	{
 		finalUV.y += finalOffset * stepLength;
-	}
 	else
-	{
 		finalUV.x += finalOffset * stepLength;
-	}
 
 	return ToneMapGammaCorrect(texture(renderTarget, finalUV).rgb);
 }
@@ -341,12 +306,12 @@ float Quality(int i)
 		case 2: return 1.0;
 		case 3: return 1.0;
 		case 4: return 1.0;
-		case 5: return 1.0;
-		case 6: return 1.0;
-		case 7: return 1.0;
-		case 8: return 1.0;
-		case 9: return 1.0;
-		case 10: return 1.0;
-		case 11: return 1.0;
+		case 5: return 1.5;
+		case 6: return 2.0;
+		case 7: return 2.0;
+		case 8: return 2.0;
+		case 9: return 2.0;
+		case 10: return 4.0;
+		case 11: return 8.0;
 	}
 }

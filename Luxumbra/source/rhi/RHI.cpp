@@ -619,7 +619,7 @@ namespace lux::rhi
 
 		RenderForward(commandBuffer, imageIndex, camera, meshes, lights);
 
-		RenderPostProcess(commandBuffer, imageIndex);
+		RenderPostProcess(commandBuffer, imageIndex, camera);
 
 		CHECK_VK(vkEndCommandBuffer(commandBuffer));
 

@@ -12,7 +12,8 @@ namespace lux
 {
 
 	Engine::Engine() noexcept
-		: isInitialized(false), window(), rhi(), scene(), resourceManager(rhi)
+		: isInitialized(false), window(), rhi(), scene(), resourceManager(rhi),
+		currentTime(0.0f), previousTime(0.0f)
 	{
 
 	}
@@ -72,7 +73,16 @@ namespace lux
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
-		ImGui::Begin("Luxumbra Engine");
+		currentTime = glfwGetTime();
+		double deltaTime = currentTime - previousTime;
+		double frameDuration = deltaTime * 1000.0;
+		double framerate = 1.0 / deltaTime;
+		previousTime = currentTime;
+
+		char buf[128];
+		sprintf_s(buf, "Luxumbra Engine %d###Luxumbra Engine", (int)framerate);
+	
+		ImGui::Begin(buf);
 
 		if (ImGui::Button("Reload Shader"))
 		{
@@ -151,29 +161,88 @@ namespace lux
 
 					ImGui::Spacing();
 
-					bool debugFXAA = postProcess.FXAADebug;
-					bool newDebugFXAA = debugFXAA;
-					ImGui::Checkbox("Show Split View", &newDebugFXAA);
+					int splitViewMask = postProcess.splitViewMask;
 
-					if (newDebugFXAA != debugFXAA)
-						postProcess.FXAADebug = newDebugFXAA;
+					bool showToneMapping = splitViewMask & lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_TONE_MAPPING_MASK;
+					bool showFXAA = splitViewMask & lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_FXAA_MASK;
+					bool showSSAO = splitViewMask & lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_SSAO_MASK;
+					bool newShowToneMapping = showToneMapping;
+					bool newShowFXAA = showFXAA;
+					bool newShowSSAO = showSSAO;
 
-					if (newDebugFXAA)
+					ImGui::Checkbox("Show Tone Mapping", &newShowToneMapping);
+					ImGui::Checkbox("Show FXAA", &newShowFXAA);
+					ImGui::Checkbox("Show SSAO", &newShowSSAO);
+
+					int newSplitViewMask = 0;
+
+					newSplitViewMask |= newShowToneMapping ? lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_TONE_MAPPING_MASK : 0;
+					newSplitViewMask |= newShowFXAA ? lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_FXAA_MASK : 0;
+					newSplitViewMask |= newShowSSAO ? lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_SSAO_MASK : 0;
+
+					if (newSplitViewMask != splitViewMask)
+						postProcess.splitViewMask = newSplitViewMask;
+
+					if (newSplitViewMask != 0)
 					{
 						ImGui::Spacing();
 
 						// FXAA Percent
-						float FXAAPercent = postProcess.FXAAPercent;
-						float newFXAAPercent = FXAAPercent;
-						ImGui::SliderFloat("Percent", &newFXAAPercent, 0.0f, 1.0f, "%.2f");
+						float splitViewRatio = postProcess.splitViewRatio;
+						float newSplitViewRatio = splitViewRatio;
+						ImGui::SliderFloat("Percent", &newSplitViewRatio, 0.0f, 1.0f, "%.2f");
 				
-						if (newFXAAPercent != FXAAPercent)
-							postProcess.FXAAPercent = newFXAAPercent;
+						if (newSplitViewRatio != splitViewRatio)
+							postProcess.splitViewRatio = newSplitViewRatio;
 					}
 
 					ImGui::NewLine();
 				}
 
+				if (ImGui::CollapsingHeader("SSAO:", ImGuiTreeNodeFlags_DefaultOpen))
+				{
+					ImGui::Spacing();
+
+					lux::rhi::SSAOParameters& ssaoParameters = rhi.forward.ssaoParameters;
+
+					// Kernel Size
+					int kernelSize = ssaoParameters.kernelSize;
+					//int newKernelSize = kernelSize;
+					//ImGui::SliderInt("KernelSize", &newKernelSize, 2, 32);
+					int kernelSizeID = log2(kernelSize) - 2;
+					ImGui::Combo("Kernel Size", &kernelSizeID, " 4 \0 8 \0 16 \0 32");
+					int newKernelSize = pow(2, kernelSizeID + 2);
+
+					if (newKernelSize != kernelSize)
+						ssaoParameters.kernelSize = newKernelSize;
+
+
+					// Kernel Radius
+					float kernelRadius = ssaoParameters.kernelRadius;
+					float newKernelRadius = kernelRadius;
+					ImGui::SliderFloat("Kernel Radius", &newKernelRadius, 0.2f, 2.0f, "%.2f", 0.5f);
+
+					if (newKernelRadius != kernelRadius)
+						ssaoParameters.kernelRadius = newKernelRadius;
+
+
+					// Bias
+					float bias = ssaoParameters.bias;
+					float newBias = bias;
+					ImGui::SliderFloat("Bias", &newBias, 0.0f, 0.05f, "%.3f", 0.5f);
+
+					if (newBias != bias)
+						ssaoParameters.bias = newBias;
+
+
+					// Strenght
+					float strenght = ssaoParameters.strenght;
+					float newStrenght = strenght;
+					ImGui::SliderFloat("Strenght", &newStrenght, 0.0f, 5.0f, "%.2f");
+
+					if (newStrenght != strenght)
+						ssaoParameters.strenght = newStrenght;
+				}
 
 				ImGui::EndTabItem();
 			}
