@@ -32,7 +32,7 @@ namespace lux::rhi
 		int toneMapping;
 		float exposure = 1.0f;
 		float splitViewRatio = 0.5f;
-		int splitViewMask = 7;
+		int splitViewMask;
 		float FXAAContrastThreshold = 0.0312f;
 		float FXAARelativeThreshold = 0.125f;
 	};

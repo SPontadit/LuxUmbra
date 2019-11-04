@@ -182,14 +182,14 @@ namespace lux
 						// Low
 						if (newFXAAQuality == 0)
 						{
-							postProcess.FXAAContrastThreshold = 0.0833;
+							postProcess.FXAAContrastThreshold = 0.0833f;
 							postProcess.FXAARelativeThreshold = 0.250f;
 
 						}
 						// Medium
 						else if (newFXAAQuality == 1)
 						{
-							postProcess.FXAAContrastThreshold = 0.0625;
+							postProcess.FXAAContrastThreshold = 0.0625f;
 							postProcess.FXAARelativeThreshold = 0.166f;
 
 						}
@@ -214,9 +214,9 @@ namespace lux
 					int kernelSize = ssaoParameters.kernelSize;
 					//int newKernelSize = kernelSize;
 					//ImGui::SliderInt("KernelSize", &newKernelSize, 2, 32);
-					int kernelSizeID = log2(kernelSize) - 2;
+					int kernelSizeID = static_cast<int>(log2(kernelSize)) - 2;
 					ImGui::Combo("Kernel Size", &kernelSizeID, " 4 \0 8 \0 16 \0 32");
-					int newKernelSize = pow(2, kernelSizeID + 2);
+					int newKernelSize = static_cast<int>(pow(2, kernelSizeID + 2));
 
 					if (newKernelSize != kernelSize)
 						ssaoParameters.kernelSize = newKernelSize;
@@ -378,7 +378,7 @@ namespace lux
 						ImGui::Checkbox("Metallic", &metallic);
 						matParameters.metallic = metallic;
 
-						if (matParameters.metallic == false)
+						if (metallic == false)
 						{
 							ImGui::SliderFloat("Reflectance", &matParameters.reflectance, 0.0f, 1.0f, "%.3f");
 						}

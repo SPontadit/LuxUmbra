@@ -1119,7 +1119,7 @@ namespace lux::rhi
 		ssaoNoiseImageCI.subresourceRangeLayerCount = 1;
 		ssaoNoiseImageCI.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
 
-		CreateImageFromBuffer(ssaoNoiseImageCI, ssaoNoise.data(), ssaoNoise.size() * sizeof(glm::vec4), forward.SSAONoiseImage);
+		CreateImageFromBuffer(ssaoNoiseImageCI, ssaoNoise.data(), TO_UINT32_T(ssaoNoise.size()) * sizeof(glm::vec4), forward.SSAONoiseImage);
 
 
 		VkDescriptorBufferInfo SSAOKernelsDescriptorBufferInfo = {};

@@ -4,6 +4,7 @@
 #include <fstream>
 
 #include "utility\Utility.h"
+#include "Logger.h"
 #include "Vertex.h"
 #include "rhi\LuxVkImpl.h"
 
