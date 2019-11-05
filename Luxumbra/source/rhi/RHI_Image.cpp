@@ -190,6 +190,16 @@ namespace lux::rhi
 		EndSingleTimeCommandBuffer(commandBuffer);
 	}
 
+	void RHI::GenerateIBLResources(const Image& cubemapSource, Image& irradiance, Image& prefiltered, Image& BRDFLut) noexcept
+	{
+		GenerateIrradianceFromCubemap(cubemapSource, irradiance);
+		GeneratePrefilteredFromCubemap(cubemapSource, prefiltered);
+		GenerateBRDFLut(BRDFLut);
+
+		vkQueueWaitIdle(computeQueue);
+		TMP_DestroyIBLResource();
+	}
+
 	void RHI::TMP_DestroyIBLResource() noexcept
 	{
 		for (size_t i = 0; i < tmp_pipelines.size(); ++i)
@@ -1306,51 +1316,13 @@ namespace lux::rhi
 		submitInfo.commandBufferCount = 1;
 		submitInfo.pCommandBuffers = &compute.commandBuffer;
 
-		CHECK_VK(vkQueueSubmit(computeQueue, 1, &submitInfo, IBLResourcesFence));
+		CHECK_VK(vkQueueSubmit(computeQueue, 1, &submitInfo, VK_NULL_HANDLE));
+
 
 		tmp_pipelines.push_back(compute.pipeline);
 		tmp_descriptorPools.push_back(compute.descriptorPool);
 		tmp_commandBuffers.push_back(compute.commandBuffer);
 	}
-
-	//void RHI::GenerateBRDFLutCompute(VkFormat format, uint32_t size, Image& BRDFLut) noexcept
-	//{
-	//	ImageCreateInfo imageCI = {};
-	//	imageCI.arrayLayers = 1;
-	//	imageCI.format = format;
-	//	imageCI.width = size;
-	//	imageCI.height = size;
-	//	imageCI.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
-	//	imageCI.subresourceRangeLayerCount = 1;
-	//	imageCI.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-	//	imageCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
-	//	CreateImage(imageCI, BRDFLut);
-
-
-
-	//	// Update Descriptor Set
-	//	VkDescriptorImageInfo BRDFLutDescriptorImageInfo = {};
-	//	storageBRDFLutDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	//	storageBRDFLutDescriptorImageInfo.sampler = forward.prefilteredSampler;
-	//	storageBRDFLutDescriptorImageInfo.imageView = BRDFLut.imageView;
-
-	//	VkWriteDescriptorSet writeBRDFLutDescriptorSet = {};
-	//	writeStorageBRDFLutDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	//	writeStorageBRDFLutDescriptorSet.descriptorCount = 1;
-	//	writeStorageBRDFLutDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	//	writeStorageBRDFLutDescriptorSet.dstBinding = 4;
-	//	writeStorageBRDFLutDescriptorSet.dstArrayElement = 0;
-	//	writeStorageBRDFLutDescriptorSet.pImageInfo = &storageBRDFLutDescriptorImageInfo;
-
-	//	for (size_t i = 0; i < swapchainImageCount; i++)
-	//	{
-	//		writeStorageBRDFLutDescriptorSet.dstSet = forward.rtViewDescriptorSets[i];
-
-	//		vkUpdateDescriptorSets(device, 1, &writeStorageBRDFLutDescriptorSet, 0, nullptr);
-	//	}
-	//}
-
 
 	void RHI::DestroyImage(Image& image) noexcept
 	{

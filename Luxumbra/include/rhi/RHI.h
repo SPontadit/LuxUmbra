@@ -77,12 +77,11 @@ namespace lux::rhi
 		void DestroyImage(Image& image) noexcept;
 		void DestroyImage(Image& image, VkSampler* sampler) noexcept;
 
+		void GenerateCubemapFromHDR(const Image& HDRSource, Image& cubemap) noexcept;
+		void GenerateIBLResources(const Image& cubemapSource, Image& irradiance, Image& prefiltered, Image& BRDFLut) noexcept;
 		void CreateEnvMapDescriptorSet(Image& image) noexcept;
 		
-		void GenerateCubemapFromHDR(const Image& HDRSource, Image& cubemap) noexcept;
-		void GenerateIrradianceFromCubemap(const Image& cubemapSource, Image& irradiance) noexcept;
-		void GeneratePrefilteredFromCubemap(const Image& cubemapSource, Image& prefiltered) noexcept;
-		void GenerateBRDFLut(Image& BRDFLut) noexcept;
+
 
 		int16_t CreateLightShadowMappingResources(scene::LightType lightType) noexcept;
 
@@ -124,7 +123,6 @@ namespace lux::rhi
 		std::vector<VkSemaphore> acquireSemaphores;
 
 		std::vector<VkFence> fences;
-		VkFence IBLResourcesFence;
 
 		VkDescriptorPool imguiDescriptorPool;
 		VkDescriptorPool materialDescriptorPool;
@@ -138,10 +136,6 @@ namespace lux::rhi
 		LightCountsPushConstant lightCountsPushConstant;
 
 		VkCommandPool computeCommandPool;
-		//VkCommandBuffer computeCommandBuffer;
-		//VkDescriptorPool computeDescriptorPool;
-		//VkDescriptorSet generateIrradianceDescriptorSet;
-
 
 		std::shared_ptr<resource::Mesh> cube;
 		uint32_t frameCount;
@@ -168,6 +162,10 @@ namespace lux::rhi
 
 		void TMP_DestroyIBLResource() noexcept;
 		
+		void GenerateIrradianceFromCubemap(const Image& cubemapSource, Image& irradiance) noexcept;
+		void GeneratePrefilteredFromCubemap(const Image& cubemapSource, Image& prefiltered) noexcept;
+		void GenerateBRDFLut(Image& BRDFLut) noexcept;
+
 		void GenerateIrradianceFromCubemapFS(const Image& cubemapSource, Image& irradiance) noexcept;
 		void GenerateIrradianceFromCubemapCS(const Image& cubemapSource, Image& irradiance) noexcept;
 		void GeneratePrefilteredFromCubemapFS(const Image& cubemapSource, Image& prefiltered) noexcept;
