@@ -134,6 +134,7 @@ vec4 CameraSpace()
 	vec3 normal = texture(normalMap, fsIn.textureCoordinateLS).rgb;
 	normal = normalize(normal * 2.0 - 1.0) * inv;
 	normal = normalize(fsIn.textureToViewMatrix * normal);
+	vec3 normalVS = normalize(mat3(fsIn.viewMatrix) * fsIn.normalWS);
 
 	float NdotV = max(dot(normal, viewDir), 0.001);
 	
@@ -146,6 +147,11 @@ vec4 CameraSpace()
 	float metallic = (material.useTextureMask & METALLIC_MASK) == METALLIC_MASK ? texture(metallicRoughnessMap, fsIn.textureCoordinateLS).b : material.metallic;
 	vec3 diffuseColor = RemapDiffuseColor(baseColor, metallic);
 	vec3 F0 = GetF0(material.reflectance, metallic, baseColor);
+	
+	// Clear Coat
+	float clearCoatPerceptualRoughness = clamp(material.clearCoatPerceptualRoughness, 0.045, 1.0);
+	float clearCoatRoughness = clearCoatPerceptualRoughness * clearCoatPerceptualRoughness;
+
 
 	for(int i = 0; i < pushConsts.lightCount; ++i)
 	{
@@ -187,27 +193,24 @@ vec4 CameraSpace()
 
 
 		// Clear Coat
-		float clearCoatPerceptualRoughness = clamp(material.clearCoatPerceptualRoughness, 0.045, 1.0);
-		float clearCoatRoughness = clearCoatPerceptualRoughness * clearCoatPerceptualRoughness;
-
 		vec3 normalVS = normalize(mat3(fsIn.viewMatrix) * fsIn.normalWS);
 		float clearCoadtNdotH = max(dot(normalVS, h), 0.001);
-		float Dc = D_GGX(clearCoadtNdotH, clearCoatRoughness);
+		float Dc = D_GGX(NdotH, clearCoatRoughness);
 		float Fc = F_Schlick(LdotH, 0.04, 1.0) * material.clearCoat;
 		float Vc = V_Kelement(LdotH);
 		
 		
-		float clearCoat = (Dc * Vc) * Fc;
+		float clearCoat = Dc * Vc * Fc;
 		float attenuation  = 1.0 - Fc;
 
-//		vec3 tmp_directColor = (directDiffuseColor + specular) * attenuation * clearCoat;
+		vec3 tmp_directColor = (directDiffuseColor + specular) * attenuation + clearCoat;
 //		float clearCoatNdotL = max(dot(normalVS, lightDir), 0.001);
 //		tmp_directColor += clearCoat * clearCoatNdotL;
 
 //		vec3 cc = ((diffuseColor + specular * (1.0 - Fc)) * (1.0 - Fc) + clearCoat);
-		directColor += (directDiffuseColor + specular) * radiance * NdotL;
+//		directColor += (directDiffuseColor + specular) * radiance * NdotL;
 
-//		directColor += (tmp_directColor * radiance * NdotL);
+		directColor += (tmp_directColor * radiance * NdotL);
 	
 	}
 
@@ -221,21 +224,33 @@ vec4 CameraSpace()
 	normal = normalize(normal);
 
 	vec3 R = reflect(-viewDir, normal);
+	vec3 clearCoatR = reflect(-viewDir, normalVS);
 
 	NdotV = max(dot(normal, viewDir), 0.001);
+	float clearCoatNdotV = max(dot(normalVS, viewDir), 0.001);
 
 	vec2 BRDF = texture(BRDFLut, vec2(NdotV, roughness)).rg;
 	vec3 reflection = PrefilteredReflection(R, roughness).rgb;
 	vec3 irradiance = texture(irradianceMap, normal).xyz;
 	
 	vec3 F = F_SchlickRoughness(NdotV, F0, roughness);
+	float clearCoatF = F_Schlick(clearCoatNdotV, 0.04, 1.0) * material.clearCoat;
+//	float clearCoatF = F_Schlick(NdotV, 0.04, 1.0) * material.clearCoat;
+	float attenuation = 1.0 - clearCoatF;
 	//vec3 indirectSpecularColor = reflection * (F * BRDF.x + BRDF.y);
+
 	vec3 indirectSpecularColor = reflection * mix(BRDF.xxx, BRDF.yyy, F0);
+	indirectSpecularColor *= attenuation;
+	indirectSpecularColor += PrefilteredReflection(clearCoatR, clearCoatPerceptualRoughness).rgb * clearCoatF;
+//	indirectSpecularColor += PrefilteredReflection(R, clearCoatPerceptualRoughness).rgb * clearCoatF;
 
 	vec3 Kdiff = 1.0 - F;
 	vec3 indirectDiffuseColor = irradiance * diffuseColor * Kdiff;
+	indirectDiffuseColor *= attenuation;
+	
 	vec3 indirectColor = indirectDiffuseColor + indirectSpecularColor;
 	
+
 	float ao = texture(ambientOcclusionMap, fsIn.textureCoordinateLS).r;
 
 	indirectColor *= ao;
