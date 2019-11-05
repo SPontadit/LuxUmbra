@@ -58,6 +58,7 @@ namespace lux::rhi
 		std::vector<VkDescriptorSet> directionalUniformBufferDescriptorSets;
 
 		Image pointShadowMapIntermediate;
+		Image pointShadowMapDepth;
 		Image dummyPointShadowMap;
 		VkFramebuffer pointFramebuffer;
 		std::vector<Image> pointShadowMaps;

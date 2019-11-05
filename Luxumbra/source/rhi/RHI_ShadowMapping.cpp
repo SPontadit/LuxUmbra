@@ -22,50 +22,67 @@ namespace lux::rhi
 
 	void RHI::InitShadowMapperRenderPasses() noexcept
 	{
-		VkAttachmentDescription attachment = {};
-		attachment.format = depthImageFormat;
-		attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-		attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		attachment.finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		VkAttachmentDescription attachments[2] = {};
 
-		VkAttachmentReference attachmentRef = {};
-		attachmentRef.attachment = 0;
+		VkAttachmentDescription& depthAttachment = attachments[0];
+		depthAttachment.format = depthImageFormat;
+		depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+		VkAttachmentReference depthAttachmentRef = {};
+		depthAttachmentRef.attachment = 0;
+		depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 		VkSubpassDescription subpass = {};
 		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 
 		VkRenderPassCreateInfo renderPassCI = {};
 		renderPassCI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		renderPassCI.attachmentCount = 1;
-		renderPassCI.pAttachments = &attachment;
 		renderPassCI.subpassCount = 1;
 		renderPassCI.pSubpasses = &subpass;
 
 		// Directional lights
 
-		attachment.format = depthImageFormat;
-
-		attachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		depthAttachment.finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 
 		subpass.colorAttachmentCount = 0;
 		subpass.pColorAttachments = nullptr;
-		subpass.pDepthStencilAttachment = &attachmentRef;
+		subpass.pDepthStencilAttachment = &depthAttachmentRef;
+
+		renderPassCI.attachmentCount = 1;
+		renderPassCI.pAttachments = &depthAttachment;
 
 		CHECK_VK(vkCreateRenderPass(device, &renderPassCI, nullptr, &shadowMapper.directionalShadowMappingRenderPass));
 
 		// Point lights
 
-		attachment.format = VK_FORMAT_R32_SFLOAT;
+		depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-		attachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		VkAttachmentDescription& colorAttachment = attachments[1];
+		colorAttachment.format = VK_FORMAT_R32_SFLOAT;
+		colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		colorAttachment.finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+
+		VkAttachmentReference colorAttachmentRef = {};
+		colorAttachmentRef.attachment = 1;
+		colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 		subpass.colorAttachmentCount = 1;
-		subpass.pColorAttachments = &attachmentRef;
-		subpass.pDepthStencilAttachment = nullptr;
+		subpass.pColorAttachments = &colorAttachmentRef;
+		subpass.pDepthStencilAttachment = &depthAttachmentRef;
+
+		renderPassCI.attachmentCount = 2;
+		renderPassCI.pAttachments = attachments;
 
 		CHECK_VK(vkCreateRenderPass(device, &renderPassCI, nullptr, &shadowMapper.pointShadowMappingRenderPass));
 	}
@@ -126,12 +143,12 @@ namespace lux::rhi
 		pointShadowMappingPipelineCI.rasterizerCullMode = VK_CULL_MODE_BACK_BIT;
 		pointShadowMappingPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		pointShadowMappingPipelineCI.disableMSAA = VK_TRUE;
-		pointShadowMappingPipelineCI.enableDepthTest = VK_FALSE;
-		pointShadowMappingPipelineCI.enableDepthWrite = VK_FALSE;
-		pointShadowMappingPipelineCI.enableDepthBias = VK_FALSE;
-		pointShadowMappingPipelineCI.depthBiasConstantFactor = 0.f;
-		pointShadowMappingPipelineCI.depthBiasSlopeFactor = 0.f;
-		pointShadowMappingPipelineCI.depthCompareOp = VK_COMPARE_OP_NEVER;
+		pointShadowMappingPipelineCI.enableDepthTest = VK_TRUE;
+		pointShadowMappingPipelineCI.enableDepthWrite = VK_TRUE;
+		pointShadowMappingPipelineCI.enableDepthBias = VK_TRUE;
+		pointShadowMappingPipelineCI.depthBiasConstantFactor = 4.f;
+		pointShadowMappingPipelineCI.depthBiasSlopeFactor = 1.5f;
+		pointShadowMappingPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS;
 		pointShadowMappingPipelineCI.viewDescriptorSetLayoutBindings = { viewProjUniformBufferDescriptorSetLayoutBinding };
 		pointShadowMappingPipelineCI.pushConstants = { modelAndVPIndexPushConstantRange };
 
@@ -215,6 +232,18 @@ namespace lux::rhi
 
 		CreateImage(pointShadowMapIntermediateCI, shadowMapper.pointShadowMapIntermediate);
 
+		ImageCreateInfo pointShadowMapDepthCI = {};
+		pointShadowMapDepthCI.format = depthImageFormat;
+		pointShadowMapDepthCI.width = POINT_SHADOW_MAP_TEXTURE_SIZE;
+		pointShadowMapDepthCI.height = POINT_SHADOW_MAP_TEXTURE_SIZE;
+		pointShadowMapDepthCI.arrayLayers = 1;
+		pointShadowMapDepthCI.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+		pointShadowMapDepthCI.subresourceRangeLayerCount = 1;
+		pointShadowMapDepthCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+		pointShadowMapDepthCI.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
+
+		CreateImage(pointShadowMapDepthCI, shadowMapper.pointShadowMapDepth);
+
 		ImageCreateInfo dummyPointShadowMapCI = {};
 		dummyPointShadowMapCI.format = VK_FORMAT_R32_SFLOAT;
 		dummyPointShadowMapCI.width = 2;
@@ -229,14 +258,16 @@ namespace lux::rhi
 
 		CommandTransitionImageLayout(shadowMapper.dummyPointShadowMap.image, VK_FORMAT_R32_SFLOAT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 6);
 
+		VkImageView attachments[2] = { shadowMapper.pointShadowMapDepth.imageView, shadowMapper.pointShadowMapIntermediate.imageView };
+
 		VkFramebufferCreateInfo pointFramebufferCI = {};
 		pointFramebufferCI.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		pointFramebufferCI.renderPass = shadowMapper.pointShadowMappingRenderPass;
 		pointFramebufferCI.width = POINT_SHADOW_MAP_TEXTURE_SIZE;
 		pointFramebufferCI.height = POINT_SHADOW_MAP_TEXTURE_SIZE;
 		pointFramebufferCI.layers = 1;
-		pointFramebufferCI.attachmentCount = 1;
-		pointFramebufferCI.pAttachments = &shadowMapper.pointShadowMapIntermediate.imageView;
+		pointFramebufferCI.attachmentCount = 2;
+		pointFramebufferCI.pAttachments = attachments;
 
 		CHECK_VK(vkCreateFramebuffer(device, &pointFramebufferCI, nullptr, &shadowMapper.pointFramebuffer));
 
@@ -281,6 +312,7 @@ namespace lux::rhi
 
 		vkDestroyFramebuffer(device, shadowMapper.pointFramebuffer, nullptr);
 		DestroyImage(shadowMapper.pointShadowMapIntermediate);
+		DestroyImage(shadowMapper.pointShadowMapDepth);
 		DestroyImage(shadowMapper.dummyPointShadowMap);
 
 		DestroyGraphicsPipeline(shadowMapper.directionalShadowMappingPipeline);
@@ -488,16 +520,17 @@ namespace lux::rhi
 
 				// Render shadow map
 
-				VkClearValue colorClearValue = {};
-				colorClearValue.color = { 1.f, 1.f, 1.f, 1.f };
+				VkClearValue clearValues[2] = {};
+				clearValues[0].depthStencil.depth = 1.f;
+				clearValues[1].color = { 1.f, 1.f, 1.f, 1.f };
 
 				VkRenderPassBeginInfo shadowMappingRenderPassBI = {};
 				shadowMappingRenderPassBI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 				shadowMappingRenderPassBI.renderPass = shadowMapper.pointShadowMappingRenderPass;
 				shadowMappingRenderPassBI.framebuffer = shadowMapper.pointFramebuffer;
 				shadowMappingRenderPassBI.renderArea = { { 0, 0 }, { POINT_SHADOW_MAP_TEXTURE_SIZE, POINT_SHADOW_MAP_TEXTURE_SIZE } };
-				shadowMappingRenderPassBI.clearValueCount = 1;
-				shadowMappingRenderPassBI.pClearValues = &colorClearValue;
+				shadowMappingRenderPassBI.clearValueCount = 2;
+				shadowMappingRenderPassBI.pClearValues = clearValues;
 
 				VkImageBlit blitRegion = {};
 				blitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
