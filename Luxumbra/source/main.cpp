@@ -101,7 +101,9 @@ void TexturedPBR(lux::Engine& luxUmbra) noexcept
 
 	scene.AddMeshNode(nullptr, glm::vec3(0.f), glm::vec3(0.f), false, "data/DamagedHelmet/DamagedHelmet.gltf", "Helmet");
 
-	scene.AddLightNode(nullptr, { 0.0f, 0.0f, -1.0f }, { 0.f, 0.f, 0.f }, false, lux::scene::LightType::LIGHT_TYPE_DIRECTIONAL, { 1.0f, 1.0f, 1.0f });
+	scene.AddLightNode(nullptr, { 0.0f, 0.0f, 0.0f }, glm::radians(glm::vec3(0.f, 15.f, 0.f)), false, lux::scene::LightType::LIGHT_TYPE_DIRECTIONAL, { 1.0f, 1.0f, 1.0f });
+	scene.AddLightNode(nullptr, { 0.0f, 0.0f, 0.0f }, glm::radians(glm::vec3(0.f, -15.f, 0.f)), false, lux::scene::LightType::LIGHT_TYPE_DIRECTIONAL, { 1.0f, 1.0f, 1.0f });
+	scene.AddLightNode(nullptr, { 0.f, 1.f, -1.5f }, { 0.f, 0.f, 0.f }, false, lux::scene::LightType::LIGHT_TYPE_POINT, glm::vec3(1.f, 0.f, 0.f));
 }
 
 void CornellBox(lux::Engine& luxUmbra) noexcept

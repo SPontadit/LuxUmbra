@@ -21,20 +21,29 @@
 
 namespace lux::rhi
 {
-#define LIGHT_MAX_COUNT 64
+#define DIRECTIONAL_LIGHT_MAX_COUNT 4
+#define POINT_LIGHT_MAX_COUNT 64
 #define MATERIAL_MAX_SET 128
 
 	using namespace lux;
 
-	struct LightBuffer
+	struct DirectionalLightBuffer
 	{
-		alignas(16) glm::vec4 position;
+		alignas(16) glm::vec3 direction;
+		alignas(16) glm::vec3 color;
+		alignas(16) glm::mat4 viewProj;
+	};
+
+	struct PointLightBuffer
+	{
+		alignas(16) glm::vec3 position;
 		alignas(16) glm::vec3 color;
 	};
 
-	struct LightCountPushConstant
+	struct LightCountsPushConstant
 	{
-		uint32_t lightCount;
+		uint32_t directionalLightCount;
+		uint32_t pointLightCount;
 	};
 
 	class RHI
@@ -50,7 +59,7 @@ namespace lux::rhi
 		const RHI& operator=(RHI&&) = delete;
 
 		bool Initialize(const Window& window) noexcept;
-		void Render(const scene::CameraNode* camera, scene::LightNode* shadowCastingDirectional, const std::vector<scene::MeshNode*> meshes, const std::vector<scene::LightNode*>& lights) noexcept;
+		void Render(const scene::CameraNode* camera, const std::vector<scene::MeshNode*> meshes, const std::vector<scene::LightNode*>& lights) noexcept;
 
 		void WaitIdle() noexcept;
 
@@ -74,6 +83,8 @@ namespace lux::rhi
 		void GenerateIrradianceFromCubemap(const Image& cubemapSource, Image& irradiance) noexcept;
 		void GeneratePrefilteredFromCubemap(const Image& cubemapSource, Image& prefiltered) noexcept;
 		void GenerateBRDFLut(Image& BRDFLut) noexcept;
+
+		int16_t CreateLightShadowMappingResources(scene::LightType lightType) noexcept;
 
 		void SetCubeMesh(std::shared_ptr<resource::Mesh> mesh) noexcept;
 
@@ -121,13 +132,15 @@ namespace lux::rhi
 		VkCommandPool commandPool;
 		std::vector<VkCommandBuffer> commandBuffers;
 
+		std::vector<Buffer> directionalLightUniformBuffers;
+		std::vector<Buffer> pointLightUniformBuffers;
+		LightCountsPushConstant lightCountsPushConstant;
+
 		VkCommandPool computeCommandPool;
 		//VkCommandBuffer computeCommandBuffer;
 		//VkDescriptorPool computeDescriptorPool;
 		//VkDescriptorSet generateIrradianceDescriptorSet;
 
-		std::vector<Buffer> lightUniformBuffers;
-		LightCountPushConstant lightCountPushConstant;
 
 		std::shared_ptr<resource::Mesh> cube;
 		uint32_t frameCount;
@@ -139,6 +152,10 @@ namespace lux::rhi
 		void InitSwapchain() noexcept;
 		void InitCommandBuffer() noexcept;
 
+		void InitShadowMapperDefaultResources() noexcept;
+		void InitShadowMapperRenderPass() noexcept;
+		void InitShadowMapperPipelines() noexcept;
+		void InitShadowMapperDescriptorPool() noexcept;
 
 		void InitForwardRenderPass() noexcept;
 		void InitForwardFramebuffers() noexcept;
@@ -148,13 +165,6 @@ namespace lux::rhi
 		void InitForwardDescriptorSets() noexcept;
 		void InitForwardUniformBuffers() noexcept;
 
-		void InitShadowMapperRenderPass() noexcept;
-		void InitShadowMapperFramebuffer() noexcept;
-		void InitShadowMapperPipelines() noexcept;
-		void InitShadowMapperViewProjUniformBuffer() noexcept;
-		void InitShadowMapperDescriptorPool() noexcept;
-		void InitShadowMapperDescriptorSets() noexcept;
-
 		void GenerateIrradianceFromCubemapFS(const Image& cubemapSource, Image& irradiance) noexcept;
 		void GenerateIrradianceFromCubemapCS(const Image& cubemapSource, Image& irradiance) noexcept;
 		void GeneratePrefilteredFromCubemapFS(const Image& cubemapSource, Image& prefiltered) noexcept;
@@ -162,7 +172,7 @@ namespace lux::rhi
 		void GenerateBRDFLutFS(Image& BRDFLut) noexcept;
 		void GenerateBRDFLutCS(Image& BRDFLut) noexcept;
 
-		void RenderShadowMaps(VkCommandBuffer commandBuffer, int imageIndex, scene::LightNode* shadowCastingDirectional, const std::vector<scene::MeshNode*>& meshes) noexcept;
+		void RenderShadowMaps(VkCommandBuffer commandBuffer, const std::vector<scene::LightNode*>& lights,const std::vector<scene::MeshNode*>& meshes) noexcept;
 		void RenderForward(VkCommandBuffer commandBuffer, int imageIndex, const scene::CameraNode* camera, const std::vector<scene::MeshNode*>& meshes, const std::vector<scene::LightNode*>& lights) noexcept;
 		void RenderPostProcess(VkCommandBuffer commandBuffer, int imageIndex) noexcept;
 
@@ -170,7 +180,8 @@ namespace lux::rhi
 
 		void GenerateCubemap(const CubeMapCreateInfo& luxCubemapCI, const Image& source, Image& image) noexcept;
 
-		void UpdateForwardUniformBuffers(const scene::CameraNode* camera, const std::vector<resource::Material*>& materials, const std::vector<scene::LightNode*>& lights) noexcept;
+		void UpdateForwardUniformBuffers(const scene::CameraNode* camera, const std::vector<resource::Material*>& materials) noexcept;
+		void UpdateLightsUniformBuffers(const std::vector<scene::LightNode*>& lights) noexcept;
 
 		void DestroySwapchainRelatedResources() noexcept;
 		void DestroyComputeRelatedResources() noexcept;

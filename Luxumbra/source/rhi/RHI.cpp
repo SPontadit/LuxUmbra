@@ -17,7 +17,7 @@ namespace lux::rhi
 		presentSemaphores(0), acquireSemaphores(0), fences(0),
 		imguiDescriptorPool(VK_NULL_HANDLE), materialDescriptorPool(VK_NULL_HANDLE), commandPool(VK_NULL_HANDLE), commandBuffers(0),
 		computeCommandPool(VK_NULL_HANDLE),
-		lightUniformBuffers(0), lightCountPushConstant(), frameCount(0), currentFrame(0), cube(nullptr),
+		directionalLightUniformBuffers(0), pointLightUniformBuffers(0), lightCountsPushConstant(), frameCount(0), currentFrame(0), cube(nullptr),
 		shadowMapper(), forward()
 #ifdef VULKAN_ENABLE_VALIDATION
 		, debugReportCallback(VK_NULL_HANDLE)
@@ -69,17 +69,13 @@ namespace lux::rhi
 
 		// Shadow mapper
 
-		InitShadowMapperRenderPass();
+		InitShadowMapperDefaultResources();
 
-		InitShadowMapperFramebuffer();
+		InitShadowMapperRenderPass();
 
 		InitShadowMapperPipelines();
 
-		InitShadowMapperViewProjUniformBuffer();
-
 		InitShadowMapperDescriptorPool();
-
-		InitShadowMapperDescriptorSets();
 
 		// Forward renderer
 
@@ -587,7 +583,7 @@ namespace lux::rhi
 	//	CHECK_VK(vkCreateDescriptorPool(device, &descriptorPoolCI, nullptr, &computeDescriptorPool));
 	//}
 
-	void RHI::Render(const scene::CameraNode* camera, scene::LightNode* shadowCastingDirectional, const std::vector<scene::MeshNode*> meshes, const std::vector<scene::LightNode*>& lights) noexcept
+	void RHI::Render(const scene::CameraNode* camera, const std::vector<scene::MeshNode*> meshes, const std::vector<scene::LightNode*>& lights) noexcept
 	{
 		// Acquire next image
 		VkFence* fence = &fences[currentFrame];
@@ -613,7 +609,7 @@ namespace lux::rhi
 
 		CHECK_VK(vkBeginCommandBuffer(commandBuffer, &commandBufferBI));
 
-		RenderShadowMaps(commandBuffer, imageIndex, shadowCastingDirectional, meshes);
+		RenderShadowMaps(commandBuffer, lights, meshes);
 
 		RenderForward(commandBuffer, imageIndex, camera, meshes, lights);
 
@@ -737,15 +733,18 @@ namespace lux::rhi
 	{
 		BufferCreateInfo lightBufferCI = {};
 		lightBufferCI.usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-		lightBufferCI.size = sizeof(LightBuffer) * LIGHT_MAX_COUNT;
 		lightBufferCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		lightBufferCI.memoryProperty = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-		lightUniformBuffers.resize(TO_SIZE_T(swapchainImageCount));
+		lightBufferCI.size = sizeof(DirectionalLightBuffer) * DIRECTIONAL_LIGHT_MAX_COUNT;
+		directionalLightUniformBuffers.resize(TO_SIZE_T(swapchainImageCount));
 		for (size_t i = 0; i < swapchainImageCount; i++)
-		{
-			CreateBuffer(lightBufferCI, lightUniformBuffers[i]);
-		}
+			CreateBuffer(lightBufferCI, directionalLightUniformBuffers[i]);
+
+		lightBufferCI.size = sizeof(PointLightBuffer) * POINT_LIGHT_MAX_COUNT;
+		pointLightUniformBuffers.resize(TO_SIZE_T(swapchainImageCount));
+		for (size_t i = 0; i < swapchainImageCount; i++)
+			CreateBuffer(lightBufferCI, pointLightUniformBuffers[i]);
 	}
 
 	void RHI::CreateMaterial(resource::Material& material) noexcept
@@ -1067,6 +1066,18 @@ namespace lux::rhi
 			imageMemoryBarrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 			dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
 			break;
+
+		case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+			imageMemoryBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+			if (format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT)
+			{
+				imageMemoryBarrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+			}
+
+			imageMemoryBarrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+			break;
 		}
 
 		vkCmdPipelineBarrier(commandBuffer, srcStageMask, dstStageMask, 0, 0, nullptr, 0, nullptr, 1, &imageMemoryBarrier);
@@ -1095,7 +1106,8 @@ namespace lux::rhi
 		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
 			vkDestroyImageView(device, swapchainImageViews[i], nullptr);
-			DestroyBuffer(lightUniformBuffers[i]);
+			DestroyBuffer(directionalLightUniformBuffers[i]);
+			DestroyBuffer(pointLightUniformBuffers[i]);
 		}
 
 		vkDestroySwapchainKHR(device, swapchain, nullptr);
