@@ -105,18 +105,23 @@ void TexturedPBR(lux::Engine& luxUmbra) noexcept
 	resourceManager.CreateMaterial("Helmet", defaultMaterialCI);
 
 
-	scene.AddCameraNode(nullptr, { 0.f, 0.f, 5.f }, { 0.f, 0.f, 0.f }, false, 45.f, 0.01f, 1000.f, true);
+	scene.AddCameraNode(nullptr, { 0.f, 0.f, 10.f }, { 0.f, 0.f, 0.f }, false, 45.f, 0.01f, 1000.f, true);
 
-	lux::scene::MeshNode* plane = scene.AddMeshNode(nullptr, glm::vec3(0.f, 0.f, -2.f), glm::radians(glm::vec3(0.f, 90.f, 0.f)), false, lux::resource::MeshPrimitive::MESH_PLANE_PRIMITIVE, "White");
-	plane = scene.AddMeshNode(nullptr, glm::vec3(-2.f, 0.f, 0.f), glm::radians(glm::vec3(0.f, 180.f, 0.f)), false, lux::resource::MeshPrimitive::MESH_PLANE_PRIMITIVE, "White");
-	plane = scene.AddMeshNode(nullptr, glm::vec3(2.f, 0.f, 0.f), glm::radians(glm::vec3(0.f, 0.f, 0.f)), false, lux::resource::MeshPrimitive::MESH_PLANE_PRIMITIVE, "White");
+	glm::vec3 planeScale(1.f, 3.f, 3.f);
 
-	//scene.AddMeshNode(nullptr, glm::vec3(0.f), glm::vec3(0.f), false, "data/DamagedHelmet/DamagedHelmet.gltf", "Helmet");
+	lux::scene::MeshNode* plane = scene.AddMeshNode(nullptr, glm::vec3(0.f, 0.f, -3.f), glm::radians(glm::vec3(0.f, 90.f, 0.f)), false, lux::resource::MeshPrimitive::MESH_PLANE_PRIMITIVE, "White");
+	plane->SetLocalScale(planeScale);
+	plane = scene.AddMeshNode(nullptr, glm::vec3(-3.f, 0.f, 0.f), glm::radians(glm::vec3(0.f, 180.f, 0.f)), false, lux::resource::MeshPrimitive::MESH_PLANE_PRIMITIVE, "White");
+	plane->SetLocalScale(planeScale);
+	plane = scene.AddMeshNode(nullptr, glm::vec3(3.f, 0.f, 0.f), glm::radians(glm::vec3(0.f, 0.f, 0.f)), false, lux::resource::MeshPrimitive::MESH_PLANE_PRIMITIVE, "White");
+	plane->SetLocalScale(planeScale);
+
+	scene.AddMeshNode(nullptr, glm::vec3(-1.5f, 0.f, 0.f), glm::vec3(0.f), false, "data/DamagedHelmet/DamagedHelmet.gltf", "Helmet");
 
 	//scene.AddLightNode(nullptr, { 0.0f, 0.0f, 0.0f }, glm::radians(glm::vec3(0.f, 15.f, 0.f)), false, lux::scene::LightType::LIGHT_TYPE_DIRECTIONAL, { 1.0f, 1.0f, 1.0f });
 	//scene.AddLightNode(nullptr, { 0.0f, 0.0f, 0.0f }, glm::radians(glm::vec3(0.f, -15.f, 0.f)), false, lux::scene::LightType::LIGHT_TYPE_DIRECTIONAL, { 1.0f, 1.0f, 1.0f });
-	lux::scene::LightNode* pointLight = scene.AddLightNode(nullptr, { 0.f, 0.f, 0.f }, { 0.f, 0.f, 0.f }, false, lux::scene::LightType::LIGHT_TYPE_POINT, glm::vec3(1.f, 0.f, 0.f));
-	pointLight->SetRadius(5.f);
+	lux::scene::LightNode* pointLight = scene.AddLightNode(nullptr, glm::vec3(1.5f, 0.f, 0.f), { 0.f, 0.f, 0.f }, false, lux::scene::LightType::LIGHT_TYPE_POINT, glm::vec3(1.f, 0.f, 0.f));
+	pointLight->SetRadius(10.f);
 }
 
 void CornellBox(lux::Engine& luxUmbra) noexcept
