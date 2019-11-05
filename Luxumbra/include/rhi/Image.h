@@ -22,6 +22,7 @@ namespace lux::rhi
 		VkImageViewType imageViewType;
 		void* imageData;
 		uint64_t imageSize;
+		bool useInComputeShader;
 	};
 
 	struct CubeMapCreateInfo

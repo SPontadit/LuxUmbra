@@ -30,8 +30,19 @@ namespace lux::rhi
 		imageCI.tiling = VK_IMAGE_TILING_OPTIMAL;
 		imageCI.usage = luxImageCI.usage;
 		imageCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-		imageCI.queueFamilyIndexCount = 1;
-		imageCI.pQueueFamilyIndices = &graphicsQueueIndex;
+		
+		if (luxImageCI.useInComputeShader)
+		{
+			uint32_t queueFamilyIndices[2] = { graphicsQueueIndex, computeQueueIndex };
+			imageCI.queueFamilyIndexCount = 2;
+			imageCI.pQueueFamilyIndices = queueFamilyIndices;
+		}
+		else
+		{
+			imageCI.queueFamilyIndexCount = 1;
+			imageCI.pQueueFamilyIndices = &graphicsQueueIndex;
+		}
+
 		imageCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 		if (luxImageCI.arrayLayers != 1)
@@ -169,6 +180,7 @@ namespace lux::rhi
 
 #ifdef USE_COMPUTE_SHADER_FOR_IBL_RESOURCES
 		imageCI.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		imageCI.useInComputeShader = VK_TRUE;
 #else
 		imageCI.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 #endif
@@ -405,6 +417,7 @@ namespace lux::rhi
 
 #ifdef USE_COMPUTE_SHADER_FOR_IBL_RESOURCES
 		imageCI.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		imageCI.useInComputeShader = VK_TRUE;
 #else
 		imageCI.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 #endif
@@ -607,7 +620,7 @@ namespace lux::rhi
 
 			vkCmdPushConstants(compute.commandBuffer, compute.pipeline.pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(GeneratePrefilteredParameters), &parameters);
 
-			uint32_t dispatch = std::max((CUBEMAP_TEXTURE_SIZE >> i) / 16, 1);
+			uint32_t dispatch = std::max((PREFILTERED_TEXTURE_SIZE >> i) / 16, 1);
 			vkCmdDispatch(compute.commandBuffer, dispatch, dispatch, 6);
 		}
 
@@ -934,6 +947,7 @@ namespace lux::rhi
 
 #ifdef USE_COMPUTE_SHADER_FOR_IBL_RESOURCES
 		imageCI.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+		imageCI.useInComputeShader = VK_TRUE;
 #else
 		imageCI.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 #endif
