@@ -82,6 +82,31 @@ namespace lux::rhi
 		CHECK_VK(vkCreateImageView(device, &imageViewCI, nullptr, &image.imageView));
 	}
 
+	void RHI::CreateImage(const ImageCreateInfo& luxImageCI, Image& image, VkSampler* sampler) noexcept
+	{
+		CreateImage(luxImageCI, image);
+
+		VkSamplerCreateInfo samplerCI = {};
+		samplerCI.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+		samplerCI.magFilter = VK_FILTER_LINEAR;
+		samplerCI.minFilter = VK_FILTER_LINEAR;
+		samplerCI.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerCI.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerCI.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerCI.anisotropyEnable = VK_FALSE;
+		samplerCI.maxAnisotropy = 16;
+		samplerCI.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+		samplerCI.unnormalizedCoordinates = VK_FALSE;
+		samplerCI.compareEnable = VK_FALSE;
+		samplerCI.compareOp = VK_COMPARE_OP_ALWAYS;
+		samplerCI.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+		samplerCI.mipLodBias = 0.0f;
+		samplerCI.minLod = 0.0f;
+		samplerCI.maxLod = TO_FLOAT(luxImageCI.mipmapCount);
+
+		CHECK_VK(vkCreateSampler(device, &samplerCI, nullptr, sampler));
+	}
+
 	void RHI::FillImage(const ImageCreateInfo& luxImageCI, Image& image) noexcept
 	{
 		BufferCreateInfo stagingBufferCI = {};
@@ -118,6 +143,51 @@ namespace lux::rhi
 		CommandTransitionImageLayout(image.image, VK_FORMAT_R8G8B8A8_UINT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	
 		DestroyBuffer(stagingBuffer);
+
+		if (luxImageCI.mipmapCount > 1)
+			GenerateMipChain(luxImageCI, image);
+	}
+	
+	void RHI::GenerateMipChain(const ImageCreateInfo& luxImageCI, Image& image) noexcept
+	{
+		VkCommandBuffer commandBuffer = BeginSingleTimeCommandBuffer();
+
+		CommandTransitionImageLayout(commandBuffer, image.image, luxImageCI.format, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+		for (uint32_t i = 1; i < luxImageCI.mipmapCount; i++)
+		{
+			VkImageBlit imageBlit = {};
+
+			imageBlit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			imageBlit.srcSubresource.layerCount = 1;
+			imageBlit.srcSubresource.mipLevel = i - 1;
+			imageBlit.srcOffsets[1].x = TO_UINT32_T(luxImageCI.width >> (i - 1));
+			imageBlit.srcOffsets[1].y = TO_UINT32_T(luxImageCI.height >> (i - 1));
+			imageBlit.srcOffsets[1].z = 1;
+		
+			imageBlit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			imageBlit.dstSubresource.layerCount = 1;
+			imageBlit.dstSubresource.mipLevel = i;
+			imageBlit.dstOffsets[1].x = TO_UINT32_T(luxImageCI.width >> i);
+			imageBlit.dstOffsets[1].y = TO_UINT32_T(luxImageCI.height >> i);
+			imageBlit.dstOffsets[1].z = 1;
+			
+			VkImageSubresourceRange mipSubresourceRange = {};
+			mipSubresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			mipSubresourceRange.levelCount = 1;
+			mipSubresourceRange.layerCount = 1;
+			mipSubresourceRange.baseMipLevel = i;
+
+			CommandTransitionImageLayout(commandBuffer, image.image, luxImageCI.format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, 1, i);
+		
+			vkCmdBlitImage(commandBuffer, image.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageBlit, VK_FILTER_LINEAR);
+		
+			CommandTransitionImageLayout(commandBuffer, image.image, luxImageCI.format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 1, 1, i);
+		}
+
+		CommandTransitionImageLayout(commandBuffer, image.image, luxImageCI.format, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, luxImageCI.mipmapCount);
+
+		EndSingleTimeCommandBuffer(commandBuffer);
 	}
 
 	void RHI::TMP_DestroyIBLResource() noexcept
@@ -203,7 +273,7 @@ namespace lux::rhi
 		writeIrradianceMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		writeIrradianceMapDescriptorSet.descriptorCount = 1;
 		writeIrradianceMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		writeIrradianceMapDescriptorSet.dstBinding = 2;
+		writeIrradianceMapDescriptorSet.dstBinding = 5;
 		writeIrradianceMapDescriptorSet.dstArrayElement = 0;
 		writeIrradianceMapDescriptorSet.pImageInfo = &irradianceMapDescriptorImageInfo;
 
@@ -441,7 +511,7 @@ namespace lux::rhi
 		writePrefilteredMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		writePrefilteredMapDescriptorSet.descriptorCount = 1;
 		writePrefilteredMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		writePrefilteredMapDescriptorSet.dstBinding = 3;
+		writePrefilteredMapDescriptorSet.dstBinding = 6;
 		writePrefilteredMapDescriptorSet.dstArrayElement = 0;
 		writePrefilteredMapDescriptorSet.pImageInfo = &prefilteredMapDescriptorImageInfo;
 
@@ -974,7 +1044,7 @@ namespace lux::rhi
 		writeBRDFLutDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		writeBRDFLutDescriptorSet.descriptorCount = 1;
 		writeBRDFLutDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		writeBRDFLutDescriptorSet.dstBinding = 4;
+		writeBRDFLutDescriptorSet.dstBinding = 7;
 		writeBRDFLutDescriptorSet.dstArrayElement = 0;
 		writeBRDFLutDescriptorSet.pImageInfo = &BRDFLutDescriptorImageInfo;
 
@@ -1289,5 +1359,10 @@ namespace lux::rhi
 		vkFreeMemory(device, image.memory, nullptr);
 	}
 
+	void RHI::DestroyImage(Image& image, VkSampler* sampler) noexcept
+	{
+		DestroyImage(image);
+		vkDestroySampler(device, *sampler, nullptr);
+	}
 
 } // namespace lux::rhi

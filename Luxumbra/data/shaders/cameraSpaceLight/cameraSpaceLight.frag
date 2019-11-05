@@ -1,7 +1,9 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
+#extension GL_KHR_vulkan_glsl : enable
 
-#define LIGHT_MAX_COUNT 64
+#define DIRECTIONAL_LIGHT_MAX_COUNT 4
+#define POINT_LIGHT_MAX_COUNT 64
 
 layout(location = 0) in FsIn
 {
@@ -10,30 +12,44 @@ layout(location = 0) in FsIn
 	vec3 normalWS;
 	mat4 viewMatrix;
 	mat3 textureToViewMatrix;
-	vec4 shadowCoord;
 } fsIn;
 
 layout(location = 0) out vec4 outColor;
 
-struct Light
+struct DirectionalLight
 {
-	vec4 parameter;
+	vec3 direction;
+	vec3 color;
+	mat4 viewProj;
+};
+
+struct PointLight
+{
+	vec3 position;
 	vec3 color;
 };
 
-layout(set = 0, binding = 1) uniform LightBuffer
+layout(set = 0, binding = 1) uniform DirectionalLightBuffer
 {
-	Light lights[LIGHT_MAX_COUNT];
+	DirectionalLight directionalLights[DIRECTIONAL_LIGHT_MAX_COUNT];
 };
 
-layout(set = 0, binding = 2) uniform samplerCube irradianceMap;
-layout(set = 0, binding = 3) uniform samplerCube prefilteredMap;
-layout(set = 0, binding = 4) uniform sampler2D BRDFLut;
-layout(set = 0, binding = 5) uniform sampler2D shadowMap;
+layout(set = 0, binding = 2) uniform pointLightBuffer
+{
+	PointLight pointLights[POINT_LIGHT_MAX_COUNT];
+};
+
+layout(set = 0, binding = 3) uniform sampler2D[DIRECTIONAL_LIGHT_MAX_COUNT] directionalShadowMaps;
+layout(set = 0, binding = 4) uniform samplerCube[POINT_LIGHT_MAX_COUNT] pointLightShadowMaps;
+
+layout(set = 0, binding = 5) uniform samplerCube irradianceMap;
+layout(set = 0, binding = 6) uniform samplerCube prefilteredMap;
+layout(set = 0, binding = 7) uniform sampler2D BRDFLut;
 
 layout(push_constant) uniform PushConsts
 {
-	layout(offset = 64) int lightCount;
+	layout(offset = 64) uint directionalLightCount;
+	layout(offset = 68) uint pointLightCount;
 } pushConsts;
 
 layout(set = 1, binding = 0) uniform Material
@@ -42,6 +58,8 @@ layout(set = 1, binding = 0) uniform Material
 	float metallic;
 	float perceptualRoughness;
 	float reflectance;
+	float clearCoat;
+	float clearCoatPerceptualRoughness;
 	int useTextureMask;
 } material;
 
@@ -50,29 +68,20 @@ layout(set = 1, binding = 2) uniform sampler2D normalMap;
 layout(set = 1, binding = 3) uniform sampler2D metallicRoughnessMap;
 layout(set = 1, binding = 4) uniform sampler2D ambientOcclusionMap;
 
-//#define BASE_COLOR material.color.xyz
-//#define METALLIC material.color.w
-//#define PERCEPTUAL_ROUGHNESS material.parameter.x
-//#define REFLECTANCE material.parameter.y
-//layout(binding = 2) uniform Material
-//{
-//	vec4 color;
-//	vec4 parameter;
-//} material;
-
 #define ROUGHNESS_MASK 0x01
 #define METALLIC_MASK 0x02
 
 const float PI = 3.1415926;
 
-float Shadow(vec4 shadowCoord);
-vec4 CameraSpace();
+vec3 DirectColor(vec3 lightDir, vec3 radiance, vec3 normal, float roughness, vec3 F0, float NdotV, vec3 diffuseColor, vec3 radiance, float shadow, float clearCoatRoughness);
+float DirectionalShadow(vec4 shadowCoord, int shadowMapIndex);
 
 // PBR
 vec3 RemapDiffuseColor(vec3 baseColor, float metallic);
 vec3 GetF0(float reflectance, float metallic, vec3 baseColor);
 float D_GGX(float VdotH, float roughness);
 float V_SmithGGXCorrelated(float NdotV, float NdotL, float roughness);
+float V_Kelement(float LdotH);
 vec3 F_Schlick(float NdotH, vec3 f0);
 float F_Schlick(float NdotH, float f0, float f90);
 vec3 F_SchlickRoughness(float VdotH, vec3 f0, float roughness);
@@ -83,7 +92,105 @@ vec3 PrefilteredReflection(vec3 R, float roughness);
 
 void main() 
 {
-	outColor = CameraSpace();
+	vec3 directColor  = vec3(0.0);
+	vec4 textureColor = texture(albedo, fsIn.textureCoordinateLS);
+
+	float inv = gl_FrontFacing ? 1.0 : -1.0;
+
+	vec3 viewDir = vec3(0.0, 0.0, 1.0);
+
+	vec3 normal = texture(normalMap, fsIn.textureCoordinateLS).rgb;
+	normal = normalize(normal * 2.0 - 1.0) * inv;
+	normal = normalize(fsIn.textureToViewMatrix * normal);
+	vec3 normalVS = normalize(mat3(fsIn.viewMatrix) * fsIn.normalWS);
+
+	float NdotV = max(dot(normal, viewDir), 0.001);
+	
+	vec3 baseColor = pow(textureColor.rgb * material.baseColor, vec3(2.2));
+	baseColor *= textureColor.a;
+
+	float perceptualRoughness = (material.useTextureMask & ROUGHNESS_MASK) == ROUGHNESS_MASK ? texture(metallicRoughnessMap, fsIn.textureCoordinateLS).g : material.perceptualRoughness;
+	perceptualRoughness = clamp(perceptualRoughness, 0.045, 1.0);
+	float roughness = perceptualRoughness * perceptualRoughness;
+	float metallic = (material.useTextureMask & METALLIC_MASK) == METALLIC_MASK ? texture(metallicRoughnessMap, fsIn.textureCoordinateLS).b : material.metallic;
+	vec3 diffuseColor = RemapDiffuseColor(baseColor, metallic);
+	vec3 F0 = GetF0(material.reflectance, metallic, baseColor);
+	
+	// Clear Coat
+	float clearCoatPerceptualRoughness = clamp(material.clearCoatPerceptualRoughness, 0.045, 1.0);
+	float clearCoatRoughness = clearCoatPerceptualRoughness * clearCoatPerceptualRoughness;
+
+
+	vec3 lightDir;
+	vec3 radiance;
+	float shadow;
+
+	// Directional lights
+	for(int i = 0; i < pushConsts.directionalLightCount; i++)
+	{
+		lightDir = normalize(mat3(fsIn.viewMatrix) * -directionalLights[i].direction);
+		radiance = directionalLights[i].color;
+
+		vec4 shadowFragCord = directionalLights[i].viewProj * vec4(fsIn.positionWS, 1.0);
+		shadow = DirectionalShadow(shadowFragCord / shadowFragCord.w, i);
+
+		directColor += DirectColor(lightDir, viewDir, normal, roughness, F0, NdotV, diffuseColor, radiance, shadow, clearCoatRoughness);
+	}
+
+	// Point lights
+	for (int i = 0; i < pushConsts.pointLightCount; i++)
+	{
+		vec3 lightPosVS = mat3(fsIn.viewMatrix) * (pointLights[i].position - fsIn.positionWS);
+		lightDir = normalize(lightPosVS);
+		float distance = length(lightPosVS);
+		float attenuation = 1.0 / (distance * distance);
+		
+		radiance = pointLights[i].color * attenuation;
+
+		shadow = 1.0;
+
+		directColor += DirectColor(lightDir, viewDir, normal, roughness, F0, NdotV, diffuseColor, radiance, shadow, clearCoatRoughness);
+	}
+
+	viewDir = -fsIn.viewMatrix[3].xyz  * mat3(fsIn.viewMatrix);
+	viewDir = normalize(viewDir - fsIn.positionWS);
+
+	normal = transpose(mat3(fsIn.viewMatrix)) * normal;
+	normal = normalize(normal);
+
+	vec3 R = reflect(-viewDir, normal);
+	vec3 clearCoatR = reflect(-viewDir, normalVS);
+
+	NdotV = max(dot(normal, viewDir), 0.001);
+	float clearCoatNdotV = max(dot(normalVS, viewDir), 0.001);
+
+	vec2 BRDF = texture(BRDFLut, vec2(NdotV, roughness)).rg;
+	vec3 reflection = PrefilteredReflection(R, roughness).rgb;
+	vec3 irradiance = texture(irradianceMap, normal).xyz;
+	
+	vec3 F = F_SchlickRoughness(NdotV, F0, roughness);
+	float clearCoatF = F_Schlick(clearCoatNdotV, 0.04, 1.0) * material.clearCoat;
+//	float clearCoatF = F_Schlick(NdotV, 0.04, 1.0) * material.clearCoat;
+	float attenuation = 1.0 - clearCoatF;
+	//vec3 indirectSpecularColor = reflection * (F * BRDF.x + BRDF.y);
+
+	vec3 indirectSpecularColor = reflection * mix(BRDF.xxx, BRDF.yyy, F0);
+	indirectSpecularColor *= attenuation;
+	indirectSpecularColor += PrefilteredReflection(clearCoatR, clearCoatPerceptualRoughness).rgb * clearCoatF;
+//	indirectSpecularColor += PrefilteredReflection(R, clearCoatPerceptualRoughness).rgb * clearCoatF;
+
+	vec3 Kdiff = 1.0 - F;
+	vec3 indirectDiffuseColor = irradiance * diffuseColor * Kdiff;
+	indirectDiffuseColor *= attenuation;
+	
+	vec3 indirectColor = indirectDiffuseColor + indirectSpecularColor;
+	
+
+	float ao = texture(ambientOcclusionMap, fsIn.textureCoordinateLS).r;
+
+	indirectColor *= ao;
+
+	outColor = vec4(directColor + indirectColor, textureColor.a);
 }
 
 vec3 getNormalFromMap()
@@ -103,68 +210,8 @@ vec3 getNormalFromMap()
     return normalize(TBN  * tangentNormal);
 }
 
-float Shadow(vec4 shadowCoord)
+vec3 DirectColor(vec3 lightDir, vec3 viewDir, vec3 normal, float roughness, vec3 F0, float NdotV, vec3 diffuseColor, vec3 radiance, float shadow, float clearCoatRoughness)
 {
-	if (abs(shadowCoord.x) > 1.0 || abs(shadowCoord.y) > 1.0 || abs(shadowCoord.z) > 1.0)
-		return 0.0;
-
-	vec2 shadowUV = shadowCoord.xy * 0.5 + 0.5;
-	if (shadowCoord.z > texture(shadowMap, shadowUV).x)
-		return 0.0;
-
-	return 1.0;
-}
-
-vec4 CameraSpace()
-{
-	vec3 directColor  = vec3(0.0);
-	vec4 textureColor = texture(albedo, fsIn.textureCoordinateLS);
-
-	float inv = gl_FrontFacing ? 1.0 : -1.0;
-
-//	vec3 viewWS = -fsIn.viewMatrix[3].xyz;
-//	vec3 viewDir = normalize(-fsIn.positionWS);
-//	viewDir = mat3(fsIn.viewMatrix) * viewDir;
-//	viewDir = normalize(viewDir);
-	vec3 viewDir = vec3(0.0, 0.0, 1.0);
-
-	vec3 normal = texture(normalMap, fsIn.textureCoordinateLS).rgb;
-	normal = normalize(normal * 2.0 - 1.0) * inv;
-	normal = normalize(fsIn.textureToViewMatrix * normal);
-
-	float NdotV = max(dot(normal, viewDir), 0.001);
-	
-	vec3 baseColor = pow(textureColor.rgb * material.baseColor, vec3(2.2));
-	baseColor *= textureColor.a;
-
-	float perceptualRoughness = (material.useTextureMask & ROUGHNESS_MASK) == ROUGHNESS_MASK ? texture(metallicRoughnessMap, fsIn.textureCoordinateLS).g : material.perceptualRoughness;
-	float roughness = perceptualRoughness * perceptualRoughness;
-	float metallic = (material.useTextureMask & METALLIC_MASK) == METALLIC_MASK ? texture(metallicRoughnessMap, fsIn.textureCoordinateLS).b : material.metallic;
-	vec3 diffuseColor = RemapDiffuseColor(baseColor, metallic);
-	vec3 F0 = GetF0(material.reflectance, metallic, baseColor);
-
-	for(int i = 0; i < pushConsts.lightCount; ++i)
-	{
-		vec3 lightDir;
-		vec3 radiance;
-
-		// Directional
-		if(lights[i].parameter.w == 0.0)
-		{
-			lightDir = normalize(mat3(fsIn.viewMatrix) * -lights[i].parameter.xyz);
-			radiance = lights[i].color;
-
-		}
-		else
-		{
-			vec3 lightPosVS = mat3(fsIn.viewMatrix) * (lights[i].parameter.xyz - fsIn.positionWS);
-			lightDir = normalize(lightPosVS);
-			float distance = length(lightPosVS);
-			float attenuation = 1.0 / (distance * distance);
-			
-			radiance = lights[i].color * attenuation;
-		}
-
 		vec3 h = normalize(viewDir + lightDir);
 		float NdotH = max(dot(normal, h), 0.001);
 		float NdotL = max(dot(normal, lightDir), 0.001);
@@ -181,39 +228,33 @@ vec4 CameraSpace()
 		//vec3 directDiffuseColor = diffuseColor * Kdiff * Fd_Burley(NdotV, NdotL, LdotH, roughness);
 		vec3 directDiffuseColor = diffuseColor * Kdiff * Fd_Lambert();
 
-		directColor += (directDiffuseColor + specular) * radiance * NdotL;
-	}
 
-	float shadow = Shadow(fsIn.shadowCoord / fsIn.shadowCoord.w);
+		// Clear Coat
+		vec3 normalVS = normalize(mat3(fsIn.viewMatrix) * fsIn.normalWS);
+		float clearCoadtNdotH = max(dot(normalVS, h), 0.001);
+		float Dc = D_GGX(NdotH, clearCoatRoughness);
+		float Fc = F_Schlick(LdotH, 0.04, 1.0) * material.clearCoat;
+		float Vc = V_Kelement(LdotH);
+		
+		
+		float clearCoat = Dc * Vc * Fc;
+		float attenuation  = 1.0 - Fc;
 
 
-	viewDir = -fsIn.viewMatrix[3].xyz  * mat3(fsIn.viewMatrix);
-	viewDir = normalize(viewDir - fsIn.positionWS);
+		return ((directDiffuseColor + specular) * attenuation + clearCoat) * (radiance * NdotL * shadow);
 
-	normal = transpose(mat3(fsIn.viewMatrix)) * normal;
-	normal = normalize(normal);
+}
 
-	vec3 R = reflect(-viewDir, normal);
+float DirectionalShadow(vec4 shadowCoord, int shadowMapIndex)
+{
+	if (abs(shadowCoord.x) > 1.0 || abs(shadowCoord.y) > 1.0 || abs(shadowCoord.z) > 1.0)
+		return 0.0;
 
-	NdotV = max(dot(normal, viewDir), 0.001);
+	vec2 shadowUV = shadowCoord.xy * 0.5 + 0.5;
+	if (shadowCoord.z > texture(directionalShadowMaps[shadowMapIndex], shadowUV).x)
+		return 0.0;
 
-	vec2 BRDF = texture(BRDFLut, vec2(NdotV, roughness)).rg;
-	vec3 reflection = PrefilteredReflection(R, roughness).rgb;
-	vec3 irradiance = texture(irradianceMap, normal).xyz;
-	
-	vec3 F = F_SchlickRoughness(NdotV, F0, roughness);
-	//vec3 indirectSpecularColor = reflection * (F * BRDF.x + BRDF.y);
-	vec3 indirectSpecularColor = reflection * mix(BRDF.xxx, BRDF.yyy, F0);
-
-	vec3 Kdiff = 1.0 - F;
-	vec3 indirectDiffuseColor = irradiance * diffuseColor * Kdiff;
-	vec3 indirectColor = indirectDiffuseColor + indirectSpecularColor;
-	
-	float ao = texture(ambientOcclusionMap, fsIn.textureCoordinateLS).r;
-
-	indirectColor *= ao;
-
-	return vec4(directColor * shadow + indirectColor, textureColor.a);
+	return 1.0;
 }
 
 vec3 PrefilteredReflection(vec3 R, float roughness)
@@ -256,6 +297,11 @@ float V_SmithGGXCorrelated(float NdotV, float NdotL, float roughness)
 	float lambdaL = NdotV * sqrt((-NdotL * a2 + NdotL) * NdotL + a2);
 
 	return 0.5 / (lambdaV + lambdaL);
+}
+
+float V_Kelement(float LdotH)
+{
+	return 0.25 / (LdotH * LdotH);
 }
 
 vec3 F_Schlick(float VdotH, vec3 f0)

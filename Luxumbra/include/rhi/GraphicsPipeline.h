@@ -17,6 +17,7 @@ namespace lux::rhi
 		uint32_t subpassIndex;
 		std::string binaryVertexFilePath;
 		std::string binaryFragmentFilePath;
+		std::string cacheFilePath;
 		lux::VertexLayout vertexLayout;
 		VkPrimitiveTopology primitiveTopology;
 		float viewportWidth;
@@ -52,6 +53,7 @@ namespace lux::rhi
 
 
 		VkPipeline pipeline;
+		VkPipelineCache cache;
 		VkPipelineLayout pipelineLayout;
 		VkDescriptorSetLayout viewDescriptorSetLayout;
 		VkDescriptorSetLayout materialDescriptorSetLayout;

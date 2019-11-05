@@ -39,7 +39,7 @@ namespace lux::rhi
 	{
 		Image() noexcept;
 		Image(const Image&) = delete;
-		Image(Image&&) = delete;
+		Image(Image&&) = default;
 
 		~Image() noexcept = default;
 
