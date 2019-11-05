@@ -11,6 +11,8 @@ namespace lux::resource
 		parameter.baseColor = materialCI.baseColor;
 		parameter.reflectance = materialCI.reflectance;
 		parameter.perceptualRoughness = materialCI.perceptualRoughness;
+		parameter.clearCoat = materialCI.clearCoat;
+		parameter.clearCoatPerceptualRoughness = materialCI.clearCoatPerceptualRoughness;
 		parameter.metallic = materialCI.metallic;
 		parameter.textureMask = materialCI.textureMask;
 	}

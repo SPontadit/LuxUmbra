@@ -833,6 +833,7 @@ namespace lux::rhi
 
 	void RHI::RenderForward(VkCommandBuffer commandBuffer, int imageIndex, const scene::CameraNode* camera, const std::vector<scene::MeshNode*>& meshes, const std::vector<scene::LightNode*>& lights) noexcept
 	{
+
 		VkDeviceSize vertexBufferOffsets[] = { 0 };
 
 		VkClearColorValue clearColor{ 0.5f, 0.5703125f, 0.6171875f, 1.0F };

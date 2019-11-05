@@ -62,6 +62,8 @@ layout(set = 1, binding = 0) uniform Material
 	float metallic;
 	float perceptualRoughness;
 	float reflectance;
+	float clearCoat;
+	float clearCoatPerceptualRoughness;
 	int useTextureMask;
 } material;
 
@@ -77,11 +79,10 @@ const float PI = 3.1415926;
 
 // Lights and shadows
 
-vec3 DirectColor(vec3 lightDir, vec3 radiance, vec3 normal, float roughness, vec3 F0, float NdotV, vec3 diffuseColor, vec3 radiance, float shadow);
+vec3 DirectColor(vec3 lightDir, vec3 radiance, vec3 normal, float roughness, vec3 F0, float NdotV, vec3 diffuseColor, vec3 radiance, float shadow, float clearCoatRoughness);
 
 float DirectionalShadow(vec4 shadowCoord, int lightIndex);
 float PointShadow(vec3 lightDir, float sqrLightDist, int lightIndex);
-
 
 // PBR
 
@@ -89,6 +90,7 @@ vec3 RemapDiffuseColor(vec3 baseColor, float metallic);
 vec3 GetF0(float reflectance, float metallic, vec3 baseColor);
 float D_GGX(float VdotH, float roughness);
 float V_SmithGGXCorrelated(float NdotV, float NdotL, float roughness);
+float V_Kelement(float LdotH);
 vec3 F_Schlick(float NdotH, vec3 f0);
 float F_Schlick(float NdotH, float f0, float f90);
 vec3 F_SchlickRoughness(float VdotH, vec3 f0, float roughness);
@@ -110,6 +112,7 @@ void main()
 	vec3 normal = texture(normalMap, fsIn.textureCoordinateLS).rgb;
 	normal = normalize(normal * 2.0 - 1.0) * inv;
 	normal = normalize(fsIn.textureToViewMatrix * normal);
+	vec3 normalVS = normalize(mat3(fsIn.viewMatrix) * fsIn.normalWS);
 
 	float NdotV = max(dot(normal, viewDir), 0.001);
 	
@@ -117,10 +120,16 @@ void main()
 	baseColor *= textureColor.a;
 
 	float perceptualRoughness = (material.useTextureMask & ROUGHNESS_MASK) == ROUGHNESS_MASK ? texture(metallicRoughnessMap, fsIn.textureCoordinateLS).g : material.perceptualRoughness;
+	perceptualRoughness = clamp(perceptualRoughness, 0.045, 1.0);
 	float roughness = perceptualRoughness * perceptualRoughness;
 	float metallic = (material.useTextureMask & METALLIC_MASK) == METALLIC_MASK ? texture(metallicRoughnessMap, fsIn.textureCoordinateLS).b : material.metallic;
 	vec3 diffuseColor = RemapDiffuseColor(baseColor, metallic);
 	vec3 F0 = GetF0(material.reflectance, metallic, baseColor);
+	
+	// Clear Coat
+	float clearCoatPerceptualRoughness = clamp(material.clearCoatPerceptualRoughness, 0.045, 1.0);
+	float clearCoatRoughness = clearCoatPerceptualRoughness * clearCoatPerceptualRoughness;
+
 
 	vec3 lightDir;
 	vec3 radiance;
@@ -135,7 +144,7 @@ void main()
 		vec4 shadowFragCord = directionalLights[i].viewProj * vec4(fsIn.positionWS, 1.0);
 		shadow = DirectionalShadow(shadowFragCord / shadowFragCord.w, i);
 
-		directColor += DirectColor(lightDir, viewDir, normal, roughness, F0, NdotV, diffuseColor, radiance, shadow);
+		directColor += DirectColor(lightDir, viewDir, normal, roughness, F0, NdotV, diffuseColor, radiance, shadow, clearCoatRoughness);
 	}
 
 	// Point lights
@@ -151,7 +160,7 @@ void main()
 
 		shadow = PointShadow(-fragToLight, length(fragToLight), i);
 
-		directColor += DirectColor(lightDir, viewDir, normal, roughness, F0, NdotV, diffuseColor, radiance, shadow);
+		directColor += DirectColor(lightDir, viewDir, normal, roughness, F0, NdotV, diffuseColor, radiance, shadow, clearCoatRoughness);
 	}
 
 	viewDir = -fsIn.viewMatrix[3].xyz  * mat3(fsIn.viewMatrix);
@@ -161,21 +170,33 @@ void main()
 	normal = normalize(normal);
 
 	vec3 R = reflect(-viewDir, normal);
+	vec3 clearCoatR = reflect(-viewDir, normalVS);
 
 	NdotV = max(dot(normal, viewDir), 0.001);
+	float clearCoatNdotV = max(dot(normalVS, viewDir), 0.001);
 
 	vec2 BRDF = texture(BRDFLut, vec2(NdotV, roughness)).rg;
 	vec3 reflection = PrefilteredReflection(R, roughness).rgb;
 	vec3 irradiance = texture(irradianceMap, normal).xyz;
 	
 	vec3 F = F_SchlickRoughness(NdotV, F0, roughness);
+	float clearCoatF = F_Schlick(clearCoatNdotV, 0.04, 1.0) * material.clearCoat;
+//	float clearCoatF = F_Schlick(NdotV, 0.04, 1.0) * material.clearCoat;
+	float attenuation = 1.0 - clearCoatF;
 	//vec3 indirectSpecularColor = reflection * (F * BRDF.x + BRDF.y);
+
 	vec3 indirectSpecularColor = reflection * mix(BRDF.xxx, BRDF.yyy, F0);
+	indirectSpecularColor *= attenuation;
+	indirectSpecularColor += PrefilteredReflection(clearCoatR, clearCoatPerceptualRoughness).rgb * clearCoatF;
+//	indirectSpecularColor += PrefilteredReflection(R, clearCoatPerceptualRoughness).rgb * clearCoatF;
 
 	vec3 Kdiff = 1.0 - F;
 	vec3 indirectDiffuseColor = irradiance * diffuseColor * Kdiff;
+	indirectDiffuseColor *= attenuation;
+	
 	vec3 indirectColor = indirectDiffuseColor + indirectSpecularColor;
 	
+
 	float ao = texture(ambientOcclusionMap, fsIn.textureCoordinateLS).r;
 
 	indirectColor *= ao;
@@ -200,7 +221,7 @@ vec3 getNormalFromMap()
     return normalize(TBN  * tangentNormal);
 }
 
-vec3 DirectColor(vec3 lightDir, vec3 viewDir, vec3 normal, float roughness, vec3 F0, float NdotV, vec3 diffuseColor, vec3 radiance, float shadow)
+vec3 DirectColor(vec3 lightDir, vec3 viewDir, vec3 normal, float roughness, vec3 F0, float NdotV, vec3 diffuseColor, vec3 radiance, float shadow, float clearCoatRoughness)
 {
 		vec3 h = normalize(viewDir + lightDir);
 		float NdotH = max(dot(normal, h), 0.001);
@@ -218,7 +239,21 @@ vec3 DirectColor(vec3 lightDir, vec3 viewDir, vec3 normal, float roughness, vec3
 		//vec3 directDiffuseColor = diffuseColor * Kdiff * Fd_Burley(NdotV, NdotL, LdotH, roughness);
 		vec3 directDiffuseColor = diffuseColor * Kdiff * Fd_Lambert();
 
-		return (directDiffuseColor + specular) * radiance * NdotL * shadow;
+
+		// Clear Coat
+		vec3 normalVS = normalize(mat3(fsIn.viewMatrix) * fsIn.normalWS);
+		float clearCoadtNdotH = max(dot(normalVS, h), 0.001);
+		float Dc = D_GGX(NdotH, clearCoatRoughness);
+		float Fc = F_Schlick(LdotH, 0.04, 1.0) * material.clearCoat;
+		float Vc = V_Kelement(LdotH);
+		
+		
+		float clearCoat = Dc * Vc * Fc;
+		float attenuation  = 1.0 - Fc;
+
+
+		return ((directDiffuseColor + specular) * attenuation + clearCoat) * (radiance * NdotL * shadow);
+
 }
 
 float DirectionalShadow(vec4 shadowCoord, int lightIndex)
@@ -297,6 +332,11 @@ float V_SmithGGXCorrelated(float NdotV, float NdotL, float roughness)
 	float lambdaL = NdotV * sqrt((-NdotL * a2 + NdotL) * NdotL + a2);
 
 	return 0.5 / (lambdaV + lambdaL);
+}
+
+float V_Kelement(float LdotH)
+{
+	return 0.25 / (LdotH * LdotH);
 }
 
 vec3 F_Schlick(float VdotH, vec3 f0)

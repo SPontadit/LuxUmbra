@@ -298,7 +298,11 @@ namespace lux
 							ImGui::SliderFloat("Reflectance", &matParameters.reflectance, 0.0f, 1.0f, "%.3f");
 						}
 
-						ImGui::SliderFloat("Roughness", &matParameters.perceptualRoughness, 0.0f, 1.0f, "%.3f");
+						ImGui::SliderFloat("Roughness", &matParameters.perceptualRoughness, 0.045f, 1.0f, "%.3f");
+
+						ImGui::SliderFloat("Clear Coat", &matParameters.clearCoat, 0.0f, 1.0f, "%.3f");
+
+						ImGui::SliderFloat("Cleat Coat Roughness", &matParameters.clearCoatPerceptualRoughness, 0.045f, 1.0f, "%.3f");
 
 						ImGui::TreePop();
 					}

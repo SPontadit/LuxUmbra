@@ -530,59 +530,6 @@ namespace lux::rhi
 
 	}
 
-	//void RHI::InitComputePipeline() noexcept
-	//{
-	//	VkDescriptorSetLayoutBinding cubemapInputDescriptorSetLayoutBinding = {};
-	//	cubemapInputDescriptorSetLayoutBinding.binding = 0;
-	//	cubemapInputDescriptorSetLayoutBinding.descriptorCount = 1;
-	//	cubemapInputDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	//	cubemapInputDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-	//	VkDescriptorSetLayoutBinding irradianceOutputDescriptorSetLayoutBinding = {};
-	//	irradianceOutputDescriptorSetLayoutBinding.binding = 1;
-	//	irradianceOutputDescriptorSetLayoutBinding.descriptorCount = 1;
-	//	irradianceOutputDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-	//	irradianceOutputDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-	//	VkPushConstantRange generateIrradiancePushConstantRange = {};
-	//	generateIrradiancePushConstantRange.offset = 0;
-	//	generateIrradiancePushConstantRange.size = sizeof(GenerateIrradianceParameters);
-	//	generateIrradiancePushConstantRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-	//	ComputePipelineCreateInfo computePipelineCI = {};
-	//	computePipelineCI.binaryComputeFilePath = "data/shaders/generateIrradianceMap/generateIrradianceMap.comp.spv";
-	//	computePipelineCI.descriptorSetLayoutBindings = { cubemapInputDescriptorSetLayoutBinding, irradianceOutputDescriptorSetLayoutBinding };
-	//	computePipelineCI.pushConstants = { generateIrradiancePushConstantRange };
-
-	//	CreateComputePipeline(computePipelineCI, computePipeline);
-
-
-	//	VkCommandBufferAllocateInfo commandBufferAI = {};
-	//	commandBufferAI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	//	commandBufferAI.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	//	commandBufferAI.commandBufferCount = 1;
-	//	commandBufferAI.commandPool = computeCommandPool;
-
-	//	CHECK_VK(vkAllocateCommandBuffers(device, &commandBufferAI, &computeCommandBuffer));
-
-	//	VkDescriptorPoolSize sourceComputeDescriptorPoolSize = {};
-	//	sourceComputeDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	//	sourceComputeDescriptorPoolSize.descriptorCount = 1;
-
-	//	VkDescriptorPoolSize destinationComputeDescriptorPoolSize = {};
-	//	destinationComputeDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-	//	destinationComputeDescriptorPoolSize.descriptorCount = 1;
-
-	//	std::array<VkDescriptorPoolSize, 2> poolSizes = { sourceComputeDescriptorPoolSize, destinationComputeDescriptorPoolSize };
-	//	VkDescriptorPoolCreateInfo descriptorPoolCI = {};
-	//	descriptorPoolCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	//	descriptorPoolCI.poolSizeCount = TO_UINT32_T(poolSizes.size());
-	//	descriptorPoolCI.pPoolSizes = poolSizes.data();
-	//	descriptorPoolCI.maxSets = 2;
-
-	//	CHECK_VK(vkCreateDescriptorPool(device, &descriptorPoolCI, nullptr, &computeDescriptorPool));
-	//}
-
 	void RHI::Render(const scene::CameraNode* camera, const std::vector<scene::MeshNode*> meshes, const std::vector<scene::LightNode*>& lights) noexcept
 	{
 		// Acquire next image

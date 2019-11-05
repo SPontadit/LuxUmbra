@@ -4,6 +4,10 @@
 
 namespace lux::rhi
 {
+	std::vector<ComputePipeline> tmp_pipelines;
+	std::vector<VkCommandBuffer> tmp_commandBuffers;
+	std::vector<VkDescriptorPool> tmp_descriptorPools;
+	std::vector<VkImageView> tmp_imageViews;
 
 	Image::Image() noexcept
 		: image(VK_NULL_HANDLE), imageView(VK_NULL_HANDLE), memory(VK_NULL_HANDLE)
@@ -26,8 +30,19 @@ namespace lux::rhi
 		imageCI.tiling = VK_IMAGE_TILING_OPTIMAL;
 		imageCI.usage = luxImageCI.usage;
 		imageCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-		imageCI.queueFamilyIndexCount = 1;
-		imageCI.pQueueFamilyIndices = &graphicsQueueIndex;
+		
+		if (luxImageCI.useInComputeShader)
+		{
+			uint32_t queueFamilyIndices[2] = { graphicsQueueIndex, computeQueueIndex };
+			imageCI.queueFamilyIndexCount = 2;
+			imageCI.pQueueFamilyIndices = queueFamilyIndices;
+		}
+		else
+		{
+			imageCI.queueFamilyIndexCount = 1;
+			imageCI.pQueueFamilyIndices = &graphicsQueueIndex;
+		}
+
 		imageCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 		if (luxImageCI.arrayLayers != 1)
@@ -175,6 +190,31 @@ namespace lux::rhi
 		EndSingleTimeCommandBuffer(commandBuffer);
 	}
 
+	void RHI::GenerateIBLResources(const Image& cubemapSource, Image& irradiance, Image& prefiltered, Image& BRDFLut) noexcept
+	{
+		GenerateIrradianceFromCubemap(cubemapSource, irradiance);
+		GeneratePrefilteredFromCubemap(cubemapSource, prefiltered);
+		GenerateBRDFLut(BRDFLut);
+
+		vkQueueWaitIdle(computeQueue);
+		TMP_DestroyIBLResource();
+	}
+
+	void RHI::TMP_DestroyIBLResource() noexcept
+	{
+		for (size_t i = 0; i < tmp_pipelines.size(); ++i)
+			DestroyComputePipeline(tmp_pipelines[i]);
+	
+		for(auto& commandBuffer : tmp_commandBuffers)
+			vkFreeCommandBuffers(device, computeCommandPool, 1, &commandBuffer);
+	
+		for (auto& descriptorPool : tmp_descriptorPools)
+			vkDestroyDescriptorPool(device, descriptorPool, nullptr);
+
+		for (auto& imageView : tmp_imageViews)
+			vkDestroyImageView(device, imageView, nullptr);
+	}
+
 	void RHI::GenerateCubemapFromHDR(const Image& HDRSource, Image& cubemap) noexcept
 	{
 		ImageCreateInfo imageCI = {};
@@ -220,6 +260,7 @@ namespace lux::rhi
 
 #ifdef USE_COMPUTE_SHADER_FOR_IBL_RESOURCES
 		imageCI.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		imageCI.useInComputeShader = VK_TRUE;
 #else
 		imageCI.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 #endif
@@ -432,15 +473,13 @@ namespace lux::rhi
 		submitInfo.pCommandBuffers = &compute.commandBuffer;
 
 		CHECK_VK(vkQueueSubmit(computeQueue, 1, &submitInfo, VK_NULL_HANDLE));
-		CHECK_VK(vkQueueWaitIdle(computeQueue));
 
-		DestroyComputePipeline(compute.pipeline);
-		vkDestroyDescriptorPool(device, compute.descriptorPool, nullptr);
-		vkFreeCommandBuffers(device, computeCommandPool, 1, &compute.commandBuffer);
-
+		tmp_pipelines.push_back(compute.pipeline);
+		tmp_descriptorPools.push_back(compute.descriptorPool);
+		tmp_commandBuffers.push_back(compute.commandBuffer);
 		for (size_t i = 0; i < mipmapCount; i++)
 		{
-			vkDestroyImageView(device, compute.imageViews[i], nullptr);
+			tmp_imageViews.push_back(compute.imageViews[i]);
 		}
 	}
 
@@ -458,6 +497,7 @@ namespace lux::rhi
 
 #ifdef USE_COMPUTE_SHADER_FOR_IBL_RESOURCES
 		imageCI.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		imageCI.useInComputeShader = VK_TRUE;
 #else
 		imageCI.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 #endif
@@ -660,7 +700,7 @@ namespace lux::rhi
 
 			vkCmdPushConstants(compute.commandBuffer, compute.pipeline.pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(GeneratePrefilteredParameters), &parameters);
 
-			uint32_t dispatch = std::max((CUBEMAP_TEXTURE_SIZE >> i) / 16, 1);
+			uint32_t dispatch = std::max((PREFILTERED_TEXTURE_SIZE >> i) / 16, 1);
 			vkCmdDispatch(compute.commandBuffer, dispatch, dispatch, 6);
 		}
 
@@ -674,15 +714,13 @@ namespace lux::rhi
 		submitInfo.pCommandBuffers = &compute.commandBuffer;
 
 		CHECK_VK(vkQueueSubmit(computeQueue, 1, &submitInfo, VK_NULL_HANDLE));
-		CHECK_VK(vkQueueWaitIdle(computeQueue));
 
-		DestroyComputePipeline(compute.pipeline);
-		vkDestroyDescriptorPool(device, compute.descriptorPool, nullptr);
-		vkFreeCommandBuffers(device, computeCommandPool, 1, &compute.commandBuffer);
-
+		tmp_pipelines.push_back(compute.pipeline);
+		tmp_descriptorPools.push_back(compute.descriptorPool);
+		tmp_commandBuffers.push_back(compute.commandBuffer);
 		for (size_t i = 0; i < mipmapCount; i++)
 		{
-			vkDestroyImageView(device, compute.imageViews[i], nullptr);
+			tmp_imageViews.push_back(compute.imageViews[i]);
 		}
 	}
 
@@ -989,6 +1027,7 @@ namespace lux::rhi
 
 #ifdef USE_COMPUTE_SHADER_FOR_IBL_RESOURCES
 		imageCI.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+		imageCI.useInComputeShader = VK_TRUE;
 #else
 		imageCI.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 #endif
@@ -1278,51 +1317,12 @@ namespace lux::rhi
 		submitInfo.pCommandBuffers = &compute.commandBuffer;
 
 		CHECK_VK(vkQueueSubmit(computeQueue, 1, &submitInfo, VK_NULL_HANDLE));
-		CHECK_VK(vkQueueWaitIdle(computeQueue));
 
-		DestroyComputePipeline(compute.pipeline);
-		vkDestroyDescriptorPool(device, compute.descriptorPool, nullptr);
-		vkFreeCommandBuffers(device, computeCommandPool, 1, &compute.commandBuffer);
+
+		tmp_pipelines.push_back(compute.pipeline);
+		tmp_descriptorPools.push_back(compute.descriptorPool);
+		tmp_commandBuffers.push_back(compute.commandBuffer);
 	}
-
-	//void RHI::GenerateBRDFLutCompute(VkFormat format, uint32_t size, Image& BRDFLut) noexcept
-	//{
-	//	ImageCreateInfo imageCI = {};
-	//	imageCI.arrayLayers = 1;
-	//	imageCI.format = format;
-	//	imageCI.width = size;
-	//	imageCI.height = size;
-	//	imageCI.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
-	//	imageCI.subresourceRangeLayerCount = 1;
-	//	imageCI.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-	//	imageCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
-	//	CreateImage(imageCI, BRDFLut);
-
-
-
-	//	// Update Descriptor Set
-	//	VkDescriptorImageInfo BRDFLutDescriptorImageInfo = {};
-	//	storageBRDFLutDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	//	storageBRDFLutDescriptorImageInfo.sampler = forward.prefilteredSampler;
-	//	storageBRDFLutDescriptorImageInfo.imageView = BRDFLut.imageView;
-
-	//	VkWriteDescriptorSet writeBRDFLutDescriptorSet = {};
-	//	writeStorageBRDFLutDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	//	writeStorageBRDFLutDescriptorSet.descriptorCount = 1;
-	//	writeStorageBRDFLutDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	//	writeStorageBRDFLutDescriptorSet.dstBinding = 4;
-	//	writeStorageBRDFLutDescriptorSet.dstArrayElement = 0;
-	//	writeStorageBRDFLutDescriptorSet.pImageInfo = &storageBRDFLutDescriptorImageInfo;
-
-	//	for (size_t i = 0; i < swapchainImageCount; i++)
-	//	{
-	//		writeStorageBRDFLutDescriptorSet.dstSet = forward.rtViewDescriptorSets[i];
-
-	//		vkUpdateDescriptorSets(device, 1, &writeStorageBRDFLutDescriptorSet, 0, nullptr);
-	//	}
-	//}
-
 
 	void RHI::DestroyImage(Image& image) noexcept
 	{

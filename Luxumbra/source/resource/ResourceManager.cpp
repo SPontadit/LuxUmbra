@@ -242,9 +242,7 @@ namespace lux::resource
 
 		// Generate Cubemap
 		rhi.GenerateCubemapFromHDR(source, cubemap->image);
-		rhi.GenerateIrradianceFromCubemap(cubemap->image, irradiance->image);
-		rhi.GeneratePrefilteredFromCubemap(cubemap->image, prefiltered->image);
-		rhi.GenerateBRDFLut(BRDFLut->image);
+		rhi.GenerateIBLResources(cubemap->image, irradiance->image, prefiltered->image, BRDFLut->image);
 
 		rhi.CreateEnvMapDescriptorSet(cubemap->image);
 
