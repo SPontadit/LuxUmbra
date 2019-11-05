@@ -69,7 +69,7 @@ namespace lux::rhi
 
 		// Shadow mapper
 
-		InitShadowMapperRenderPass();
+		InitShadowMapperRenderPasses();
 
 		InitShadowMapperPipelines();
 

@@ -139,20 +139,32 @@ void main()
 	}
 
 	// Point lights
+//	for (int i = 0; i < pushConsts.pointLightCount; i++)
+//	{
+//		vec3 unnormalizedLightDir = pointLights[i].position - fsIn.positionWS;
+//
+//		vec3 lightPosVS = mat3(fsIn.viewMatrix) * unnormalizedLightDir;
+//		lightDir = normalize(lightPosVS);
+//
+//		float sqrLightDist = dot(unnormalizedLightDir, unnormalizedLightDir);
+//		float attenuation = 1.0; // / sqrLightDist;
+//		radiance = pointLights[i].color; // * attenuation;
+//
+//		shadow = PointShadow(normalize(-unnormalizedLightDir), sqrLightDist, i);
+//
+//		directColor += DirectColor(lightDir, viewDir, normal, roughness, F0, NdotV, diffuseColor, radiance, shadow);
+//	}
 	for (int i = 0; i < pushConsts.pointLightCount; i++)
 	{
-		vec3 unnormalizedLightDir = pointLights[i].position - fsIn.positionWS;
+		vec3 fragToLight = pointLights[i].position - fsIn.positionWS;
 
-		vec3 lightPosVS = mat3(fsIn.viewMatrix) * unnormalizedLightDir;
-		lightDir = normalize(lightPosVS);
+		lightDir = normalize(mat3(fsIn.viewMatrix) * fragToLight);
 
-		float sqrLightDist = dot(unnormalizedLightDir, unnormalizedLightDir);
-		float attenuation = 1.0; // / sqrLightDist;
-		radiance = pointLights[i].color; // * attenuation;
+		radiance = pointLights[i].color;
 
-		shadow = PointShadow(normalize(unnormalizedLightDir), sqrLightDist, i);
+		shadow = PointShadow(-fragToLight, length(fragToLight), i);
 
-		directColor += DirectColor(lightDir, viewDir, normal, roughness, F0, NdotV, diffuseColor, radiance, shadow);
+		directColor += vec3(shadow); //DirectColor(lightDir, viewDir, normal, roughness, F0, NdotV, diffuseColor, radiance, shadow);
 	}
 
 	viewDir = -fsIn.viewMatrix[3].xyz  * mat3(fsIn.viewMatrix);
@@ -181,7 +193,7 @@ void main()
 
 	indirectColor *= ao;
 
-	outColor = vec4(directColor + indirectColor, textureColor.a);
+	outColor = vec4(directColor/* + indirectColor*/, textureColor.a);
 }
 
 vec3 getNormalFromMap()
@@ -248,18 +260,41 @@ float DirectionalShadow(vec4 shadowCoord, int lightIndex)
 	return lightedCount / directionalLights[lightIndex].pcfKernelSize;
 }
 
-float PointShadow(vec3 lightDir, float sqrLightDist, int lightIndex)
+//float PointShadow(vec3 lightDir, float sqrLightDist, int lightIndex)
+//{
+//	float radius = pointLights[lightIndex].radius;
+//
+//	if (sqrLightDist > radius * radius)
+//		return 0.0;
+//
+//	float near = 0.1, far = 5.0;
+//
+//	float sampledDist = texture(pointLightShadowMaps[lightIndex], lightDir).r;
+//	float linearDepth = sampledDist * 2.0 - 1.0;
+//	linearDepth = (2.0 * near * far) / (near + far - linearDepth * (far - near));
+//
+//	if (sqrLightDist >= linearDepth * linearDepth + 0.001)
+//		return 0.0;
+//
+//	return 1.0;
+//}
+
+float PointShadow(vec3 lightToFrag, float lightDist, int lightIndex)
 {
-	float radius = pointLights[lightIndex].radius;
+	if (abs(lightToFrag.y) > abs(lightToFrag.x) && abs(lightToFrag.y) > abs(lightToFrag.z))
+		lightToFrag.z *= -1.0;
 
-	if (sqrLightDist > radius * radius)
-		return 0.0;
+	float sampledDist = texture(pointLightShadowMaps[lightIndex], normalize(lightToFrag)).r;
 
-	float sampledDist = texture(pointLightShadowMaps[lightIndex], lightDir).r;
-	if (sqrLightDist > sampledDist * sampledDist)
-		return 0.0;
+	float near = 0.1f, far = pointLights[lightIndex].radius;
+	//float linearDepth = sampledDist * 2.0 - 1.0;
+	//float linearDepth = near * far / (far + sampledDist * (near - far));
+	float linearDepth = (2.0 * near) / (far + near - sampledDist * (far - near));
 
-	return 1.0;
+	if (lightDist <= linearDepth + 0.15)
+		return 1.0;
+
+	return 0.0;
 }
 
 vec3 PrefilteredReflection(vec3 R, float roughness)

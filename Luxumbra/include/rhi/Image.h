@@ -18,7 +18,7 @@ namespace lux::rhi
 		uint32_t mipmapCount = 1;
 		VkImageUsageFlags usage;
 		uint32_t subresourceRangeLayerCount;
-		VkImageAspectFlagBits subresourceRangeAspectMask;
+		VkImageAspectFlags subresourceRangeAspectMask;
 		VkImageViewType imageViewType;
 		void* imageData;
 		uint64_t imageSize;

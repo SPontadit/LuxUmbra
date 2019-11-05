@@ -15,9 +15,15 @@
 namespace lux::rhi
 {
 
-	struct ShadowMappingViewProjUniform
+	struct DirectionalShadowMappingViewProjUniform
 	{
 		glm::mat4 viewProj;
+	};
+
+	struct PointShadowMappingViewProjUniform
+	{
+		glm::mat4 view[6];
+		glm::mat4 proj;
 	};
 
 	struct ShadowMappingModelConstant
@@ -36,9 +42,11 @@ namespace lux::rhi
 		const ShadowMapper& operator =(const ShadowMapper&) = delete;
 		const ShadowMapper& operator =(ShadowMapper&&) = delete;
 
-		VkRenderPass renderPass;
+		VkRenderPass directionalShadowMappingRenderPass;
+		VkRenderPass pointShadowMappingRenderPass;
 
-		GraphicsPipeline shadowMappingPipeline;
+		GraphicsPipeline directionalShadowMappingPipeline;
+		GraphicsPipeline pointShadowMappingPipeline;
 
 		VkDescriptorPool descriptorPool;
 
