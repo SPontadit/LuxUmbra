@@ -325,7 +325,7 @@ namespace lux::rhi
 		VkDescriptorSetLayoutBinding cubemapDescriptorSetLayoutBinding = {};
 		cubemapDescriptorSetLayoutBinding.binding = 0;
 		cubemapDescriptorSetLayoutBinding.descriptorCount = 1;
-		cubemapDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		cubemapDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 		cubemapDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
 		VkDescriptorSetLayoutBinding irradianceDescriptorSetLayoutBinding = {};
@@ -363,7 +363,7 @@ namespace lux::rhi
 		CHECK_VK(vkAllocateCommandBuffers(device, &commandBufferAI, &compute.commandBuffer));
 
 		VkDescriptorPoolSize samplerDescriptorPoolSize = {};
-		samplerDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		samplerDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 		samplerDescriptorPoolSize.descriptorCount = mipmapCount;
 
 		VkDescriptorPoolSize storageDescriptorPoolSize = {};
@@ -392,6 +392,7 @@ namespace lux::rhi
 		CHECK_VK(vkBeginCommandBuffer(compute.commandBuffer, &commandBufferBI));
 
 		CommandTransitionImageLayout(compute.commandBuffer, irradiance.image, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, 6, TO_UINT32_T(floor(log2(IRRADIANCE_TEXTURE_SIZE))) + 1);
+		CommandTransitionImageLayout(compute.commandBuffer, cubemapSource.image, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, 6, TO_UINT32_T(floor(log2(CUBEMAP_TEXTURE_SIZE))) + 1);
 
 		vkCmdBindPipeline(compute.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute.pipeline.pipeline);
 
@@ -423,14 +424,14 @@ namespace lux::rhi
 			CHECK_VK(vkAllocateDescriptorSets(device, &generateIrradianceDescriptorSetAI, &compute.descriptorSets[i]));
 
 			VkDescriptorImageInfo cubemapDescriptorImageInfo = {};
-			cubemapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			cubemapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 			cubemapDescriptorImageInfo.imageView = cubemapSource.imageView;
 			cubemapDescriptorImageInfo.sampler = forward.cubemapSampler;
 
 			VkWriteDescriptorSet writeCubemapDescriptorSet = {};
 			writeCubemapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			writeCubemapDescriptorSet.descriptorCount = 1;
-			writeCubemapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			writeCubemapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 			writeCubemapDescriptorSet.dstBinding = 0;
 			writeCubemapDescriptorSet.dstArrayElement = 0;
 			writeCubemapDescriptorSet.pImageInfo = &cubemapDescriptorImageInfo;
@@ -464,6 +465,7 @@ namespace lux::rhi
 		}
 
 		CommandTransitionImageLayout(compute.commandBuffer, irradiance.image, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 6, TO_UINT32_T(floor(log2(IRRADIANCE_TEXTURE_SIZE))) + 1);
+		CommandTransitionImageLayout(compute.commandBuffer, cubemapSource.image, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 6, TO_UINT32_T(floor(log2(CUBEMAP_TEXTURE_SIZE))) + 1);
 
 		CHECK_VK(vkEndCommandBuffer(compute.commandBuffer));
 
