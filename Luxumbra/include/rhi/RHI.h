@@ -92,7 +92,7 @@ namespace lux::rhi
 
 		void SetCubeMesh(std::shared_ptr<resource::Mesh> mesh) noexcept;
 
-		void RebuildForwardGraphicsPipeline() noexcept;
+		void RebuildPipelines() noexcept;
 
 		static const uint32_t SWAPCHAIN_MIN_IMAGE_COUNT = 2;
 		ForwardRenderer forward;
@@ -194,7 +194,6 @@ namespace lux::rhi
 		void DestroyComputeRelatedResources() noexcept;
 		void DestroyShadowMapper() noexcept;
 		void DestroyForwardRenderer() noexcept;
-		void DestroyForwardGraphicsPipeline() noexcept;
 
 		void InitImgui() noexcept;
 		void RenderImgui() noexcept;
@@ -209,9 +208,11 @@ namespace lux::rhi
 		void CommandTransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t layerCount = 1, uint32_t levelCount = 1, uint32_t baseMipLevel = 0) noexcept;
 
 		void CreateGraphicsPipeline(const GraphicsPipelineCreateInfo& luxGraphicsPipelineCI, GraphicsPipeline& graphicsPipeline) noexcept;
+		void UpdateGraphicsPipelineShaderStages(GraphicsPipeline& pipeline, const GraphicsPipelineCreateInfo& luxGraphicsPipelineCI) noexcept;
 		void WriteGraphicsPipelineCacheOnDisk(const std::string& cacheFilePath, GraphicsPipeline& graphicsPipeline) noexcept;
 		void CreateGraphicsPipelineCache(const std::string& pipelineCacheFilePath, GraphicsPipeline& graphicsPipeline) noexcept;
-		void CreateShaderModule(const std::string& binaryFilePath, VkShaderModule* shaderModule) const noexcept;
+		void LoadShaderStages(const GraphicsPipelineCreateInfo& luxGraphicsPipelineCI, std::vector<VkPipelineShaderStageCreateInfo>& shaderStages) noexcept;
+		VkShaderModule CreateShaderModule(const std::string& binaryFilePath) const noexcept;
 		void DestroyGraphicsPipeline(GraphicsPipeline& graphicsPipeline) noexcept;
 
 		void CreateComputePipeline(const ComputePipelineCreateInfo& luxComputePipelineCI, ComputePipeline& computePipeline) noexcept;

@@ -86,7 +86,7 @@ namespace lux
 
 		if (ImGui::Button("Reload Shader"))
 		{
-			rhi.RebuildForwardGraphicsPipeline();
+			rhi.RebuildPipelines();
 		}
 
 		ImGui::NewLine();

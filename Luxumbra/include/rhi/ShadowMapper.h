@@ -48,6 +48,9 @@ namespace lux::rhi
 		GraphicsPipeline directionalShadowMappingPipeline;
 		GraphicsPipeline pointShadowMappingPipeline;
 
+		GraphicsPipelineCreateInfo directionalShadowMappingPipelineCI;
+		GraphicsPipelineCreateInfo pointShadowMappingPipelineCI;
+
 		VkDescriptorPool descriptorPool;
 
 		Image directionalShadowMapIntermediate;

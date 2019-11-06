@@ -11,6 +11,7 @@ namespace lux::rhi
 	ShadowMapper::ShadowMapper() noexcept
 		: directionalShadowMappingRenderPass(VK_NULL_HANDLE), pointShadowMappingRenderPass(VK_NULL_HANDLE),
 		directionalShadowMappingPipeline(), pointShadowMappingPipeline(),
+		directionalShadowMappingPipelineCI(), pointShadowMappingPipelineCI(),
 		descriptorPool(VK_NULL_HANDLE),
 		directionalShadowMapIntermediate(), dummyDirectionalShadowMap(), directionalFramebuffer(VK_NULL_HANDLE), directionalShadowMaps(0),
 		directionalUniformBuffers(0), directionalUniformBufferDescriptorSets(0),
@@ -102,27 +103,27 @@ namespace lux::rhi
 		modelPushConstantRange.size = TO_UINT32_T(sizeof(ShadowMappingModelConstant));
 		modelPushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-		GraphicsPipelineCreateInfo directionalShadowMappingPipelineCI = {};
-		directionalShadowMappingPipelineCI.renderPass = shadowMapper.directionalShadowMappingRenderPass;
-		directionalShadowMappingPipelineCI.subpassIndex = 0;
-		directionalShadowMappingPipelineCI.binaryVertexFilePath = "data/shaders/shadowMapping/directionalShadowMapping.vert.spv";
-		directionalShadowMappingPipelineCI.vertexLayout = VertexLayout::VERTEX_POSITION_ONLY_LAYOUT;
-		directionalShadowMappingPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-		directionalShadowMappingPipelineCI.viewportWidth = DIRECTIONAL_SHADOW_MAP_TEXTURE_SIZE;
-		directionalShadowMappingPipelineCI.viewportHeight = DIRECTIONAL_SHADOW_MAP_TEXTURE_SIZE;
-		directionalShadowMappingPipelineCI.rasterizerCullMode = VK_CULL_MODE_BACK_BIT;
-		directionalShadowMappingPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-		directionalShadowMappingPipelineCI.disableMSAA = VK_TRUE;
-		directionalShadowMappingPipelineCI.enableDepthTest = VK_TRUE;
-		directionalShadowMappingPipelineCI.enableDepthWrite = VK_TRUE;
-		directionalShadowMappingPipelineCI.enableDepthBias = VK_TRUE;
-		directionalShadowMappingPipelineCI.depthBiasConstantFactor = 4.f;
-		directionalShadowMappingPipelineCI.depthBiasSlopeFactor = 1.5f;
-		directionalShadowMappingPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS;
-		directionalShadowMappingPipelineCI.viewDescriptorSetLayoutBindings = { viewProjUniformBufferDescriptorSetLayoutBinding };
-		directionalShadowMappingPipelineCI.pushConstants = { modelPushConstantRange };
+		shadowMapper.directionalShadowMappingPipelineCI = {};
+		shadowMapper.directionalShadowMappingPipelineCI.renderPass = shadowMapper.directionalShadowMappingRenderPass;
+		shadowMapper.directionalShadowMappingPipelineCI.subpassIndex = 0;
+		shadowMapper.directionalShadowMappingPipelineCI.binaryVertexFilePath = "data/shaders/shadowMapping/directionalShadowMapping.vert.spv";
+		shadowMapper.directionalShadowMappingPipelineCI.vertexLayout = VertexLayout::VERTEX_POSITION_ONLY_LAYOUT;
+		shadowMapper.directionalShadowMappingPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		shadowMapper.directionalShadowMappingPipelineCI.viewportWidth = DIRECTIONAL_SHADOW_MAP_TEXTURE_SIZE;
+		shadowMapper.directionalShadowMappingPipelineCI.viewportHeight = DIRECTIONAL_SHADOW_MAP_TEXTURE_SIZE;
+		shadowMapper.directionalShadowMappingPipelineCI.rasterizerCullMode = VK_CULL_MODE_BACK_BIT;
+		shadowMapper.directionalShadowMappingPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+		shadowMapper.directionalShadowMappingPipelineCI.disableMSAA = VK_TRUE;
+		shadowMapper.directionalShadowMappingPipelineCI.enableDepthTest = VK_TRUE;
+		shadowMapper.directionalShadowMappingPipelineCI.enableDepthWrite = VK_TRUE;
+		shadowMapper.directionalShadowMappingPipelineCI.enableDepthBias = VK_TRUE;
+		shadowMapper.directionalShadowMappingPipelineCI.depthBiasConstantFactor = 4.f;
+		shadowMapper.directionalShadowMappingPipelineCI.depthBiasSlopeFactor = 1.5f;
+		shadowMapper.directionalShadowMappingPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS;
+		shadowMapper.directionalShadowMappingPipelineCI.viewDescriptorSetLayoutBindings = { viewProjUniformBufferDescriptorSetLayoutBinding };
+		shadowMapper.directionalShadowMappingPipelineCI.pushConstants = { modelPushConstantRange };
 
-		CreateGraphicsPipeline(directionalShadowMappingPipelineCI, shadowMapper.directionalShadowMappingPipeline);
+		CreateGraphicsPipeline(shadowMapper.directionalShadowMappingPipelineCI, shadowMapper.directionalShadowMappingPipeline);
 
 		// Point lights
 
@@ -131,28 +132,28 @@ namespace lux::rhi
 		modelAndVPIndexPushConstantRange.size = TO_UINT32_T(sizeof(ShadowMappingModelConstant) + sizeof(uint32_t));
 		modelAndVPIndexPushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-		GraphicsPipelineCreateInfo pointShadowMappingPipelineCI = {};
-		pointShadowMappingPipelineCI.renderPass = shadowMapper.pointShadowMappingRenderPass;
-		pointShadowMappingPipelineCI.subpassIndex = 0;
-		pointShadowMappingPipelineCI.binaryVertexFilePath = "data/shaders/shadowMapping/pointShadowMapping.vert.spv";
-		pointShadowMappingPipelineCI.binaryFragmentFilePath = "data/shaders/shadowMapping/pointShadowMapping.frag.spv";
-		pointShadowMappingPipelineCI.vertexLayout = VertexLayout::VERTEX_POSITION_ONLY_LAYOUT;
-		pointShadowMappingPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-		pointShadowMappingPipelineCI.viewportWidth = POINT_SHADOW_MAP_TEXTURE_SIZE;
-		pointShadowMappingPipelineCI.viewportHeight = POINT_SHADOW_MAP_TEXTURE_SIZE;
-		pointShadowMappingPipelineCI.rasterizerCullMode = VK_CULL_MODE_BACK_BIT;
-		pointShadowMappingPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-		pointShadowMappingPipelineCI.disableMSAA = VK_TRUE;
-		pointShadowMappingPipelineCI.enableDepthTest = VK_TRUE;
-		pointShadowMappingPipelineCI.enableDepthWrite = VK_TRUE;
-		pointShadowMappingPipelineCI.enableDepthBias = VK_TRUE;
-		pointShadowMappingPipelineCI.depthBiasConstantFactor = 4.f;
-		pointShadowMappingPipelineCI.depthBiasSlopeFactor = 1.5f;
-		pointShadowMappingPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS;
-		pointShadowMappingPipelineCI.viewDescriptorSetLayoutBindings = { viewProjUniformBufferDescriptorSetLayoutBinding };
-		pointShadowMappingPipelineCI.pushConstants = { modelAndVPIndexPushConstantRange };
+		shadowMapper.pointShadowMappingPipelineCI = {};
+		shadowMapper.pointShadowMappingPipelineCI.renderPass = shadowMapper.pointShadowMappingRenderPass;
+		shadowMapper.pointShadowMappingPipelineCI.subpassIndex = 0;
+		shadowMapper.pointShadowMappingPipelineCI.binaryVertexFilePath = "data/shaders/shadowMapping/pointShadowMapping.vert.spv";
+		shadowMapper.pointShadowMappingPipelineCI.binaryFragmentFilePath = "data/shaders/shadowMapping/pointShadowMapping.frag.spv";
+		shadowMapper.pointShadowMappingPipelineCI.vertexLayout = VertexLayout::VERTEX_POSITION_ONLY_LAYOUT;
+		shadowMapper.pointShadowMappingPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		shadowMapper.pointShadowMappingPipelineCI.viewportWidth = POINT_SHADOW_MAP_TEXTURE_SIZE;
+		shadowMapper.pointShadowMappingPipelineCI.viewportHeight = POINT_SHADOW_MAP_TEXTURE_SIZE;
+		shadowMapper.pointShadowMappingPipelineCI.rasterizerCullMode = VK_CULL_MODE_BACK_BIT;
+		shadowMapper.pointShadowMappingPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+		shadowMapper.pointShadowMappingPipelineCI.disableMSAA = VK_TRUE;
+		shadowMapper.pointShadowMappingPipelineCI.enableDepthTest = VK_TRUE;
+		shadowMapper.pointShadowMappingPipelineCI.enableDepthWrite = VK_TRUE;
+		shadowMapper.pointShadowMappingPipelineCI.enableDepthBias = VK_TRUE;
+		shadowMapper.pointShadowMappingPipelineCI.depthBiasConstantFactor = 4.f;
+		shadowMapper.pointShadowMappingPipelineCI.depthBiasSlopeFactor = 1.5f;
+		shadowMapper.pointShadowMappingPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS;
+		shadowMapper.pointShadowMappingPipelineCI.viewDescriptorSetLayoutBindings = { viewProjUniformBufferDescriptorSetLayoutBinding };
+		shadowMapper.pointShadowMappingPipelineCI.pushConstants = { modelAndVPIndexPushConstantRange };
 
-		CreateGraphicsPipeline(pointShadowMappingPipelineCI, shadowMapper.pointShadowMappingPipeline);
+		CreateGraphicsPipeline(shadowMapper.pointShadowMappingPipelineCI, shadowMapper.pointShadowMappingPipeline);
 	}
 
 	void RHI::InitShadowMapperDescriptorPool() noexcept

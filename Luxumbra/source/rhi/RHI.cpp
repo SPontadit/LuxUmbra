@@ -1064,6 +1064,26 @@ namespace lux::rhi
 		cube = mesh;
 	}
 
+	void RHI::RebuildPipelines() noexcept
+	{
+		WaitIdle();
+
+		// Shadow mapper
+
+
+
+		// Forward renderer
+
+		UpdateGraphicsPipelineShaderStages(forward.blitGraphicsPipeline, forward.blitGraphicsPipelineCI);
+
+		UpdateGraphicsPipelineShaderStages(forward.rtGraphicsPipeline, forward.rtGraphicsPipelineCI);
+		UpdateGraphicsPipelineShaderStages(forward.rtCutoutGraphicsPipeline, forward.rtCutoutGraphicsPipelineCI);
+		UpdateGraphicsPipelineShaderStages(forward.rtTransparentFrontGraphicsPipeline, forward.rtTransparentFrontGraphicsPipelineCI);
+		UpdateGraphicsPipelineShaderStages(forward.rtTransparentBackGraphicsPipeline, forward.rtTransparentBackGraphicsPipelineCI);
+
+		UpdateGraphicsPipelineShaderStages(forward.envMapGraphicsPipeline, forward.envMapGraphicsPipelineCI);
+	}
+
 	void RHI::WaitIdle() noexcept
 	{
 		vkDeviceWaitIdle(device);

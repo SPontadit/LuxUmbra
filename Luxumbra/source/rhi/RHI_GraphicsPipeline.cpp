@@ -22,39 +22,9 @@ namespace lux::rhi
 
 	void RHI::CreateGraphicsPipeline(const GraphicsPipelineCreateInfo& luxGraphicsPipelineCI, GraphicsPipeline& graphicsPipeline) noexcept
 	{
-		VkShaderModule vertexShaderModule = VK_NULL_HANDLE;
-		VkShaderModule fragmentShaderModule = VK_NULL_HANDLE;
-
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
+		LoadShaderStages(luxGraphicsPipelineCI, shaderStages);
 
-		bool useVertexShaderStage = !luxGraphicsPipelineCI.binaryVertexFilePath.empty();
-		bool useFragmentShaderStage = !luxGraphicsPipelineCI.binaryFragmentFilePath.empty();
-
-		if (useVertexShaderStage)
-		{
-			CreateShaderModule(luxGraphicsPipelineCI.binaryVertexFilePath, &vertexShaderModule);
-
-			VkPipelineShaderStageCreateInfo vertexStageCI = {};
-			vertexStageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-			vertexStageCI.stage = VK_SHADER_STAGE_VERTEX_BIT;
-			vertexStageCI.module = vertexShaderModule;
-			vertexStageCI.pName = "main";
-
-			shaderStages.emplace_back(vertexStageCI);
-		}
-
-		if (useFragmentShaderStage)
-		{
-			CreateShaderModule(luxGraphicsPipelineCI.binaryFragmentFilePath, &fragmentShaderModule);
-
-			VkPipelineShaderStageCreateInfo fragmentStageCI = {};
-			fragmentStageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-			fragmentStageCI.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-			fragmentStageCI.module = fragmentShaderModule;
-			fragmentStageCI.pName = "main";
-
-			shaderStages.emplace_back(fragmentStageCI);
-		}
 
 		VkPipelineVertexInputStateCreateInfo vertexInputStateCI = {};
 		vertexInputStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -116,6 +86,7 @@ namespace lux::rhi
 		default:
 			break;
 		}
+
 
 		VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateCI = {};
 		inputAssemblyStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -275,10 +246,184 @@ namespace lux::rhi
 	
 		WriteGraphicsPipelineCacheOnDisk(luxGraphicsPipelineCI.cacheFilePath, graphicsPipeline);
 
-		if (useVertexShaderStage)
-			vkDestroyShaderModule(device, vertexShaderModule, nullptr);
-		if (useFragmentShaderStage)
-			vkDestroyShaderModule(device, fragmentShaderModule, nullptr);
+		for (size_t i = 0; i < shaderStages.size(); i++)
+			vkDestroyShaderModule(device, shaderStages[i].module, nullptr);
+	}
+
+	void RHI::UpdateGraphicsPipelineShaderStages(GraphicsPipeline& graphicsPipeline, const GraphicsPipelineCreateInfo& luxGraphicsPipelineCI) noexcept
+	{
+		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
+		LoadShaderStages(luxGraphicsPipelineCI, shaderStages);
+
+
+		VkPipelineVertexInputStateCreateInfo vertexInputStateCI = {};
+		vertexInputStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
+		switch (luxGraphicsPipelineCI.vertexLayout)
+		{
+		case VertexLayout::NO_VERTEX_LAYOUT:
+			vertexInputStateCI.vertexBindingDescriptionCount = 0;
+			vertexInputStateCI.pVertexBindingDescriptions = nullptr;
+			vertexInputStateCI.vertexAttributeDescriptionCount = 0;
+			vertexInputStateCI.pVertexAttributeDescriptions = nullptr;
+			break;
+
+		case VertexLayout::VERTEX_POSITION_ONLY_LAYOUT:
+		{
+			VkVertexInputBindingDescription bindingDescription = Vertex::GetBindingDescription();
+			VkVertexInputAttributeDescription attributeDescription = Vertex::GetPositionOnlyAttributeDescription();
+
+			vertexInputStateCI.vertexBindingDescriptionCount = 1;
+			vertexInputStateCI.pVertexBindingDescriptions = &bindingDescription;
+			vertexInputStateCI.vertexAttributeDescriptionCount = 1;
+			vertexInputStateCI.pVertexAttributeDescriptions = &attributeDescription;
+			break;
+		}
+
+		case VertexLayout::VERTEX_BASIC_LAYOUT:
+		{
+			VkVertexInputBindingDescription bindingDescription = Vertex::GetBindingDescription();
+			std::array<VkVertexInputAttributeDescription, 3> attributesDescription = Vertex::GetBasicAttributeDescriptions();
+
+			vertexInputStateCI.vertexBindingDescriptionCount = 1;
+			vertexInputStateCI.pVertexBindingDescriptions = &bindingDescription;
+			vertexInputStateCI.vertexAttributeDescriptionCount = TO_UINT32_T(attributesDescription.size());
+			vertexInputStateCI.pVertexAttributeDescriptions = attributesDescription.data();
+			break;
+		}
+
+		case VertexLayout::VERTEX_FULL_LAYOUT:
+		{
+			VkVertexInputBindingDescription bindingDescription = Vertex::GetBindingDescription();
+			std::array<VkVertexInputAttributeDescription, 5> attributesDescription = Vertex::GetFullAttributeDescriptions();
+
+			vertexInputStateCI.vertexBindingDescriptionCount = 1;
+			vertexInputStateCI.pVertexBindingDescriptions = &bindingDescription;
+			vertexInputStateCI.vertexAttributeDescriptionCount = TO_UINT32_T(attributesDescription.size());
+			vertexInputStateCI.pVertexAttributeDescriptions = attributesDescription.data();
+			break;
+		}
+
+		default:
+			break;
+		}
+
+
+		VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateCI = {};
+		inputAssemblyStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+		inputAssemblyStateCI.topology = luxGraphicsPipelineCI.primitiveTopology;
+		inputAssemblyStateCI.primitiveRestartEnable = VK_FALSE;
+
+
+		VkViewport viewport = {};
+		viewport.x = 0.0f;
+		viewport.y = 0.0f;
+		viewport.width = luxGraphicsPipelineCI.viewportWidth;
+		viewport.height = luxGraphicsPipelineCI.viewportHeight;
+		viewport.minDepth = 0.0f;
+		viewport.maxDepth = 1.0f;
+
+		VkRect2D scissor = {};
+		scissor.offset = { 0, 0 };
+		scissor.extent.width = TO_UINT32_T(luxGraphicsPipelineCI.viewportWidth);
+		scissor.extent.height = TO_UINT32_T(luxGraphicsPipelineCI.viewportHeight);
+
+		VkPipelineViewportStateCreateInfo viewportStateCI = {};
+		viewportStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+		viewportStateCI.viewportCount = 1;
+		viewportStateCI.pViewports = &viewport;
+		viewportStateCI.scissorCount = 1;
+		viewportStateCI.pScissors = &scissor;
+
+
+		VkPipelineRasterizationStateCreateInfo rasterizerStateCI = {};
+		rasterizerStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+		rasterizerStateCI.depthClampEnable = VK_FALSE;
+		rasterizerStateCI.rasterizerDiscardEnable = VK_FALSE;
+		rasterizerStateCI.polygonMode = VK_POLYGON_MODE_FILL;
+		rasterizerStateCI.lineWidth = 1.0f;
+		rasterizerStateCI.cullMode = luxGraphicsPipelineCI.rasterizerCullMode;
+		rasterizerStateCI.frontFace = luxGraphicsPipelineCI.rasterizerFrontFace;
+		rasterizerStateCI.depthBiasEnable = luxGraphicsPipelineCI.enableDepthBias;
+		rasterizerStateCI.depthBiasConstantFactor = luxGraphicsPipelineCI.depthBiasConstantFactor;
+		rasterizerStateCI.depthBiasClamp = 0.0f;
+		rasterizerStateCI.depthBiasSlopeFactor = luxGraphicsPipelineCI.depthBiasSlopeFactor;
+
+
+		VkPipelineMultisampleStateCreateInfo multisampleStateCI = {};
+		multisampleStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+		multisampleStateCI.sampleShadingEnable = VK_FALSE;
+		multisampleStateCI.rasterizationSamples = luxGraphicsPipelineCI.disableMSAA ? VK_SAMPLE_COUNT_1_BIT : msaaSamples;
+		multisampleStateCI.minSampleShading = 1.0f;
+		multisampleStateCI.pSampleMask = nullptr;
+		multisampleStateCI.alphaToCoverageEnable = VK_FALSE;
+		multisampleStateCI.alphaToOneEnable = VK_FALSE;
+
+
+		VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
+
+		if (luxGraphicsPipelineCI.disableColorWriteMask)
+			colorBlendAttachment.colorWriteMask = 0;
+		else
+			colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+
+		colorBlendAttachment.blendEnable = luxGraphicsPipelineCI.enableBlend;
+		colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+		colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+		colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+		colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+
+		VkPipelineColorBlendStateCreateInfo colorBlendStateCI = {};
+		colorBlendStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+		colorBlendStateCI.logicOpEnable = VK_FALSE;
+		colorBlendStateCI.logicOp = VK_LOGIC_OP_COPY;
+		colorBlendStateCI.attachmentCount = 1;
+		colorBlendStateCI.pAttachments = &colorBlendAttachment;
+		colorBlendStateCI.blendConstants[0] = 0.0f;
+		colorBlendStateCI.blendConstants[1] = 0.0f;
+		colorBlendStateCI.blendConstants[2] = 0.0f;
+		colorBlendStateCI.blendConstants[3] = 0.0f;
+
+
+		VkPipelineDynamicStateCreateInfo dynamicStateCI = {};
+		dynamicStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+		dynamicStateCI.dynamicStateCount = TO_UINT32_T(luxGraphicsPipelineCI.dynamicStates.size());
+		dynamicStateCI.pDynamicStates = luxGraphicsPipelineCI.dynamicStates.data();
+
+
+		VkPipelineDepthStencilStateCreateInfo depthStencilStateCI = {};
+		depthStencilStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+		depthStencilStateCI.depthTestEnable = luxGraphicsPipelineCI.enableDepthTest;
+		depthStencilStateCI.depthWriteEnable = luxGraphicsPipelineCI.enableDepthWrite;
+		depthStencilStateCI.depthCompareOp = luxGraphicsPipelineCI.depthCompareOp;
+		depthStencilStateCI.depthBoundsTestEnable = VK_FALSE;
+
+
+		VkGraphicsPipelineCreateInfo pipelineCI = {};
+		pipelineCI.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+		pipelineCI.stageCount = TO_UINT32_T(shaderStages.size());
+		pipelineCI.pStages = shaderStages.data();
+		pipelineCI.pVertexInputState = &vertexInputStateCI;
+		pipelineCI.pInputAssemblyState = &inputAssemblyStateCI;
+		pipelineCI.pViewportState = &viewportStateCI;
+		pipelineCI.pRasterizationState = &rasterizerStateCI;
+		pipelineCI.pMultisampleState = &multisampleStateCI;
+		pipelineCI.pDepthStencilState = &depthStencilStateCI;
+		pipelineCI.pColorBlendState = &colorBlendStateCI;
+		pipelineCI.pDynamicState = &dynamicStateCI;
+		pipelineCI.layout = graphicsPipeline.pipelineLayout;
+		pipelineCI.renderPass = luxGraphicsPipelineCI.renderPass;
+		pipelineCI.subpass = luxGraphicsPipelineCI.subpassIndex;
+		pipelineCI.basePipelineHandle = VK_NULL_HANDLE;
+		pipelineCI.basePipelineIndex = -1;
+
+		vkDestroyPipeline(device, graphicsPipeline.pipeline, nullptr);
+		CHECK_VK(vkCreateGraphicsPipelines(device, graphicsPipeline.cache, 1, &pipelineCI, nullptr, &graphicsPipeline.pipeline));
+
+		for (size_t i = 0; i < shaderStages.size(); i++)
+			vkDestroyShaderModule(device, shaderStages[i].module, nullptr);
 	}
 
 	void RHI::CreateGraphicsPipelineCache(const std::string& cacheFilePath, GraphicsPipeline& graphicsPipeline) noexcept
@@ -390,7 +535,36 @@ namespace lux::rhi
 		file.close();
 	}
 
-	void RHI::CreateShaderModule(const std::string& binaryFilePath, VkShaderModule* shaderModule) const noexcept
+	void RHI::LoadShaderStages(const GraphicsPipelineCreateInfo& luxGraphicsPipelineCI, std::vector<VkPipelineShaderStageCreateInfo>& shaderStages) noexcept
+	{
+		if (!luxGraphicsPipelineCI.binaryVertexFilePath.empty())
+		{
+			VkShaderModule vertexShaderModule = CreateShaderModule(luxGraphicsPipelineCI.binaryVertexFilePath);
+
+			VkPipelineShaderStageCreateInfo vertexStageCI = {};
+			vertexStageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+			vertexStageCI.stage = VK_SHADER_STAGE_VERTEX_BIT;
+			vertexStageCI.module = vertexShaderModule;
+			vertexStageCI.pName = "main";
+
+			shaderStages.emplace_back(vertexStageCI);
+		}
+
+		if (!luxGraphicsPipelineCI.binaryFragmentFilePath.empty())
+		{
+			VkShaderModule fragmentShaderModule = CreateShaderModule(luxGraphicsPipelineCI.binaryFragmentFilePath);
+
+			VkPipelineShaderStageCreateInfo fragmentStageCI = {};
+			fragmentStageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+			fragmentStageCI.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+			fragmentStageCI.module = fragmentShaderModule;
+			fragmentStageCI.pName = "main";
+
+			shaderStages.emplace_back(fragmentStageCI);
+		}
+	}
+
+	VkShaderModule RHI::CreateShaderModule(const std::string& binaryFilePath) const noexcept
 	{
 		std::vector<char> shaderCode = utility::ReadFile(binaryFilePath);
 
@@ -399,7 +573,10 @@ namespace lux::rhi
 		shaderModuleCI.codeSize = shaderCode.size();
 		shaderModuleCI.pCode = reinterpret_cast<const uint32_t*>(shaderCode.data());
 
-		CHECK_VK(vkCreateShaderModule(device, &shaderModuleCI, nullptr, shaderModule));
+		VkShaderModule shaderModule;
+		CHECK_VK(vkCreateShaderModule(device, &shaderModuleCI, nullptr, &shaderModule));
+
+		return shaderModule;
 	}
 
 	void RHI::DestroyGraphicsPipeline(GraphicsPipeline& graphicsPipeline) noexcept
