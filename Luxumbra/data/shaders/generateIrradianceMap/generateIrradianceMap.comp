@@ -3,13 +3,12 @@
 
 layout(local_size_x = 16, local_size_y = 16) in;
 
-layout(binding = 0, rgba32f) uniform readonly imageCube envMap;
+layout(binding = 0) uniform samplerCube envMap;
 layout(binding = 1, rgba32f) writeonly uniform imageCube irradianceMap;
 
 const float PI = 3.1415926535897932384626433832795;
 
 vec3 CubeCoordinateToWorld(ivec3 cubeCoordinate, vec2 cubemapSize);
-ivec3 TextureCoordinateToCube(vec3 textureCoordinate, vec2 cubemapSize);
 
 layout(push_constant) uniform PushConstants
 {
@@ -23,7 +22,8 @@ void main()
 {   
     ivec3 cubeCoord = ivec3(gl_GlobalInvocationID);
     vec3 worldPos = CubeCoordinateToWorld(cubeCoord, cubemapSize);
-    // tangent space from origin point
+    
+	// tangent space from origin point
     vec3 normal = normalize(worldPos);
     vec3 up = vec3(0.0, 1.0, 0.0);
     vec3 right = normalize(cross(up, normal));
@@ -32,17 +32,18 @@ void main()
 
 	const float TWO_PI = PI * 2.0;
 	const float HALF_PI = PI * 0.5;
-	const float sampleDelta = 0.025;
-	const float totalSamples = (TWO_PI / sampleDelta) * (HALF_PI / sampleDelta); 
+	const float totalSamples = (TWO_PI / deltaPhi) * (HALF_PI / deltaTheta); 
 	const float invTotalSamples = 1.0 / totalSamples;
 
     vec3 irradiance = vec3(0.0);
-    for(float phi = 0.0; phi < TWO_PI; phi += sampleDelta)
+	uint samplerCount = 0u;
+
+    for(float phi = 0.0; phi < TWO_PI; phi += deltaPhi)
     {
         float sinPhi = sin(phi);
         float cosPhi = cos(phi);
         
-        for(float theta = 0.0; theta < HALF_PI; theta += sampleDelta)
+        for(float theta = 0.0; theta < HALF_PI; theta += deltaTheta)
         {
             float sinTheta = sin(theta);
             float cosTheta = cos(theta);
@@ -51,62 +52,19 @@ void main()
             vec3 sphereCoord = vec3(sinTheta * cosPhi,  sinTheta * sinPhi, cosTheta);
             // tangent space to world
             vec3 sampleVec = sphereCoord.x * right + sphereCoord.y * up + sphereCoord.z * normal; 
-            // world to cube coord
-            ivec3 sampleCoord = TextureCoordinateToCube(sampleVec, cubemapSize);
 
-            irradiance += imageLoad(envMap, sampleCoord).rgb * cosTheta * sinTheta;
+            irradiance += texture(envMap, sampleVec).rgb * cosTheta * sinTheta;
+			samplerCount++;
         }
     }
-    irradiance *= PI * invTotalSamples;
+    irradiance = PI * irradiance / float(samplerCount);
 
     imageStore(irradianceMap, cubeCoord, vec4(irradiance, 1.0));
 }
 
-
-void main2() 
-{
-	ivec3 cubeCoordinate = ivec3(gl_GlobalInvocationID);
-	vec3 positionWS = CubeCoordinateToWorld(cubeCoordinate, cubemapSize);
-
-	vec3 N = normalize(positionWS);
-	vec3 up = vec3(0.0, 1.0, 0.0);
-	vec3 right = normalize(cross(up, N));
-	up = cross(N, right);
-
-	const float TWO_PI = PI * 2.0;
-	const float HALF_PI = PI * 0.5;
-
-	vec3 color = vec3(0.0);
-	uint samplerCount = 0u;
-
-	for(float phi = 0.0; phi < TWO_PI; phi += deltaPhi)
-	{
-		float sinPhi = sin(phi);
-		float cosPhi = cos(phi);
-
-		for(float theta = 0.0; theta < HALF_PI; theta += deltaTheta)
-		{
-			float sinTheta = sin(theta);
-			float cosTheta = cos(theta);
-
-			vec3 tmpVec = cosPhi * right + sinPhi * up;
-			vec3 samplerVector = cosTheta * N + sinTheta * tmpVec;
-
-			ivec3 samplerCoordinate = TextureCoordinateToCube(samplerVector, cubemapSize);
-
-			color += imageLoad(envMap, samplerCoordinate).rgb * cosTheta * sinTheta;
-			samplerCount++;
-		}
-	}
-
-	color = PI * color / float(samplerCount);
-
-	imageStore(irradianceMap, cubeCoordinate, vec4(color, 1.0));
-}
-
 vec3 CubeCoordinateToWorld(ivec3 cubeCoordinate, vec2 cubemapSize)
 {
-	vec2 textureCoordinate = vec2(cubeCoordinate.xy) / cubemapSize;
+	vec2 textureCoordinate = vec2(cubeCoordinate.xy) / (cubemapSize - vec2(1.0));
 	textureCoordinate = textureCoordinate * 2.0 - 1.0;
 
 	switch(cubeCoordinate.z)
@@ -127,38 +85,4 @@ vec3 CubeCoordinateToWorld(ivec3 cubeCoordinate, vec2 cubemapSize)
 	}
 
 	return vec3(0.0);
-}
-
-ivec3 TextureCoordinateToCube(vec3 textureCoordinate, vec2 cubemapSize)
-{
-	vec3 absTexture = abs(textureCoordinate);
-	textureCoordinate /= max(max(absTexture.x, absTexture.y), absTexture.z);
-
-	float cubeFace;
-	vec2 uvCoordinate;
-
-	if (absTexture.x > absTexture.y && absTexture.x > absTexture.z)
-	{
-		float negativeX = step(textureCoordinate.x, 0.0);
-		uvCoordinate = mix(-textureCoordinate.zy, vec2(textureCoordinate.z, -textureCoordinate.y), negativeX);
-		cubeFace = negativeX;
-	}
-	else if (absTexture.y > absTexture.z)
-	{
-		float negativeY = step(textureCoordinate.y, 0.0);
-		uvCoordinate = mix(textureCoordinate.xz, vec2(textureCoordinate.x, -textureCoordinate.z), negativeY);
-		cubeFace = 2.0 + negativeY;
-	}
-	else
-	{
-		float negativeZ = step(textureCoordinate.z, 0.0);
-		uvCoordinate = mix(vec2(textureCoordinate.x, -textureCoordinate.y), -textureCoordinate.xy, negativeZ);
-		cubeFace = 4.0 + negativeZ;
-	}
-
-	uvCoordinate = (uvCoordinate + 1.0) * 0.5;
-	uvCoordinate = uvCoordinate * cubemapSize;
-	uvCoordinate = clamp(uvCoordinate, vec2(0.0), cubemapSize - vec2(1.0));
-
-	return ivec3(ivec2(uvCoordinate), int(cubeFace));
 }

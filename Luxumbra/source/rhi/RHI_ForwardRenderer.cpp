@@ -16,13 +16,14 @@ namespace lux::rhi
 	
 	ForwardRenderer::ForwardRenderer() noexcept
 		: rtImageFormat(VK_FORMAT_R32G32B32A32_SFLOAT), rtRenderPass(VK_NULL_HANDLE), rtFrameBuffers(0), descriptorPool(VK_NULL_HANDLE),
-		blitRenderPass(VK_NULL_HANDLE), blitFrameBuffers(0), blitGraphicsPipeline(), blitDescriptorSets(0),
+		blitRenderPass(VK_NULL_HANDLE), blitFrameBuffers(0), blitGraphicsPipeline(), blitGraphicsPipelineCI(), blitDescriptorSets(0),
 		ssaoRenderPass(VK_NULL_HANDLE), ssaoFrameBuffers(0), ssaoColorAttachments(0),
-		rtGraphicsPipeline(), rtViewDescriptorSets(0), rtModelDescriptorSets(0), rtColorAttachmentImages(0), rtColorAttachmentImageMemories(0), rtColorAttachmentImageViews(0),
+		rtGraphicsPipeline(), rtCutoutGraphicsPipeline(), rtTransparentBackGraphicsPipeline(), rtTransparentFrontGraphicsPipeline(),
+		rtGraphicsPipelineCI(), rtCutoutGraphicsPipelineCI(), rtTransparentBackGraphicsPipelineCI(), rtTransparentFrontGraphicsPipelineCI(),
+		rtViewDescriptorSets(0), rtModelDescriptorSets(0), rtColorAttachmentImages(0), rtColorAttachmentImageMemories(0), rtColorAttachmentImageViews(0),
 		rtDepthAttachmentImage(VK_NULL_HANDLE), rtDepthAttachmentMemory(VK_NULL_HANDLE), rtDepthAttachmentImageView(VK_NULL_HANDLE),
-		envMapGraphicsPipeline(), envMapViewDescriptorSets(0), modelConstant(), viewProjUniformBuffers(0),
-		sampler(VK_NULL_HANDLE), cubemapSampler(VK_NULL_HANDLE), irradianceSampler(VK_NULL_HANDLE), prefilteredSampler(VK_NULL_HANDLE),
-		rtCutoutGraphicsPipeline(), rtTransparentBackGraphicsPipeline(), rtTransparentFrontGraphicsPipeline()
+		envMapGraphicsPipeline(), envMapGraphicsPipelineCI(), envMapViewDescriptorSets(0), modelConstant(), viewProjUniformBuffers(0),
+		sampler(VK_NULL_HANDLE), cubemapSampler(VK_NULL_HANDLE), irradianceSampler(VK_NULL_HANDLE), prefilteredSampler(VK_NULL_HANDLE)
 	{
 
 	}
@@ -667,35 +668,36 @@ namespace lux::rhi
 
 		forward.postProcessParameters.inverseScreenSize = { TO_FLOAT(1.0 / swapchainExtent.width), TO_FLOAT(1.0 / swapchainExtent.height) };
 
-		GraphicsPipelineCreateInfo blitGraphicsPipelineCI = {};
-		blitGraphicsPipelineCI.renderPass = forward.blitRenderPass;
-		blitGraphicsPipelineCI.subpassIndex = 0;
-		blitGraphicsPipelineCI.binaryVertexFilePath = "data/shaders/blit/blit.vert.spv";
-		blitGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/blit/blit.frag.spv";
-		blitGraphicsPipelineCI.cacheFilePath = "data/pipelineCache/blitGraphics.bin";
-		blitGraphicsPipelineCI.vertexLayout = lux::VertexLayout::NO_VERTEX_LAYOUT;
-		blitGraphicsPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
-		blitGraphicsPipelineCI.viewportWidth = TO_FLOAT(swapchainExtent.width);
-		blitGraphicsPipelineCI.viewportHeight = TO_FLOAT(swapchainExtent.height);
-		blitGraphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_BACK_BIT;
-		blitGraphicsPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_CLOCKWISE;
-		blitGraphicsPipelineCI.disableMSAA = true;
-		blitGraphicsPipelineCI.enableDepthTest = VK_TRUE;
-		blitGraphicsPipelineCI.enableDepthWrite = VK_TRUE;
-		blitGraphicsPipelineCI.enableDepthBias = VK_FALSE;
-		blitGraphicsPipelineCI.depthBiasConstantFactor = 0.f;
-		blitGraphicsPipelineCI.depthBiasSlopeFactor = 0.f;
-		blitGraphicsPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS;
-		blitGraphicsPipelineCI.viewDescriptorSetLayoutBindings = 
-		{ 
+		forward.blitGraphicsPipelineCI = {};
+		forward.blitGraphicsPipelineCI.renderPass = forward.blitRenderPass;
+		forward.blitGraphicsPipelineCI.subpassIndex = 0;
+		forward.blitGraphicsPipelineCI.binaryVertexFilePath = "data/shaders/blit/blit.vert.spv";
+		forward.blitGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/blit/blit.frag.spv";
+		forward.blitGraphicsPipelineCI.cacheFilePath = "data/pipelineCache/blitGraphics.bin";
+		forward.blitGraphicsPipelineCI.vertexLayout = lux::VertexLayout::NO_VERTEX_LAYOUT;
+		forward.blitGraphicsPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+		forward.blitGraphicsPipelineCI.viewportWidth = TO_FLOAT(swapchainExtent.width);
+		forward.blitGraphicsPipelineCI.viewportHeight = TO_FLOAT(swapchainExtent.height);
+		forward.blitGraphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_BACK_BIT;
+		forward.blitGraphicsPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_CLOCKWISE;
+		forward.blitGraphicsPipelineCI.disableMSAA = true;
+		forward.blitGraphicsPipelineCI.enableDepthTest = VK_TRUE;
+		forward.blitGraphicsPipelineCI.enableDepthWrite = VK_TRUE;
+		forward.blitGraphicsPipelineCI.enableDepthBias = VK_FALSE;
+		forward.blitGraphicsPipelineCI.depthBiasConstantFactor = 0.f;
+		forward.blitGraphicsPipelineCI.depthBiasSlopeFactor = 0.f;
+		forward.blitGraphicsPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS;
+
+		forward.blitGraphicsPipelineCI.viewDescriptorSetLayoutBindings =
+		{
 			blitDescriptorSetLayoutBinding,
 			SSAOMapDescriptorSetLayoutBinding,
 			indirectColorMapDescriptorSetLayoutBinding
 		};
-		
-		blitGraphicsPipelineCI.pushConstants = { blitPostProcessParameterPushConstantRange };
 
-		CreateGraphicsPipeline(blitGraphicsPipelineCI, forward.blitGraphicsPipeline);
+		forward.blitGraphicsPipelineCI.pushConstants = { blitPostProcessParameterPushConstantRange };
+
+		CreateGraphicsPipeline(forward.blitGraphicsPipelineCI, forward.blitGraphicsPipeline);
 
 
 		// SSAO
@@ -857,27 +859,28 @@ namespace lux::rhi
 
 
 		// Graphics Pipeline
-		GraphicsPipelineCreateInfo rtGraphicsPipelineCI = {};
-		rtGraphicsPipelineCI.renderPass = forward.rtRenderPass;
-		rtGraphicsPipelineCI.subpassIndex = ForwardRenderer::FORWARD_SUBPASS_RENDER_TO_TARGET;
-		rtGraphicsPipelineCI.binaryVertexFilePath = "data/shaders/cameraSpaceLight/cameraSpaceLight.vert.spv";
-		rtGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/cameraSpaceLight/cameraSpaceLight.frag.spv";
-		rtGraphicsPipelineCI.cacheFilePath = "data/pipelineCache/rtGraphics.bin";
-		rtGraphicsPipelineCI.vertexLayout = lux::VertexLayout::VERTEX_FULL_LAYOUT;
-		rtGraphicsPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-		rtGraphicsPipelineCI.viewportWidth = TO_FLOAT(swapchainExtent.width);
-		rtGraphicsPipelineCI.viewportHeight = TO_FLOAT(swapchainExtent.height);
-		rtGraphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_BACK_BIT;
-		rtGraphicsPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-		rtGraphicsPipelineCI.enableDepthTest = VK_TRUE;
-		rtGraphicsPipelineCI.enableDepthWrite = VK_TRUE;
-		rtGraphicsPipelineCI.enableDepthBias = VK_FALSE;
-		rtGraphicsPipelineCI.depthBiasConstantFactor = 0.f;
-		rtGraphicsPipelineCI.depthBiasSlopeFactor = 0.f;
-		rtGraphicsPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS;
-		rtGraphicsPipelineCI.colorBlendAttachmentStateCount = 4;
 
-		rtGraphicsPipelineCI.viewDescriptorSetLayoutBindings = 
+		forward.rtGraphicsPipelineCI = {};
+		forward.rtGraphicsPipelineCI.renderPass = forward.rtRenderPass;
+		forward.rtGraphicsPipelineCI.subpassIndex = ForwardRenderer::FORWARD_SUBPASS_RENDER_TO_TARGET;
+		forward.rtGraphicsPipelineCI.binaryVertexFilePath = "data/shaders/cameraSpaceLight/cameraSpaceLight.vert.spv";
+		forward.rtGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/cameraSpaceLight/cameraSpaceLight.frag.spv";
+		forward.rtGraphicsPipelineCI.cacheFilePath = "data/pipelineCache/rtGraphics.bin";
+		forward.rtGraphicsPipelineCI.vertexLayout = lux::VertexLayout::VERTEX_FULL_LAYOUT;
+		forward.rtGraphicsPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		forward.rtGraphicsPipelineCI.viewportWidth = TO_FLOAT(swapchainExtent.width);
+		forward.rtGraphicsPipelineCI.viewportHeight = TO_FLOAT(swapchainExtent.height);
+		forward.rtGraphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_BACK_BIT;
+		forward.rtGraphicsPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+		forward.rtGraphicsPipelineCI.enableDepthTest = VK_TRUE;
+		forward.rtGraphicsPipelineCI.enableDepthWrite = VK_TRUE;
+		forward.rtGraphicsPipelineCI.enableDepthBias = VK_FALSE;
+		forward.rtGraphicsPipelineCI.depthBiasConstantFactor = 0.f;
+		forward.rtGraphicsPipelineCI.depthBiasSlopeFactor = 0.f;
+		forward.rtGraphicsPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS;
+		forward.rtGraphicsPipelineCI.colorBlendAttachmentStateCount = 4;
+		
+		forward.rtGraphicsPipelineCI.viewDescriptorSetLayoutBindings = 
 		{ 
 			rtViewProjDescriptorSetLayoutBinding, 
 			directionalLightUniformDescriptorSetLayoutBinding,
@@ -889,7 +892,7 @@ namespace lux::rhi
 			BRDFLutDescriptorSetLayoutBinding,
 		};
 
-		rtGraphicsPipelineCI.materialDescriptorSetLayoutBindings = 
+		forward.rtGraphicsPipelineCI.materialDescriptorSetLayoutBindings =
 		{ 
 			materialParametersDescriptorSetLayoutBinding, 
 			materialAlbedoDescriptorSetLayoutBinding, 
@@ -898,36 +901,39 @@ namespace lux::rhi
 			materialAmbientOcclusionDescriptorSetLayoutBinding,
 		};
 
-		rtGraphicsPipelineCI.pushConstants = { rtModelPushConstantRange, lightCountPushConstantRange };
+		forward.rtGraphicsPipelineCI.pushConstants = { rtModelPushConstantRange, lightCountPushConstantRange };
 
-		CreateGraphicsPipeline(rtGraphicsPipelineCI, forward.rtGraphicsPipeline);
+		CreateGraphicsPipeline(forward.rtGraphicsPipelineCI, forward.rtGraphicsPipeline);
 
 
 		// Cutout Graphics Pipeline
-		rtGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/cameraSpaceLight/cameraSpaceLightCutout.frag.spv";
-		rtGraphicsPipelineCI.cacheFilePath = "data/pipelineCache/rtCutoutGraphics.bin";
-		rtGraphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_NONE;
-		rtGraphicsPipelineCI.disableColorWriteMask = true;
-		rtGraphicsPipelineCI.enableBlend = true;
+		forward.rtCutoutGraphicsPipelineCI = forward.rtGraphicsPipelineCI;
+		forward.rtCutoutGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/cameraSpaceLight/cameraSpaceLightCutout.frag.spv";
+		forward.rtCutoutGraphicsPipelineCI.cacheFilePath = "data/pipelineCache/rtCutoutGraphics.bin";
+		forward.rtCutoutGraphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_NONE;
+		forward.rtCutoutGraphicsPipelineCI.disableColorWriteMask = true;
+		forward.rtCutoutGraphicsPipelineCI.enableBlend = true;
 
-		CreateGraphicsPipeline(rtGraphicsPipelineCI, forward.rtCutoutGraphicsPipeline);
+		CreateGraphicsPipeline(forward.rtCutoutGraphicsPipelineCI, forward.rtCutoutGraphicsPipeline);
 
 
 		// Front Face Transparent Graphics Pipeline
-		rtGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/cameraSpaceLight/cameraSpaceLight.frag.spv";
-		rtGraphicsPipelineCI.cacheFilePath = "data/pipelineCache/rtTransparentFrontGraphics.bin";
-		rtGraphicsPipelineCI.disableColorWriteMask = false;
-		rtGraphicsPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
-		rtGraphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_BACK_BIT;
+		forward.rtTransparentFrontGraphicsPipelineCI = forward.rtCutoutGraphicsPipelineCI;
+		forward.rtTransparentFrontGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/cameraSpaceLight/cameraSpaceLight.frag.spv";
+		forward.rtTransparentFrontGraphicsPipelineCI.cacheFilePath = "data/pipelineCache/rtTransparentFrontGraphics.bin";
+		forward.rtTransparentFrontGraphicsPipelineCI.disableColorWriteMask = false;
+		forward.rtTransparentFrontGraphicsPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+		forward.rtTransparentFrontGraphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_BACK_BIT;
 
-		CreateGraphicsPipeline(rtGraphicsPipelineCI, forward.rtTransparentFrontGraphicsPipeline);
+		CreateGraphicsPipeline(forward.rtTransparentFrontGraphicsPipelineCI, forward.rtTransparentFrontGraphicsPipeline);
 
 
 		// Back Face Transparent Graphics Pipeline
-		rtGraphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_FRONT_BIT;
-		rtGraphicsPipelineCI.cacheFilePath = "data/pipelineCache/rtTransparentBackGraphics.bin";
+		forward.rtTransparentBackGraphicsPipelineCI = forward.rtTransparentFrontGraphicsPipelineCI;
+		forward.rtTransparentBackGraphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_FRONT_BIT;
+		forward.rtTransparentBackGraphicsPipelineCI.cacheFilePath = "data/pipelineCache/rtTransparentBackGraphics.bin";
 
-		CreateGraphicsPipeline(rtGraphicsPipelineCI, forward.rtTransparentBackGraphicsPipeline);
+		CreateGraphicsPipeline(forward.rtTransparentBackGraphicsPipelineCI, forward.rtTransparentBackGraphicsPipeline);
 
 
 		// Env map Pipeline
@@ -943,28 +949,28 @@ namespace lux::rhi
 		envMapSamplerDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		envMapSamplerDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-		GraphicsPipelineCreateInfo envMapGraphicsPipelineCI = {};
-		envMapGraphicsPipelineCI.renderPass = forward.rtRenderPass;
-		envMapGraphicsPipelineCI.subpassIndex = ForwardRenderer::FORWARD_SUBPASS_RENDER_TO_TARGET;
-		envMapGraphicsPipelineCI.binaryVertexFilePath = "data/shaders/envMap/envMap.vert.spv";
-		envMapGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/envMap/envMap.frag.spv";
-		envMapGraphicsPipelineCI.cacheFilePath = "data/pipelineCache/rtEnvMapGraphics.bin";
-		envMapGraphicsPipelineCI.vertexLayout = lux::VertexLayout::VERTEX_POSITION_ONLY_LAYOUT;
-		envMapGraphicsPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
-		envMapGraphicsPipelineCI.viewportWidth = TO_FLOAT(swapchainExtent.width);
-		envMapGraphicsPipelineCI.viewportHeight = TO_FLOAT(swapchainExtent.height);
-		envMapGraphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_NONE;
-		envMapGraphicsPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_CLOCKWISE;
-		envMapGraphicsPipelineCI.colorBlendAttachmentStateCount = 4;
-		envMapGraphicsPipelineCI.enableDepthTest = VK_TRUE;
-		envMapGraphicsPipelineCI.enableDepthWrite = VK_FALSE;
-		envMapGraphicsPipelineCI.enableDepthBias = VK_FALSE;
-		envMapGraphicsPipelineCI.depthBiasConstantFactor = 0.f;
-		envMapGraphicsPipelineCI.depthBiasSlopeFactor = 0.f;
-		envMapGraphicsPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
-		envMapGraphicsPipelineCI.viewDescriptorSetLayoutBindings = { envMapViewProjDescriptorSetLayoutBinding, envMapSamplerDescriptorSetLayoutBinding};
+		forward.envMapGraphicsPipelineCI = {};
+		forward.envMapGraphicsPipelineCI.renderPass = forward.rtRenderPass;
+		forward.envMapGraphicsPipelineCI.subpassIndex = ForwardRenderer::FORWARD_SUBPASS_RENDER_TO_TARGET;
+		forward.envMapGraphicsPipelineCI.binaryVertexFilePath = "data/shaders/envMap/envMap.vert.spv";
+		forward.envMapGraphicsPipelineCI.binaryFragmentFilePath = "data/shaders/envMap/envMap.frag.spv";
+		forward.envMapGraphicsPipelineCI.cacheFilePath = "data/pipelineCache/rtEnvMapGraphics.bin";
+		forward.envMapGraphicsPipelineCI.vertexLayout = lux::VertexLayout::VERTEX_POSITION_ONLY_LAYOUT;
+		forward.envMapGraphicsPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+		forward.envMapGraphicsPipelineCI.viewportWidth = TO_FLOAT(swapchainExtent.width);
+		forward.envMapGraphicsPipelineCI.viewportHeight = TO_FLOAT(swapchainExtent.height);
+		forward.envMapGraphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_NONE;
+		forward.envMapGraphicsPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_CLOCKWISE;
+		forward.envMapGraphicsPipelineCI.colorBlendAttachmentStateCount = 4;
+		forward.envMapGraphicsPipelineCI.enableDepthTest = VK_TRUE;
+		forward.envMapGraphicsPipelineCI.enableDepthWrite = VK_FALSE;
+		forward.envMapGraphicsPipelineCI.enableDepthBias = VK_FALSE;
+		forward.envMapGraphicsPipelineCI.depthBiasConstantFactor = 0.f;
+		forward.envMapGraphicsPipelineCI.depthBiasSlopeFactor = 0.f;
+		forward.envMapGraphicsPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+		forward.envMapGraphicsPipelineCI.viewDescriptorSetLayoutBindings = { envMapViewProjDescriptorSetLayoutBinding, envMapSamplerDescriptorSetLayoutBinding};
 	
-		CreateGraphicsPipeline(envMapGraphicsPipelineCI, forward.envMapGraphicsPipeline);
+		CreateGraphicsPipeline(forward.envMapGraphicsPipelineCI, forward.envMapGraphicsPipeline);
 	}
 
 	void RHI::InitForwardSampler() noexcept
@@ -1562,14 +1568,7 @@ namespace lux::rhi
 		vkCmdEndRenderPass(commandBuffer);
 	}
 
-	void RHI::RebuildForwardGraphicsPipeline() noexcept
-	{
-		vkDeviceWaitIdle(device);
-		DestroyForwardGraphicsPipeline();
-		InitForwardGraphicsPipelines();
-	}
-	
-	void RHI::DestroyForwardGraphicsPipeline() noexcept
+	void RHI::DestroyForwardRenderer() noexcept
 	{
 		DestroyGraphicsPipeline(forward.blitGraphicsPipeline);
 		DestroyGraphicsPipeline(forward.ssaoGraphicsPipeline);
@@ -1578,11 +1577,6 @@ namespace lux::rhi
 		DestroyGraphicsPipeline(forward.rtTransparentBackGraphicsPipeline);
 		DestroyGraphicsPipeline(forward.rtTransparentFrontGraphicsPipeline);
 		DestroyGraphicsPipeline(forward.envMapGraphicsPipeline);
-	}
-
-	void RHI::DestroyForwardRenderer() noexcept
-	{
-		DestroyForwardGraphicsPipeline();
 
 		vkDestroyDescriptorPool(device, forward.descriptorPool, nullptr);
 

@@ -373,7 +373,7 @@ namespace lux::rhi
 		VkDescriptorSetLayoutBinding cubemapDescriptorSetLayoutBinding = {};
 		cubemapDescriptorSetLayoutBinding.binding = 0;
 		cubemapDescriptorSetLayoutBinding.descriptorCount = 1;
-		cubemapDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		cubemapDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		cubemapDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
 		VkDescriptorSetLayoutBinding irradianceDescriptorSetLayoutBinding = {};
@@ -411,7 +411,7 @@ namespace lux::rhi
 		CHECK_VK(vkAllocateCommandBuffers(device, &commandBufferAI, &compute.commandBuffer));
 
 		VkDescriptorPoolSize samplerDescriptorPoolSize = {};
-		samplerDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		samplerDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		samplerDescriptorPoolSize.descriptorCount = mipmapCount;
 
 		VkDescriptorPoolSize storageDescriptorPoolSize = {};
@@ -431,7 +431,7 @@ namespace lux::rhi
 		GenerateIrradianceParameters parameters;
 		parameters.deltaPhi = (2.0f * PI) / 180.0f;
 		parameters.deltaTheta = (0.5f * PI) / TO_FLOAT(IRRADIANCE_TEXTURE_SIZE);
-		parameters.cubemapSize = glm::vec2(CUBEMAP_TEXTURE_SIZE);
+		parameters.cubemapSize = glm::vec2(IRRADIANCE_TEXTURE_SIZE);
 
 		VkCommandBufferBeginInfo commandBufferBI = {};
 		commandBufferBI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -440,7 +440,6 @@ namespace lux::rhi
 		CHECK_VK(vkBeginCommandBuffer(compute.commandBuffer, &commandBufferBI));
 
 		CommandTransitionImageLayout(compute.commandBuffer, irradiance.image, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, 6, TO_UINT32_T(floor(log2(IRRADIANCE_TEXTURE_SIZE))) + 1);
-		CommandTransitionImageLayout(compute.commandBuffer, cubemapSource.image, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, 6, TO_UINT32_T(floor(log2(CUBEMAP_TEXTURE_SIZE))) + 1);
 
 		vkCmdBindPipeline(compute.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute.pipeline.pipeline);
 
@@ -472,14 +471,14 @@ namespace lux::rhi
 			CHECK_VK(vkAllocateDescriptorSets(device, &generateIrradianceDescriptorSetAI, &compute.descriptorSets[i]));
 
 			VkDescriptorImageInfo cubemapDescriptorImageInfo = {};
-			cubemapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+			cubemapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 			cubemapDescriptorImageInfo.imageView = cubemapSource.imageView;
 			cubemapDescriptorImageInfo.sampler = forward.cubemapSampler;
 
 			VkWriteDescriptorSet writeCubemapDescriptorSet = {};
 			writeCubemapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			writeCubemapDescriptorSet.descriptorCount = 1;
-			writeCubemapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+			writeCubemapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 			writeCubemapDescriptorSet.dstBinding = 0;
 			writeCubemapDescriptorSet.dstArrayElement = 0;
 			writeCubemapDescriptorSet.pImageInfo = &cubemapDescriptorImageInfo;
@@ -508,12 +507,11 @@ namespace lux::rhi
 
 			vkCmdBindDescriptorSets(compute.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute.pipeline.pipelineLayout, 0, 1, &compute.descriptorSets[i], 0, nullptr);
 
-			uint32_t dispatch = std::max((CUBEMAP_TEXTURE_SIZE >> i) / 16, 1);
+			uint32_t dispatch = std::max((IRRADIANCE_TEXTURE_SIZE >> i) / 16, 1);
 			vkCmdDispatch(compute.commandBuffer, dispatch, dispatch, 6);
 		}
 
 		CommandTransitionImageLayout(compute.commandBuffer, irradiance.image, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 6, TO_UINT32_T(floor(log2(IRRADIANCE_TEXTURE_SIZE))) + 1);
-		CommandTransitionImageLayout(compute.commandBuffer, cubemapSource.image, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 6, TO_UINT32_T(floor(log2(CUBEMAP_TEXTURE_SIZE))) + 1);
 
 		CHECK_VK(vkEndCommandBuffer(compute.commandBuffer));
 

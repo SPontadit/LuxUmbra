@@ -10,8 +10,7 @@ namespace lux::rhi
 
 	void RHI::CreateComputePipeline(const ComputePipelineCreateInfo& luxComputePipelineCI, ComputePipeline& computePipeline) noexcept
 	{
-		VkShaderModule computeShaderModule = VK_NULL_HANDLE;
-		CreateShaderModule(luxComputePipelineCI.binaryComputeFilePath, &computeShaderModule);
+		VkShaderModule computeShaderModule = CreateShaderModule(luxComputePipelineCI.binaryComputeFilePath);
 
 		VkPipelineShaderStageCreateInfo computeStageCI = {};
 		computeStageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;

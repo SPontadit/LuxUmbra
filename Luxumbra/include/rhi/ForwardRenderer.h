@@ -65,6 +65,8 @@ namespace lux::rhi
 		const ForwardRenderer& operator=(const ForwardRenderer&) = delete;
 		const ForwardRenderer& operator=(ForwardRenderer&&) = delete;
 
+		// SSAO
+
 		VkRenderPass ssaoRenderPass;
 		std::vector<VkFramebuffer> ssaoFrameBuffers;
 		std::vector<Image> ssaoColorAttachments;
@@ -72,15 +74,18 @@ namespace lux::rhi
 		GraphicsPipeline ssaoGraphicsPipeline;
 		std::vector<VkDescriptorSet> ssaoDescriptorSets;
 
-
+		// Blit
 
 		VkRenderPass blitRenderPass;
 		std::vector<VkFramebuffer> blitFrameBuffers;
 
 		GraphicsPipeline blitGraphicsPipeline;
+		GraphicsPipelineCreateInfo blitGraphicsPipelineCI;
 		std::vector<VkDescriptorSet> blitDescriptorSets;
 		Buffer SSAOKernelsUniformBuffer;
 		Image SSAONoiseImage;
+
+		// Render to target
 
 		VkFormat rtImageFormat;
 
@@ -92,16 +97,28 @@ namespace lux::rhi
 		GraphicsPipeline rtCutoutGraphicsPipeline;
 		GraphicsPipeline rtTransparentBackGraphicsPipeline;
 		GraphicsPipeline rtTransparentFrontGraphicsPipeline;
+
+		GraphicsPipelineCreateInfo rtGraphicsPipelineCI;
+		GraphicsPipelineCreateInfo rtCutoutGraphicsPipelineCI;
+		GraphicsPipelineCreateInfo rtTransparentBackGraphicsPipelineCI;
+		GraphicsPipelineCreateInfo rtTransparentFrontGraphicsPipelineCI;
+
 		std::vector<VkDescriptorSet> rtViewDescriptorSets;
 		std::vector<VkDescriptorSet> rtModelDescriptorSets;
 
+		// Env map
+
 		GraphicsPipeline envMapGraphicsPipeline;
+		GraphicsPipelineCreateInfo envMapGraphicsPipelineCI;
 		std::vector<VkDescriptorSet> envMapViewDescriptorSets;
+
+		// Uniforms
 
 		RtModelConstant modelConstant;
 		RtViewProjUniform rtViewProjUniform;
 		std::vector<Buffer> viewProjUniformBuffers;
 
+		// Attachments
 
 		std::vector<VkImage> rtColorAttachmentImages;
 		std::vector<VkImageView> rtColorAttachmentImageViews;
