@@ -124,6 +124,8 @@ namespace lux::rhi
 
 		Image rtResolveDepth;
 
+		Image rtIndirectColorMap;
+
 		VkSampler sampler;
 		VkSampler cubemapSampler;
 		VkSampler irradianceSampler;
@@ -139,6 +141,7 @@ namespace lux::rhi
 			FORWARD_RT_DEPTH_ATTACHMENT_BIND_POINT,
 			FORWARD_RT_POSITION_ATTACHMENT_BIND_POINT,
 			FORWARD_RT_NORMAL_ATTACHMENT_BIND_POINT,
+			FORWARD_RT_INDIRECT_COLOR_ATTACHMENT_BIND_POINT,
 			FORWARD_RT_ATTACHMENT_BIND_POINT_COUNT
 		};
 

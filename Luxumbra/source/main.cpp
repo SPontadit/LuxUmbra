@@ -126,6 +126,7 @@ void SSAOTest(lux::Engine& luxUmbra) noexcept
 
 	lux::resource::MaterialCreateInfo defaultMaterialCI;
 	defaultMaterialCI.baseColor = glm::vec3(1.0f);
+	//defaultMaterialCI.albedo = resourceManager.GetTexture("data/textures/ironman.dff.png");
 	defaultMaterialCI.metallic = false;
 	defaultMaterialCI.perceptualRoughness = 0.0f;
 	defaultMaterialCI.reflectance = 0.5f;

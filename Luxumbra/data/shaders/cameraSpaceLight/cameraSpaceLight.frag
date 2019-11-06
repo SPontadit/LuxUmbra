@@ -17,6 +17,7 @@ layout(location = 0) in FsIn
 layout(location = 0) out vec4 outColor;
 layout(location = 1) out vec4 outPositionVS;
 layout(location = 2) out vec4 outNormalVS;
+layout(location = 3) out vec4 outIndirectColor;
 
 struct Light
 {
@@ -217,8 +218,10 @@ vec4 CameraSpace()
 	float ao = texture(ambientOcclusionMap, fsIn.textureCoordinateLS).r;
 
 	indirectColor *= ao;
+	
+	outIndirectColor = vec4(indirectColor, 1.0);
 
-	return vec4(directColor * shadow + indirectColor, textureColor.a);
+	return vec4(directColor * shadow, textureColor.a);
 }
 
 vec3 PrefilteredReflection(vec3 R, float roughness)

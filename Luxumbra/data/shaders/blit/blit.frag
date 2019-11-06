@@ -7,6 +7,7 @@ layout(location = 0) out vec4 outColor;
 
 layout(set = 0, binding = 0) uniform sampler2D renderTarget;
 layout(set = 0, binding = 1) uniform sampler2D SSAOMap;
+layout(set = 0, binding = 2) uniform sampler2D IndirectColorMap;
 
 #define SSAO_KERNEL_SIZE  32
 #define SSAO_RADIUS 0.5
@@ -42,10 +43,7 @@ float Quality(int i);
 
 void main() 
 {
-	float ss = texture(SSAOMap, textureCoordinate).r;
-	float ssao = BlurSSAO();
-	
-	outColor =  vec4(FXAA() * ssao, 1.0);
+	outColor =  vec4(FXAA(), 1.0);
 
 	if (splitViewMask != 0)
 	{
@@ -55,16 +53,33 @@ void main()
 				outColor = vec4(FXAA(), 1.0);
 			else
 				outColor = vec4(ToneMapGammaCorrect(texture(renderTarget, textureCoordinate).rgb), 1.0);
-
-			ssao = (splitViewMask & SPLIT_VIEW_SSAO_MASK) == SPLIT_VIEW_SSAO_MASK ? ssao : 1.0;
-			outColor *= ssao;
 		}
 		else
-			outColor = pow(texture(renderTarget, textureCoordinate), vec4(1.0/2.2));
+		{
+			vec4 indirect = texture(IndirectColorMap, textureCoordinate);
+			outColor = pow(texture(renderTarget, textureCoordinate) + indirect, vec4(1.0/2.2));
+		}
 
 		if (textureCoordinate.x < splitViewRatio + 0.001 && textureCoordinate.x > splitViewRatio - 0.001)
 			outColor = vec4(1.0);
 	}
+}
+
+float BlurSSAO2()
+{
+	vec2 texelSize = vec2(1.0) / textureSize(SSAOMap, 0);
+	vec2 f = fract(textureCoordinate * textureSize(SSAOMap, 0));
+	vec2 uv = textureCoordinate + (0.5 - f) * texelSize;
+
+	float tl = texture(SSAOMap, uv).r;
+	float tr = texture(SSAOMap, uv + vec2(texelSize.x, 0.0)).r;
+	float bl = texture(SSAOMap, uv + vec2(0.0, texelSize.y)).r;
+	float br = texture(SSAOMap, uv + vec2(texelSize.x, texelSize.y)).r;
+
+	float tA = mix(tl, tr, f.x);
+	float tB = mix(bl, br, f.x);
+
+	return mix(tA, tB, f.y);
 }
 
 float BlurSSAO()
@@ -115,26 +130,33 @@ vec3 Uncharted2Tonemap(vec3 x)
 
 vec3 ToneMapGammaCorrect(vec3 color)
 {
+	float ssao = BlurSSAO();
+
+	if(splitViewMask != 0)
+		ssao = ((splitViewMask & SPLIT_VIEW_SSAO_MASK) == SPLIT_VIEW_SSAO_MASK) ? ssao : 1.0;
+
+	vec3 indirect = texture(IndirectColorMap, textureCoordinate).rgb * ssao;
+
 	if ((splitViewMask & SPLIT_VIEW_TONE_MAPPING_MASK) == SPLIT_VIEW_TONE_MAPPING_MASK)
 	{
 		switch(toneMapping)
 		{
 			case 0: 
 			{
-				return pow(ACESFilm(0.6 * color * exposure), vec3(1.0/2.2));
+				return pow(ACESFilm(0.6 * (indirect + color) * exposure), vec3(1.0/2.2));
 			}
 			case 1: 
 			{
-				return pow(Uncharted2Tonemap(color * exposure), vec3(1.0/2.2));
+				return pow(Uncharted2Tonemap((indirect + color) * exposure), vec3(1.0/2.2));
 			}
 			case 2:
 			{
-				return pow(Reinhard(color * exposure), vec3(1.0/2.2));
+				return pow(Reinhard((indirect + color) * exposure), vec3(1.0/2.2));
 			}
 		}
 	}
 	else
-		return pow(color, vec3(1.0/2.2));
+		return pow(indirect + color, vec3(1.0/2.2));
 }
 
 vec3 FXAA()

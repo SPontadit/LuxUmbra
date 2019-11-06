@@ -69,6 +69,16 @@ namespace lux::rhi
 		rtNormalAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		rtNormalAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
+		VkAttachmentDescription rtIndirectColorAttachment = {};
+		rtIndirectColorAttachment.format = forward.rtImageFormat;
+		rtIndirectColorAttachment.samples = msaaSamples;
+		rtIndirectColorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		rtIndirectColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		rtIndirectColorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		rtIndirectColorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		rtIndirectColorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		rtIndirectColorAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
 		VkAttachmentDescription rtResolveColorAttachment = {};
 		rtResolveColorAttachment.format = forward.rtImageFormat;
 		rtResolveColorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -121,11 +131,15 @@ namespace lux::rhi
 		rtNormalAttachmentRef.attachment = ForwardRenderer::FORWARD_RT_NORMAL_ATTACHMENT_BIND_POINT;
 		rtNormalAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
+		VkAttachmentReference rtIndirectColorAttachmentRef = {};
+		rtIndirectColorAttachmentRef.attachment = ForwardRenderer::FORWARD_RT_INDIRECT_COLOR_ATTACHMENT_BIND_POINT;
+		rtIndirectColorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
 		VkAttachmentReference rtDepthAttachmentRef = {};
 		rtDepthAttachmentRef.attachment = ForwardRenderer::FORWARD_RT_DEPTH_ATTACHMENT_BIND_POINT;
 		rtDepthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-		std::array<VkAttachmentReference, 3> colorAttachments = { rtColorAttachmentRef, rtPositionAttachmentRef, rtNormalAttachmentRef };
+		std::array<VkAttachmentReference, 4> colorAttachments = { rtColorAttachmentRef, rtPositionAttachmentRef, rtNormalAttachmentRef, rtIndirectColorAttachmentRef };
 
 		VkSubpassDescription renderToTargetSubpass = {};
 		renderToTargetSubpass.colorAttachmentCount = TO_UINT32_T(colorAttachments.size());
@@ -139,7 +153,8 @@ namespace lux::rhi
 			rtColorAttachment,
 			rtDepthAttachment,
 			rtPositionAttachment,
-			rtNormalAttachment
+			rtNormalAttachment,
+			rtIndirectColorAttachment
 		};
 
 		//std::array<VkSubpassDescription, TO_SIZE_T(ForwardRenderer::FORWARD_SUBPASS_COUNT)> subpasses{
@@ -379,6 +394,19 @@ namespace lux::rhi
 
 		CreateImage(rtNormalImageCI, forward.rtNormalMap);
 
+		// Indirect Color Map
+		ImageCreateInfo rtIndirectColorImageCI = {};
+		rtIndirectColorImageCI.format = forward.rtImageFormat;
+		rtIndirectColorImageCI.width = swapchainExtent.width;
+		rtIndirectColorImageCI.height = swapchainExtent.height;
+		rtIndirectColorImageCI.arrayLayers = 1;
+		rtIndirectColorImageCI.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+		rtIndirectColorImageCI.sampleCount = msaaSamples;
+		rtIndirectColorImageCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		rtIndirectColorImageCI.subresourceRangeLayerCount = 1;
+		rtIndirectColorImageCI.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
+
+		CreateImage(rtNormalImageCI, forward.rtIndirectColorMap);
 		
 		// SSAO Image
 		ImageCreateInfo ssaoImageCI = {};
@@ -440,6 +468,7 @@ namespace lux::rhi
 			attachments[TO_SIZE_T(ForwardRenderer::FORWARD_RT_DEPTH_ATTACHMENT_BIND_POINT)] = forward.rtDepthAttachmentImageView;
 			attachments[TO_SIZE_T(ForwardRenderer::FORWARD_RT_POSITION_ATTACHMENT_BIND_POINT)] = forward.rtPositionMap.imageView;
 			attachments[TO_SIZE_T(ForwardRenderer::FORWARD_RT_NORMAL_ATTACHMENT_BIND_POINT)] = forward.rtNormalMap.imageView;
+			attachments[TO_SIZE_T(ForwardRenderer::FORWARD_RT_INDIRECT_COLOR_ATTACHMENT_BIND_POINT)] = forward.rtIndirectColorMap.imageView;
 
 			CHECK_VK(vkCreateFramebuffer(device, &rtFramebufferCI, nullptr, &forward.rtFrameBuffers[i]));
 			CHECK_VK(vkCreateFramebuffer(device, &blitFramebufferCI, nullptr, &forward.blitFrameBuffers[i]));
@@ -452,7 +481,7 @@ namespace lux::rhi
 	{
 		VkDescriptorPoolSize blitSamplersDescriptorPoolSize = {};
 		blitSamplersDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		blitSamplersDescriptorPoolSize.descriptorCount = swapchainImageCount * 2;
+		blitSamplersDescriptorPoolSize.descriptorCount = swapchainImageCount * 3;
 
 		VkDescriptorPoolSize SSAOSamplersDescriptorPoolSize = {};
 		SSAOSamplersDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -534,6 +563,12 @@ namespace lux::rhi
 		SSAOMapDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		SSAOMapDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
+		VkDescriptorSetLayoutBinding indirectColorMapDescriptorSetLayoutBinding = {};
+		indirectColorMapDescriptorSetLayoutBinding.binding = 2;
+		indirectColorMapDescriptorSetLayoutBinding.descriptorCount = 1;
+		indirectColorMapDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		indirectColorMapDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
 		VkPushConstantRange blitPostProcessParameterPushConstantRange = {};
 		blitPostProcessParameterPushConstantRange.offset = 0;
 		blitPostProcessParameterPushConstantRange.size = sizeof(PostProcessParameters);
@@ -563,7 +598,8 @@ namespace lux::rhi
 		blitGraphicsPipelineCI.viewDescriptorSetLayoutBindings = 
 		{ 
 			blitDescriptorSetLayoutBinding,
-			SSAOMapDescriptorSetLayoutBinding
+			SSAOMapDescriptorSetLayoutBinding,
+			indirectColorMapDescriptorSetLayoutBinding
 		};
 		
 		blitGraphicsPipelineCI.pushConstants = { blitPostProcessParameterPushConstantRange };
@@ -736,7 +772,7 @@ namespace lux::rhi
 		rtGraphicsPipelineCI.depthBiasConstantFactor = 0.f;
 		rtGraphicsPipelineCI.depthBiasSlopeFactor = 0.f;
 		rtGraphicsPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS;
-		rtGraphicsPipelineCI.colorBlendAttachmentStateCount = 3;
+		rtGraphicsPipelineCI.colorBlendAttachmentStateCount = 4;
 
 		rtGraphicsPipelineCI.viewDescriptorSetLayoutBindings = 
 		{ 
@@ -814,7 +850,7 @@ namespace lux::rhi
 		envMapGraphicsPipelineCI.viewportHeight = TO_FLOAT(swapchainExtent.height);
 		envMapGraphicsPipelineCI.rasterizerCullMode = VK_CULL_MODE_NONE;
 		envMapGraphicsPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_CLOCKWISE;
-		envMapGraphicsPipelineCI.colorBlendAttachmentStateCount = 3;
+		envMapGraphicsPipelineCI.colorBlendAttachmentStateCount = 4;
 		envMapGraphicsPipelineCI.enableDepthTest = VK_TRUE;
 		envMapGraphicsPipelineCI.enableDepthWrite = VK_FALSE;
 		envMapGraphicsPipelineCI.enableDepthBias = VK_FALSE;
@@ -918,6 +954,17 @@ namespace lux::rhi
 		writeSSAOMapDescriptorSet.dstBinding = 1;
 		writeSSAOMapDescriptorSet.pImageInfo = &SSAOMapDescriptorImageInfo;
 
+		VkDescriptorImageInfo indirectColorMapDescriptorImageInfo = {};
+		indirectColorMapDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		indirectColorMapDescriptorImageInfo.sampler = forward.sampler;
+		indirectColorMapDescriptorImageInfo.imageView = forward.rtIndirectColorMap.imageView;
+
+		VkWriteDescriptorSet writeIndirectColorMapDescriptorSet = {};
+		writeIndirectColorMapDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeIndirectColorMapDescriptorSet.descriptorCount = 1;
+		writeIndirectColorMapDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		writeIndirectColorMapDescriptorSet.dstBinding = 2;
+		writeIndirectColorMapDescriptorSet.pImageInfo = &indirectColorMapDescriptorImageInfo;
 		
 		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
@@ -927,11 +974,13 @@ namespace lux::rhi
 
 			writeBlitDescriptorSet.dstSet = forward.blitDescriptorSets[i];
 			writeSSAOMapDescriptorSet.dstSet = forward.blitDescriptorSets[i];
+			writeIndirectColorMapDescriptorSet.dstSet = forward.blitDescriptorSets[i];
 
-			std::array<VkWriteDescriptorSet, 2> writeDescriptorSets = 
+			std::array<VkWriteDescriptorSet, 3> writeDescriptorSets = 
 			{
 				writeBlitDescriptorSet,
-				writeSSAOMapDescriptorSet
+				writeSSAOMapDescriptorSet,
+				writeIndirectColorMapDescriptorSet
 			};
 
 			vkUpdateDescriptorSets(device, TO_UINT32_T(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
@@ -1236,10 +1285,12 @@ namespace lux::rhi
 
 		VkClearColorValue clearColor{ 0.5f, 0.5703125f, 0.6171875f, 1.0F };
 
-		std::array<VkClearValue, 4> clearValues = {};
+		
+		std::array<VkClearValue, 5> clearValues = {};
 		clearValues[ForwardRenderer::FORWARD_RT_COLOR_ATTACHMENT_BIND_POINT].color = clearColor;
 		clearValues[ForwardRenderer::FORWARD_RT_POSITION_ATTACHMENT_BIND_POINT].color = { 0.0f, 0.0f, 0.0f, 0.0f };
 		clearValues[ForwardRenderer::FORWARD_RT_NORMAL_ATTACHMENT_BIND_POINT].color = { 0.0f, 0.0f, 0.0f, 0.0f };
+		clearValues[ForwardRenderer::FORWARD_RT_INDIRECT_COLOR_ATTACHMENT_BIND_POINT].color = { 0.0f, 0.0f, 0.0f, 0.0f };
 		clearValues[ForwardRenderer::FORWARD_RT_DEPTH_ATTACHMENT_BIND_POINT].depthStencil = { 1.0f, 0 };
 
 
@@ -1486,6 +1537,7 @@ namespace lux::rhi
 
 		DestroyImage(forward.rtPositionMap);
 		DestroyImage(forward.rtNormalMap);
+		DestroyImage(forward.rtIndirectColorMap);
 		DestroyImage(forward.SSAONoiseImage);
 		DestroyBuffer(forward.SSAOKernelsUniformBuffer);
 
