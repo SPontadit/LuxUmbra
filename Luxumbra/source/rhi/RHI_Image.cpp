@@ -507,7 +507,13 @@ namespace lux::rhi
 
 			vkCmdBindDescriptorSets(compute.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute.pipeline.pipelineLayout, 0, 1, &compute.descriptorSets[i], 0, nullptr);
 
-			uint32_t dispatch = std::max((IRRADIANCE_TEXTURE_SIZE >> i) / 16, 1);
+			uint32_t textureSize = IRRADIANCE_TEXTURE_SIZE >> i;
+			parameters.deltaTheta = (0.5f * PI) / TO_FLOAT(textureSize);
+			parameters.cubemapSize = glm::vec2(TO_FLOAT(textureSize));
+
+			vkCmdPushConstants(compute.commandBuffer, compute.pipeline.pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(GenerateIrradianceParameters), &parameters);
+
+			uint32_t dispatch = std::max(textureSize / 16u, 1u);
 			vkCmdDispatch(compute.commandBuffer, dispatch, dispatch, 6);
 		}
 
