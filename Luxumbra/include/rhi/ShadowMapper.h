@@ -42,6 +42,9 @@ namespace lux::rhi
 		const ShadowMapper& operator =(const ShadowMapper&) = delete;
 		const ShadowMapper& operator =(ShadowMapper&&) = delete;
 
+		float depthBiasConstantFactor;
+		float depthBiasSlopeFactor;
+
 		VkRenderPass directionalShadowMappingRenderPass;
 		VkRenderPass pointShadowMappingRenderPass;
 

@@ -254,6 +254,25 @@ namespace lux
 				ImGui::EndTabItem();
 			}
 
+			if (ImGui::BeginTabItem("Render Settings"))
+			{
+				if (ImGui::CollapsingHeader("Shadow Mapping", ImGuiTreeNodeFlags_DefaultOpen))
+				{
+					ImGui::Spacing();
+
+					float depthBiasConstantFactor = rhi.GetShadowMappingDepthBiasConstantFactor();
+					float depthBiasSlopeFactor = rhi.GetShadowMappingDepthBiasSlopeFactor();
+
+					if (ImGui::DragFloat("Depth bias constant factor", &depthBiasConstantFactor, 0.01f))
+						rhi.SetShadowMappingDepthBiasConstantFactor(depthBiasConstantFactor);
+
+					if (ImGui::DragFloat("Depth bias slope factor", &depthBiasSlopeFactor, 0.01f))
+						rhi.SetShadowMappingDepthBiasSlopeFactor(depthBiasSlopeFactor);
+				}
+
+				ImGui::EndTabItem();
+			}
+
 			if (ImGui::BeginTabItem("Scene"))
 			{
 				scene::CameraNode* camera = scene.GetCurrentCamera();
