@@ -8,6 +8,7 @@
 #include "glm\glm.hpp"
 
 #include "LuxVkImpl.h"
+#include "rhi\Image.h"
 #include "resource\Mesh.h"
 
 
@@ -30,10 +31,27 @@ namespace lux::rhi
 		glm::vec2 inverseScreenSize;
 		int toneMapping;
 		float exposure = 1.0f;
-		float FXAAPercent = 0.5f;
-		int FXAADebug;
+		float splitViewRatio = 0.5f;
+		int splitViewMask;
 		float FXAAContrastThreshold = 0.0312f;
 		float FXAARelativeThreshold = 0.125f;
+	};
+
+	enum PostProcessSplitViewMask
+	{
+		SPLIT_VIEW_TONE_MAPPING_MASK = 0x1,
+		SPLIT_VIEW_FXAA_MASK = 0x2,
+		SPLIT_VIEW_SSAO_MASK = 0x4,
+		SPLIT_VIEW_MASK_COUNT = 0x8,
+	};
+
+	struct SSAOParameters
+	{
+		glm::mat4 proj;
+		int kernelSize = 16;
+		float kernelRadius = 0.5f;
+		float bias = 0.01f;
+		float strenght = 1.0f;
 	};
 
 	struct ForwardRenderer
@@ -47,11 +65,22 @@ namespace lux::rhi
 		const ForwardRenderer& operator=(const ForwardRenderer&) = delete;
 		const ForwardRenderer& operator=(ForwardRenderer&&) = delete;
 
+		VkRenderPass ssaoRenderPass;
+		std::vector<VkFramebuffer> ssaoFrameBuffers;
+		std::vector<Image> ssaoColorAttachments;
+
+		GraphicsPipeline ssaoGraphicsPipeline;
+		std::vector<VkDescriptorSet> ssaoDescriptorSets;
+
+
+
 		VkRenderPass blitRenderPass;
 		std::vector<VkFramebuffer> blitFrameBuffers;
 
 		GraphicsPipeline blitGraphicsPipeline;
 		std::vector<VkDescriptorSet> blitDescriptorSets;
+		Buffer SSAOKernelsUniformBuffer;
+		Image SSAONoiseImage;
 
 		VkFormat rtImageFormat;
 
@@ -73,6 +102,7 @@ namespace lux::rhi
 		RtViewProjUniform rtViewProjUniform;
 		std::vector<Buffer> viewProjUniformBuffers;
 
+
 		std::vector<VkImage> rtColorAttachmentImages;
 		std::vector<VkImageView> rtColorAttachmentImageViews;
 		std::vector<VkDeviceMemory> rtColorAttachmentImageMemories;
@@ -81,22 +111,37 @@ namespace lux::rhi
 		VkImageView rtResolveColorAttachmentImageView;
 		VkDeviceMemory rtResolveColorAttachmentMemory;
 
+
 		VkImage rtDepthAttachmentImage;
 		VkImageView rtDepthAttachmentImageView;
 		VkDeviceMemory rtDepthAttachmentMemory;
+
+		Image rtPositionMap;
+		Image rtResolvePositionMap;
+
+		Image rtNormalMap;
+		Image rtResolveNormalMap;
+
+		Image rtResolveDepth;
+
+		Image rtIndirectColorMap;
 
 		VkSampler sampler;
 		VkSampler cubemapSampler;
 		VkSampler irradianceSampler;
 		VkSampler prefilteredSampler;
+		VkSampler SSAONoiseSampler;
 
 		PostProcessParameters postProcessParameters;
+		SSAOParameters ssaoParameters;
 
 		enum ForwardRtAttachmentBindPoints : uint32_t
 		{
 			FORWARD_RT_COLOR_ATTACHMENT_BIND_POINT = 0,
 			FORWARD_RT_DEPTH_ATTACHMENT_BIND_POINT,
-			FORWARD_RT_RESOLVE_COLOR_ATTACHMENT_BIND_POINT,
+			FORWARD_RT_POSITION_ATTACHMENT_BIND_POINT,
+			FORWARD_RT_NORMAL_ATTACHMENT_BIND_POINT,
+			FORWARD_RT_INDIRECT_COLOR_ATTACHMENT_BIND_POINT,
 			FORWARD_RT_ATTACHMENT_BIND_POINT_COUNT
 		};
 

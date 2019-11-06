@@ -85,6 +85,9 @@
     <Filter Include="Resource Files\shadowMapping">
       <UniqueIdentifier>{bb890761-e6c5-4237-b3ca-3f80d71c6424}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resource Files\SSAO">
+      <UniqueIdentifier>{10f661e3-1428-434b-9643-84fe9d28aed6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\main.cpp">
@@ -349,9 +352,6 @@
     <None Include="data\shaders\generateBRDFLut\generateBRDFLut.vert">
       <Filter>Resource Files\generateBRDFLut</Filter>
     </None>
-    <None Include="data\shaders\shadowMapping\directionalShadowMapping.vert">
-      <Filter>Resource Files\shadowMapping</Filter>
-    </None>
     <None Include="data\shaders\CompileShaders.bat">
       <Filter>Resource Files</Filter>
     </None>
@@ -363,6 +363,21 @@
     </None>
     <None Include="data\shaders\generateBRDFLut\generateBRDFLut.comp">
       <Filter>Resource Files\generateBRDFLut</Filter>
+    </None>
+    <None Include="data\shaders\SSAO\SSAO.frag">
+      <Filter>Resource Files\SSAO</Filter>
+    </None>
+    <None Include="data\shaders\SSAO\SSAO.vert">
+      <Filter>Resource Files\SSAO</Filter>
+    </None>
+    <None Include="data\shaders\shadowMapping\pointShadowMapping.frag">
+      <Filter>Resource Files\shadowMapping</Filter>
+    </None>
+    <None Include="data\shaders\shadowMapping\pointShadowMapping.vert">
+      <Filter>Resource Files\shadowMapping</Filter>
+    </None>
+    <None Include="data\shaders\shadowMapping\directionalShadowMapping.vert">
+      <Filter>Resource Files\shadowMapping</Filter>
     </None>
   </ItemGroup>
 </Project>

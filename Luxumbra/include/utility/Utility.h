@@ -9,7 +9,8 @@
 namespace lux::utility
 {
 
-	std::vector<char> ReadFile(const std::string& filePath);
+	std::vector<char> ReadFile(const std::string& filePath) noexcept;
+	float Lerp(float a, float b, float t) noexcept;
 
 } // namespace lux::utility
 

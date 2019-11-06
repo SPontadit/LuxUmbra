@@ -5,7 +5,7 @@
 namespace lux::utility
 {
 
-	std::vector<char> ReadFile(const std::string& filePath)
+	std::vector<char> ReadFile(const std::string& filePath) noexcept
 	{
 		std::ifstream file(filePath, std::ios::ate | std::ios::binary);
 
@@ -20,5 +20,9 @@ namespace lux::utility
 		return buffer;
 	}
 
+	float Lerp(float a, float b, float t) noexcept
+	{
+		return a + t * (b - a);
+	}
 
 } // namespace lux::utility

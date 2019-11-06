@@ -32,12 +32,16 @@ namespace lux::rhi
 		alignas(16) glm::vec3 direction;
 		alignas(16) glm::vec3 color;
 		alignas(16) glm::mat4 viewProj;
+		float shadowMapTexelSize;
+		float pcfExtent;
+		float pcfKernelSize;
 	};
 
 	struct PointLightBuffer
 	{
 		alignas(16) glm::vec3 position;
 		alignas(16) glm::vec3 color;
+		float radius;
 	};
 
 	struct LightCountsPushConstant
@@ -72,6 +76,7 @@ namespace lux::rhi
 		
 		void CreateImage(const ImageCreateInfo& luxImageCI, Image& image) noexcept;
 		void CreateImage(const ImageCreateInfo& luxImageCI, Image& image, VkSampler* sampler) noexcept;
+		void CreateImageFromBuffer(ImageCreateInfo& luxImageCI, void* data, uint32_t size, Image& image) noexcept;
 		void GenerateMipChain(const ImageCreateInfo& luxImageCI, Image& image) noexcept;
 		void FillImage(const ImageCreateInfo& luxImageCI, Image& image) noexcept;
 		void DestroyImage(Image& image) noexcept;
@@ -147,10 +152,10 @@ namespace lux::rhi
 		void InitSwapchain() noexcept;
 		void InitCommandBuffer() noexcept;
 
-		void InitShadowMapperDefaultResources() noexcept;
-		void InitShadowMapperRenderPass() noexcept;
+		void InitShadowMapperRenderPasses() noexcept;
 		void InitShadowMapperPipelines() noexcept;
 		void InitShadowMapperDescriptorPool() noexcept;
+		void InitShadowMapperDefaultResources() noexcept;
 
 		void InitForwardRenderPass() noexcept;
 		void InitForwardFramebuffers() noexcept;
@@ -173,16 +178,17 @@ namespace lux::rhi
 		void GenerateBRDFLutFS(Image& BRDFLut) noexcept;
 		void GenerateBRDFLutCS(Image& BRDFLut) noexcept;
 
+		void GenerateSSAOKernels() noexcept;
+
 		void RenderShadowMaps(VkCommandBuffer commandBuffer, const std::vector<scene::LightNode*>& lights,const std::vector<scene::MeshNode*>& meshes) noexcept;
 		void RenderForward(VkCommandBuffer commandBuffer, int imageIndex, const scene::CameraNode* camera, const std::vector<scene::MeshNode*>& meshes, const std::vector<scene::LightNode*>& lights) noexcept;
-		void RenderPostProcess(VkCommandBuffer commandBuffer, int imageIndex) noexcept;
+		void RenderPostProcess(VkCommandBuffer commandBuffer, int imageIndex, const scene::CameraNode* camera) noexcept;
 
 		void BuildLightUniformBuffers(size_t lightCount) noexcept;
 
 		void GenerateCubemap(const CubeMapCreateInfo& luxCubemapCI, const Image& source, Image& image) noexcept;
 
 		void UpdateForwardUniformBuffers(const scene::CameraNode* camera, const std::vector<resource::Material*>& materials) noexcept;
-		void UpdateLightsUniformBuffers(const std::vector<scene::LightNode*>& lights) noexcept;
 
 		void DestroySwapchainRelatedResources() noexcept;
 		void DestroyComputeRelatedResources() noexcept;
@@ -200,7 +206,7 @@ namespace lux::rhi
 		void EndSingleTimeCommandBuffer(VkCommandBuffer commandBuffer) const noexcept;
 
 		void CommandTransitionImageLayout(VkCommandBuffer, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t layerCount = 1, uint32_t levelCount = 1, uint32_t baseMipLevel = 0) noexcept;
-		void CommandTransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) noexcept;
+		void CommandTransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t layerCount = 1, uint32_t levelCount = 1, uint32_t baseMipLevel = 0) noexcept;
 
 		void CreateGraphicsPipeline(const GraphicsPipelineCreateInfo& luxGraphicsPipelineCI, GraphicsPipeline& graphicsPipeline) noexcept;
 		void WriteGraphicsPipelineCacheOnDisk(const std::string& cacheFilePath, GraphicsPipeline& graphicsPipeline) noexcept;

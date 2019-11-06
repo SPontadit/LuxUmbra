@@ -9,53 +9,28 @@ namespace lux::rhi
 	using namespace lux;
 
 	ShadowMapper::ShadowMapper() noexcept
-		: renderPass(VK_NULL_HANDLE), directionalShadowMappingPipeline(), descriptorPool(VK_NULL_HANDLE),
-		dummyDirectionalShadowMap(), directionalShadowMaps(0), directionalFramebuffers(0),
+		: directionalShadowMappingRenderPass(VK_NULL_HANDLE), pointShadowMappingRenderPass(VK_NULL_HANDLE),
+		directionalShadowMappingPipeline(), pointShadowMappingPipeline(),
+		descriptorPool(VK_NULL_HANDLE),
+		directionalShadowMapIntermediate(), dummyDirectionalShadowMap(), directionalFramebuffer(VK_NULL_HANDLE), directionalShadowMaps(0),
 		directionalUniformBuffers(0), directionalUniformBufferDescriptorSets(0),
-		pointShadowMaps(0), pointFramebuffers(0),
+		pointShadowMapIntermediate(), dummyPointShadowMap(), pointFramebuffer(VK_NULL_HANDLE), pointShadowMaps(0),
 		pointUniformBuffers(0), pointUniformBufferDescriptorSets(0)
 	{
 
 	}
 
-	void RHI::InitShadowMapperDefaultResources() noexcept
+	void RHI::InitShadowMapperRenderPasses() noexcept
 	{
-		ImageCreateInfo dummyDirectionalShadowMapImageCI = {};
-		dummyDirectionalShadowMapImageCI.format = depthImageFormat;
-		dummyDirectionalShadowMapImageCI.width = 2;
-		dummyDirectionalShadowMapImageCI.height = 2;
-		dummyDirectionalShadowMapImageCI.arrayLayers = 1;
-		dummyDirectionalShadowMapImageCI.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-		dummyDirectionalShadowMapImageCI.subresourceRangeLayerCount = 1;
-		dummyDirectionalShadowMapImageCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-		dummyDirectionalShadowMapImageCI.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
+		VkAttachmentDescription attachments[2] = {};
 
-		CreateImage(dummyDirectionalShadowMapImageCI, shadowMapper.dummyDirectionalShadowMap);
-
-		CommandTransitionImageLayout(shadowMapper.dummyDirectionalShadowMap.image, depthImageFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
-
-		shadowMapper.directionalShadowMaps.reserve(DIRECTIONAL_LIGHT_MAX_COUNT);
-		shadowMapper.directionalFramebuffers.reserve(DIRECTIONAL_LIGHT_MAX_COUNT);
-		shadowMapper.directionalUniformBuffers.reserve(DIRECTIONAL_LIGHT_MAX_COUNT);
-		shadowMapper.directionalUniformBufferDescriptorSets.reserve(DIRECTIONAL_LIGHT_MAX_COUNT);
-
-		shadowMapper.pointShadowMaps.reserve(POINT_LIGHT_MAX_COUNT);
-		shadowMapper.pointFramebuffers.reserve(POINT_LIGHT_MAX_COUNT);
-		shadowMapper.pointUniformBuffers.reserve(POINT_LIGHT_MAX_COUNT);
-		shadowMapper.pointUniformBufferDescriptorSets.reserve(POINT_LIGHT_MAX_COUNT);
-	}
-
-	void RHI::InitShadowMapperRenderPass() noexcept
-	{
-		VkAttachmentDescription depthAttachment = {};
+		VkAttachmentDescription& depthAttachment = attachments[0];
 		depthAttachment.format = depthImageFormat;
 		depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
 		depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 		depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 
 		VkAttachmentReference depthAttachmentRef = {};
 		depthAttachmentRef.attachment = 0;
@@ -63,16 +38,53 @@ namespace lux::rhi
 
 		VkSubpassDescription subpass = {};
 		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-		subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
 		VkRenderPassCreateInfo renderPassCI = {};
 		renderPassCI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		renderPassCI.attachmentCount = 1;
-		renderPassCI.pAttachments = &depthAttachment;
 		renderPassCI.subpassCount = 1;
 		renderPassCI.pSubpasses = &subpass;
 
-		CHECK_VK(vkCreateRenderPass(device, &renderPassCI, nullptr, &shadowMapper.renderPass));
+		// Directional lights
+
+		depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		depthAttachment.finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+
+		subpass.colorAttachmentCount = 0;
+		subpass.pColorAttachments = nullptr;
+		subpass.pDepthStencilAttachment = &depthAttachmentRef;
+
+		renderPassCI.attachmentCount = 1;
+		renderPassCI.pAttachments = &depthAttachment;
+
+		CHECK_VK(vkCreateRenderPass(device, &renderPassCI, nullptr, &shadowMapper.directionalShadowMappingRenderPass));
+
+		// Point lights
+
+		depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+		VkAttachmentDescription& colorAttachment = attachments[1];
+		colorAttachment.format = VK_FORMAT_R32_SFLOAT;
+		colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		colorAttachment.finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+
+		VkAttachmentReference colorAttachmentRef = {};
+		colorAttachmentRef.attachment = 1;
+		colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+		subpass.colorAttachmentCount = 1;
+		subpass.pColorAttachments = &colorAttachmentRef;
+		subpass.pDepthStencilAttachment = &depthAttachmentRef;
+
+		renderPassCI.attachmentCount = 2;
+		renderPassCI.pAttachments = attachments;
+
+		CHECK_VK(vkCreateRenderPass(device, &renderPassCI, nullptr, &shadowMapper.pointShadowMappingRenderPass));
 	}
 
 	void RHI::InitShadowMapperPipelines() noexcept
@@ -83,19 +95,21 @@ namespace lux::rhi
 		viewProjUniformBufferDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		viewProjUniformBufferDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
+		// Directional lights
+
 		VkPushConstantRange modelPushConstantRange = {};
 		modelPushConstantRange.offset = 0;
-		modelPushConstantRange.size = sizeof(ShadowMappingModelConstant);
+		modelPushConstantRange.size = TO_UINT32_T(sizeof(ShadowMappingModelConstant));
 		modelPushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
 		GraphicsPipelineCreateInfo directionalShadowMappingPipelineCI = {};
-		directionalShadowMappingPipelineCI.renderPass = shadowMapper.renderPass;
+		directionalShadowMappingPipelineCI.renderPass = shadowMapper.directionalShadowMappingRenderPass;
 		directionalShadowMappingPipelineCI.subpassIndex = 0;
 		directionalShadowMappingPipelineCI.binaryVertexFilePath = "data/shaders/shadowMapping/directionalShadowMapping.vert.spv";
 		directionalShadowMappingPipelineCI.vertexLayout = VertexLayout::VERTEX_POSITION_ONLY_LAYOUT;
 		directionalShadowMappingPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-		directionalShadowMappingPipelineCI.viewportWidth = TO_FLOAT(SHADOW_MAP_TEXTURE_SIZE);
-		directionalShadowMappingPipelineCI.viewportHeight = TO_FLOAT(SHADOW_MAP_TEXTURE_SIZE);
+		directionalShadowMappingPipelineCI.viewportWidth = DIRECTIONAL_SHADOW_MAP_TEXTURE_SIZE;
+		directionalShadowMappingPipelineCI.viewportHeight = DIRECTIONAL_SHADOW_MAP_TEXTURE_SIZE;
 		directionalShadowMappingPipelineCI.rasterizerCullMode = VK_CULL_MODE_BACK_BIT;
 		directionalShadowMappingPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		directionalShadowMappingPipelineCI.disableMSAA = VK_TRUE;
@@ -109,6 +123,36 @@ namespace lux::rhi
 		directionalShadowMappingPipelineCI.pushConstants = { modelPushConstantRange };
 
 		CreateGraphicsPipeline(directionalShadowMappingPipelineCI, shadowMapper.directionalShadowMappingPipeline);
+
+		// Point lights
+
+		VkPushConstantRange modelAndVPIndexPushConstantRange = {};
+		modelAndVPIndexPushConstantRange.offset = 0;
+		modelAndVPIndexPushConstantRange.size = TO_UINT32_T(sizeof(ShadowMappingModelConstant) + sizeof(uint32_t));
+		modelAndVPIndexPushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+		GraphicsPipelineCreateInfo pointShadowMappingPipelineCI = {};
+		pointShadowMappingPipelineCI.renderPass = shadowMapper.pointShadowMappingRenderPass;
+		pointShadowMappingPipelineCI.subpassIndex = 0;
+		pointShadowMappingPipelineCI.binaryVertexFilePath = "data/shaders/shadowMapping/pointShadowMapping.vert.spv";
+		pointShadowMappingPipelineCI.binaryFragmentFilePath = "data/shaders/shadowMapping/pointShadowMapping.frag.spv";
+		pointShadowMappingPipelineCI.vertexLayout = VertexLayout::VERTEX_POSITION_ONLY_LAYOUT;
+		pointShadowMappingPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		pointShadowMappingPipelineCI.viewportWidth = POINT_SHADOW_MAP_TEXTURE_SIZE;
+		pointShadowMappingPipelineCI.viewportHeight = POINT_SHADOW_MAP_TEXTURE_SIZE;
+		pointShadowMappingPipelineCI.rasterizerCullMode = VK_CULL_MODE_BACK_BIT;
+		pointShadowMappingPipelineCI.rasterizerFrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+		pointShadowMappingPipelineCI.disableMSAA = VK_TRUE;
+		pointShadowMappingPipelineCI.enableDepthTest = VK_TRUE;
+		pointShadowMappingPipelineCI.enableDepthWrite = VK_TRUE;
+		pointShadowMappingPipelineCI.enableDepthBias = VK_TRUE;
+		pointShadowMappingPipelineCI.depthBiasConstantFactor = 4.f;
+		pointShadowMappingPipelineCI.depthBiasSlopeFactor = 1.5f;
+		pointShadowMappingPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS;
+		pointShadowMappingPipelineCI.viewDescriptorSetLayoutBindings = { viewProjUniformBufferDescriptorSetLayoutBinding };
+		pointShadowMappingPipelineCI.pushConstants = { modelAndVPIndexPushConstantRange };
+
+		CreateGraphicsPipeline(pointShadowMappingPipelineCI, shadowMapper.pointShadowMappingPipeline);
 	}
 
 	void RHI::InitShadowMapperDescriptorPool() noexcept
@@ -129,32 +173,155 @@ namespace lux::rhi
 		CHECK_VK(vkCreateDescriptorPool(device, &descriptorPoolCI, nullptr, &shadowMapper.descriptorPool));
 	}
 
+	void RHI::InitShadowMapperDefaultResources() noexcept
+	{
+		// Directional lights
+
+		ImageCreateInfo directionalShadowMapIntermediateCI = {};
+		directionalShadowMapIntermediateCI.format = depthImageFormat;
+		directionalShadowMapIntermediateCI.width = DIRECTIONAL_SHADOW_MAP_TEXTURE_SIZE;
+		directionalShadowMapIntermediateCI.height = DIRECTIONAL_SHADOW_MAP_TEXTURE_SIZE;
+		directionalShadowMapIntermediateCI.arrayLayers = 1;
+		directionalShadowMapIntermediateCI.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+		directionalShadowMapIntermediateCI.subresourceRangeLayerCount = 1;
+		directionalShadowMapIntermediateCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+		directionalShadowMapIntermediateCI.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
+
+		CreateImage(directionalShadowMapIntermediateCI, shadowMapper.directionalShadowMapIntermediate);
+
+		ImageCreateInfo dummyDirectionalShadowMapCI = {};
+		dummyDirectionalShadowMapCI.format = depthImageFormat;
+		dummyDirectionalShadowMapCI.width = 2;
+		dummyDirectionalShadowMapCI.height = 2;
+		dummyDirectionalShadowMapCI.arrayLayers = 1;
+		dummyDirectionalShadowMapCI.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		dummyDirectionalShadowMapCI.subresourceRangeLayerCount = 1;
+		dummyDirectionalShadowMapCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+		dummyDirectionalShadowMapCI.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
+
+		CreateImage(dummyDirectionalShadowMapCI, shadowMapper.dummyDirectionalShadowMap);
+
+		CommandTransitionImageLayout(shadowMapper.dummyDirectionalShadowMap.image, depthImageFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+
+		VkFramebufferCreateInfo directionalFramebufferCI = {};
+		directionalFramebufferCI.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		directionalFramebufferCI.renderPass = shadowMapper.directionalShadowMappingRenderPass;
+		directionalFramebufferCI.width = DIRECTIONAL_SHADOW_MAP_TEXTURE_SIZE;
+		directionalFramebufferCI.height = DIRECTIONAL_SHADOW_MAP_TEXTURE_SIZE;
+		directionalFramebufferCI.layers = 1;
+		directionalFramebufferCI.attachmentCount = 1;
+		directionalFramebufferCI.pAttachments = &shadowMapper.directionalShadowMapIntermediate.imageView;
+
+		CHECK_VK(vkCreateFramebuffer(device, &directionalFramebufferCI, nullptr, &shadowMapper.directionalFramebuffer));
+
+		shadowMapper.directionalShadowMaps.reserve(DIRECTIONAL_LIGHT_MAX_COUNT);
+		shadowMapper.directionalUniformBuffers.reserve(DIRECTIONAL_LIGHT_MAX_COUNT);
+		shadowMapper.directionalUniformBufferDescriptorSets.reserve(DIRECTIONAL_LIGHT_MAX_COUNT);
+
+		// Point lights
+
+		ImageCreateInfo pointShadowMapIntermediateCI = {};
+		pointShadowMapIntermediateCI.format = VK_FORMAT_R32_SFLOAT;
+		pointShadowMapIntermediateCI.width = POINT_SHADOW_MAP_TEXTURE_SIZE;
+		pointShadowMapIntermediateCI.height = POINT_SHADOW_MAP_TEXTURE_SIZE;
+		pointShadowMapIntermediateCI.arrayLayers = 1;
+		pointShadowMapIntermediateCI.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+		pointShadowMapIntermediateCI.subresourceRangeLayerCount = 1;
+		pointShadowMapIntermediateCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		pointShadowMapIntermediateCI.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
+
+		CreateImage(pointShadowMapIntermediateCI, shadowMapper.pointShadowMapIntermediate);
+
+		ImageCreateInfo pointShadowMapDepthCI = {};
+		pointShadowMapDepthCI.format = depthImageFormat;
+		pointShadowMapDepthCI.width = POINT_SHADOW_MAP_TEXTURE_SIZE;
+		pointShadowMapDepthCI.height = POINT_SHADOW_MAP_TEXTURE_SIZE;
+		pointShadowMapDepthCI.arrayLayers = 1;
+		pointShadowMapDepthCI.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+		pointShadowMapDepthCI.subresourceRangeLayerCount = 1;
+		pointShadowMapDepthCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+		pointShadowMapDepthCI.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
+
+		CreateImage(pointShadowMapDepthCI, shadowMapper.pointShadowMapDepth);
+
+		ImageCreateInfo dummyPointShadowMapCI = {};
+		dummyPointShadowMapCI.format = VK_FORMAT_R32_SFLOAT;
+		dummyPointShadowMapCI.width = 2;
+		dummyPointShadowMapCI.height = 2;
+		dummyPointShadowMapCI.arrayLayers = 6;
+		dummyPointShadowMapCI.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+		dummyPointShadowMapCI.subresourceRangeLayerCount = 6;
+		dummyPointShadowMapCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		dummyPointShadowMapCI.imageViewType = VK_IMAGE_VIEW_TYPE_CUBE;
+
+		CreateImage(dummyPointShadowMapCI, shadowMapper.dummyPointShadowMap);
+
+		CommandTransitionImageLayout(shadowMapper.dummyPointShadowMap.image, VK_FORMAT_R32_SFLOAT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 6);
+
+		VkImageView attachments[2] = { shadowMapper.pointShadowMapDepth.imageView, shadowMapper.pointShadowMapIntermediate.imageView };
+
+		VkFramebufferCreateInfo pointFramebufferCI = {};
+		pointFramebufferCI.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		pointFramebufferCI.renderPass = shadowMapper.pointShadowMappingRenderPass;
+		pointFramebufferCI.width = POINT_SHADOW_MAP_TEXTURE_SIZE;
+		pointFramebufferCI.height = POINT_SHADOW_MAP_TEXTURE_SIZE;
+		pointFramebufferCI.layers = 1;
+		pointFramebufferCI.attachmentCount = 2;
+		pointFramebufferCI.pAttachments = attachments;
+
+		CHECK_VK(vkCreateFramebuffer(device, &pointFramebufferCI, nullptr, &shadowMapper.pointFramebuffer));
+
+		shadowMapper.pointShadowMaps.reserve(POINT_LIGHT_MAX_COUNT);
+		shadowMapper.pointUniformBuffers.reserve(POINT_LIGHT_MAX_COUNT);
+		shadowMapper.pointUniformBufferDescriptorSets.reserve(POINT_LIGHT_MAX_COUNT);
+	}
+
 	void RHI::DestroyShadowMapper() noexcept
 	{
-		size_t directionalLightCount = shadowMapper.directionalFramebuffers.size();
+		// Directional lights
+
+		size_t directionalLightCount = shadowMapper.directionalShadowMaps.size();
 		for (size_t i = 0; i < directionalLightCount; i++)
 		{
-			vkDestroyFramebuffer(device, shadowMapper.directionalFramebuffers[i], nullptr);
 			DestroyImage(shadowMapper.directionalShadowMaps[i]);
 			DestroyBuffer(shadowMapper.directionalUniformBuffers[i]);
 		}
-		vkFreeDescriptorSets(device, shadowMapper.descriptorPool, TO_UINT32_T(directionalLightCount), shadowMapper.directionalUniformBufferDescriptorSets.data());
 
-		size_t pointLightCount = shadowMapper.pointFramebuffers.size();
+		if (directionalLightCount > 0)
+			vkFreeDescriptorSets(device, shadowMapper.descriptorPool, TO_UINT32_T(directionalLightCount), shadowMapper.directionalUniformBufferDescriptorSets.data());
+
+		vkDestroyFramebuffer(device, shadowMapper.directionalFramebuffer, nullptr);
+		DestroyImage(shadowMapper.directionalShadowMapIntermediate);
+		DestroyImage(shadowMapper.dummyDirectionalShadowMap);
+
+		DestroyGraphicsPipeline(shadowMapper.pointShadowMappingPipeline);
+
+		vkDestroyRenderPass(device, shadowMapper.pointShadowMappingRenderPass, nullptr);
+
+		// Point lights
+
+		size_t pointLightCount = shadowMapper.pointShadowMaps.size();
 		for (size_t i = 0; i < pointLightCount; i++)
 		{
-			vkDestroyFramebuffer(device, shadowMapper.pointFramebuffers[i], nullptr);
 			DestroyImage(shadowMapper.pointShadowMaps[i]);
+			DestroyBuffer(shadowMapper.pointUniformBuffers[i]);
 		}
-		vkFreeDescriptorSets(device, shadowMapper.descriptorPool, TO_UINT32_T(pointLightCount), shadowMapper.pointUniformBufferDescriptorSets.data());
 
-		vkDestroyDescriptorPool(device, shadowMapper.descriptorPool, nullptr);
+		if (pointLightCount > 0)
+			vkFreeDescriptorSets(device, shadowMapper.descriptorPool, TO_UINT32_T(pointLightCount), shadowMapper.pointUniformBufferDescriptorSets.data());
+
+		vkDestroyFramebuffer(device, shadowMapper.pointFramebuffer, nullptr);
+		DestroyImage(shadowMapper.pointShadowMapIntermediate);
+		DestroyImage(shadowMapper.pointShadowMapDepth);
+		DestroyImage(shadowMapper.dummyPointShadowMap);
 
 		DestroyGraphicsPipeline(shadowMapper.directionalShadowMappingPipeline);
 
-		vkDestroyRenderPass(device, shadowMapper.renderPass, nullptr);
+		vkDestroyRenderPass(device, shadowMapper.directionalShadowMappingRenderPass, nullptr);
 
-		DestroyImage(shadowMapper.dummyDirectionalShadowMap);
+		// Common
+
+		vkDestroyDescriptorPool(device, shadowMapper.descriptorPool, nullptr);
 	}
 
 	void RHI::RenderShadowMaps(VkCommandBuffer commandBuffer, const std::vector<scene::LightNode*>& lights, const std::vector<scene::MeshNode*>& meshes) noexcept
@@ -163,7 +330,7 @@ namespace lux::rhi
 		std::array<VkDescriptorImageInfo, DIRECTIONAL_LIGHT_MAX_COUNT> directionalShadowMapsImageDescriptorInfo;
 
 		std::array<PointLightBuffer, POINT_LIGHT_MAX_COUNT> pointLightBuffer;
-		//std::array<VkDescriptorImageInfo, POINT_LIGHT_MAX_COUNT> pointShadowMapsImageDescriptorInfo;
+		std::array<VkDescriptorImageInfo, POINT_LIGHT_MAX_COUNT> pointShadowMapsImageDescriptorInfo;
 
 		size_t directionalLightIndex = 0;
 		size_t pointLightIndex = 0;
@@ -173,11 +340,13 @@ namespace lux::rhi
 
 		VkDeviceSize vertexBufferOffsets[] = { 0 };
 
-		//float aabbDebugBoxScaleFactor = 1.f / 1.28f;
-
 		for (size_t i = 0; i < lightCount; i++)
 		{
 			scene::LightNode* light = lights[i];
+
+			int16_t resourceIndex = light->GetShadowMappingResourceIndex();
+			if (resourceIndex == -1)
+				continue;
 
 			switch (light->GetType())
 			{
@@ -228,39 +397,40 @@ namespace lux::rhi
 
 				glm::mat4 view = glm::lookAt(lightPos, lightPos + lightDir, glm::vec3(0.f, 1.f, 0.f));
 
-				// Update light UBO
+				glm::mat4 viewProj = proj * view;
+
+				// Update light UBO & descriptor
 
 				lightBufferEntry.direction = lightDir;
 				lightBufferEntry.color = light->GetColor();
-				lightBufferEntry.viewProj = proj * view;
-
-				// RNEDER SHADOW MAP
-
-				size_t resourceIndex = TO_SIZE_T(light->GetShadowMappingResourceIndex());
-
-				// Update shadow mapping UBO
-
-				DirectionalShadowMappingViewProjUniform viewProjUniform;
-				viewProjUniform.viewProj = lightBufferEntry.viewProj;
-
-				UpdateBuffer(shadowMapper.directionalUniformBuffers[resourceIndex], &viewProjUniform);
-
-				// Update shadow maps descriptor
+				lightBufferEntry.viewProj = viewProj;
+				lightBufferEntry.shadowMapTexelSize = 1.f / DIRECTIONAL_SHADOW_MAP_TEXTURE_SIZE;
+				lightBufferEntry.pcfExtent = 1.f;
+				lightBufferEntry.pcfKernelSize = lightBufferEntry.pcfExtent * 2.0f + 1.f;
+				lightBufferEntry.pcfKernelSize *= lightBufferEntry.pcfKernelSize;
 
 				VkDescriptorImageInfo& shadowMapDescriptorInfo = directionalShadowMapsImageDescriptorInfo[directionalLightIndex];
 				shadowMapDescriptorInfo.imageView = shadowMapper.directionalShadowMaps[resourceIndex].imageView;
 				shadowMapDescriptorInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 				shadowMapDescriptorInfo.sampler = forward.sampler;
 
+				// Update shadow mapping UBO
+
+				DirectionalShadowMappingViewProjUniform viewProjUniform;
+				viewProjUniform.viewProj = viewProj;
+
+				UpdateBuffer(shadowMapper.directionalUniformBuffers[resourceIndex], &viewProjUniform);
+
+				// Render shadow map
+
 				VkClearValue depthClearValue = {};
 				depthClearValue.depthStencil.depth = 1.f;
-				depthClearValue.depthStencil.stencil = 0;
 
 				VkRenderPassBeginInfo shadowMappingRenderPassBI = {};
 				shadowMappingRenderPassBI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-				shadowMappingRenderPassBI.renderPass = shadowMapper.renderPass;
-				shadowMappingRenderPassBI.framebuffer = shadowMapper.directionalFramebuffers[resourceIndex];
-				shadowMappingRenderPassBI.renderArea = { { 0, 0 }, {SHADOW_MAP_TEXTURE_SIZE, SHADOW_MAP_TEXTURE_SIZE} };
+				shadowMappingRenderPassBI.renderPass = shadowMapper.directionalShadowMappingRenderPass;
+				shadowMappingRenderPassBI.framebuffer = shadowMapper.directionalFramebuffer;
+				shadowMappingRenderPassBI.renderArea = { { 0, 0 }, { DIRECTIONAL_SHADOW_MAP_TEXTURE_SIZE, DIRECTIONAL_SHADOW_MAP_TEXTURE_SIZE } };
 				shadowMappingRenderPassBI.clearValueCount = 1;
 				shadowMappingRenderPassBI.pClearValues = &depthClearValue;
 
@@ -271,7 +441,7 @@ namespace lux::rhi
 
 				ShadowMappingModelConstant shadowMappingModelConstant = {};
 
-				for (size_t j = 1; j < meshCount; j += 2)
+				for (size_t j = 0; j < meshCount; j++)
 				{
 					scene::MeshNode* meshNode = meshes[j];
 
@@ -286,22 +456,154 @@ namespace lux::rhi
 
 				vkCmdEndRenderPass(commandBuffer);
 
+				CommandTransitionImageLayout(commandBuffer, shadowMapper.directionalShadowMaps[resourceIndex].image, depthImageFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+				VkImageCopy imageCopy = {};
+				imageCopy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+				imageCopy.srcSubresource.layerCount = 1;
+				imageCopy.srcSubresource.baseArrayLayer = 0;
+				imageCopy.srcSubresource.mipLevel = 0;
+				imageCopy.srcOffset = { 0, 0, 0 };
+
+				imageCopy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+				imageCopy.dstSubresource.layerCount = 1;
+				imageCopy.dstSubresource.baseArrayLayer = 0;
+				imageCopy.dstSubresource.mipLevel = 0;
+				imageCopy.dstOffset = { 0, 0, 0 };
+
+				imageCopy.extent.width = DIRECTIONAL_SHADOW_MAP_TEXTURE_SIZE;
+				imageCopy.extent.height = DIRECTIONAL_SHADOW_MAP_TEXTURE_SIZE;
+				imageCopy.extent.depth = 1;
+
+				vkCmdCopyImage(commandBuffer, shadowMapper.directionalShadowMapIntermediate.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, shadowMapper.directionalShadowMaps[resourceIndex].image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageCopy);
+
+				CommandTransitionImageLayout(commandBuffer, shadowMapper.directionalShadowMaps[resourceIndex].image, depthImageFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+
 				directionalLightIndex++;
 			}
 			break;
 
 			case scene::LightType::LIGHT_TYPE_POINT:
 			{
+				if (pointLightIndex > POINT_LIGHT_MAX_COUNT)
+					break;
+
 				PointLightBuffer& lightBufferEntry = pointLightBuffer[pointLightIndex];
 
-				// Update light UBO
+				// Update light UBO & descriptor
 
 				lightBufferEntry.position = light->GetWorldPosition();
 				lightBufferEntry.color = light->GetColor();
+				lightBufferEntry.radius = light->GetRadius();
+
+				VkDescriptorImageInfo& shadowMapDescriptorInfo = pointShadowMapsImageDescriptorInfo[pointLightIndex];
+				shadowMapDescriptorInfo.imageView = shadowMapper.pointShadowMaps[resourceIndex].imageView;
+				shadowMapDescriptorInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				shadowMapDescriptorInfo.sampler = forward.sampler;
+
+				// Update shadowMappingUBO
+
+				glm::vec3 lightPos = light->GetWorldPosition();
+
+				PointShadowMappingViewProjUniform viewProjUniformBuffer;
+				viewProjUniformBuffer.proj = glm::perspective(glm::radians(90.f), 1.f, 0.1f, light->GetRadius());;
+				viewProjUniformBuffer.proj[1][1] *= -1.f;
+
+				viewProjUniformBuffer.view[0] = glm::lookAt(lightPos, lightPos + glm::vec3(1.f, 0.f, 0.f), glm::vec3(0.f, -1.f, 0.f));
+				viewProjUniformBuffer.view[1] = glm::lookAt(lightPos, lightPos + glm::vec3(-1.f, 0.f, 0.f), glm::vec3(0.f, -1.f, 0.f));
+				viewProjUniformBuffer.view[2] = glm::lookAt(lightPos, lightPos + glm::vec3(0.f, 1.f, 0.f), glm::vec3(0.f, 0.f, 1.f));
+				viewProjUniformBuffer.view[3] = glm::lookAt(lightPos, lightPos + glm::vec3(0.f, -1.f, 0.f), glm::vec3(0.f, 0.f, -1.f));
+				viewProjUniformBuffer.view[4] = glm::lookAt(lightPos, lightPos + glm::vec3(0.f, 0.f, 1.f), glm::vec3(0.f, -1.f, 0.f));
+				viewProjUniformBuffer.view[5] = glm::lookAt(lightPos, lightPos + glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f, -1.f, 0.f));
+
+				UpdateBuffer(shadowMapper.pointUniformBuffers[resourceIndex], &viewProjUniformBuffer);
+
+				// Render shadow map
+
+				VkClearValue clearValues[2] = {};
+				clearValues[0].depthStencil.depth = 1.f;
+				clearValues[1].color = { 1.f, 1.f, 1.f, 1.f };
+
+				VkRenderPassBeginInfo shadowMappingRenderPassBI = {};
+				shadowMappingRenderPassBI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+				shadowMappingRenderPassBI.renderPass = shadowMapper.pointShadowMappingRenderPass;
+				shadowMappingRenderPassBI.framebuffer = shadowMapper.pointFramebuffer;
+				shadowMappingRenderPassBI.renderArea = { { 0, 0 }, { POINT_SHADOW_MAP_TEXTURE_SIZE, POINT_SHADOW_MAP_TEXTURE_SIZE } };
+				shadowMappingRenderPassBI.clearValueCount = 2;
+				shadowMappingRenderPassBI.pClearValues = clearValues;
+
+				VkImageBlit blitRegion = {};
+				blitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				blitRegion.srcSubresource.layerCount = 1;
+				blitRegion.srcSubresource.baseArrayLayer = 0;
+				blitRegion.srcSubresource.mipLevel = 0;
+				blitRegion.srcOffsets[0] = { 0, 0, 0 };
+				blitRegion.srcOffsets[1] = { POINT_SHADOW_MAP_TEXTURE_SIZE, POINT_SHADOW_MAP_TEXTURE_SIZE, 1 };
+
+				blitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				blitRegion.dstSubresource.layerCount = 1;
+				blitRegion.dstSubresource.mipLevel = 0;
+				blitRegion.dstOffsets[0] = { 0, POINT_SHADOW_MAP_TEXTURE_SIZE, 0 };
+				blitRegion.dstOffsets[1] = { POINT_SHADOW_MAP_TEXTURE_SIZE, 0, 1 };
+
+				VkImageMemoryBarrier blitBarrier = {};
+				blitBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+				blitBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				blitBarrier.dstAccessMask = 0;
+				blitBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+				blitBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+				blitBarrier.srcQueueFamilyIndex = graphicsQueueIndex;
+				blitBarrier.dstQueueFamilyIndex = graphicsQueueIndex;
+				blitBarrier.image = shadowMapper.pointShadowMapIntermediate.image;
+				blitBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				blitBarrier.subresourceRange.layerCount = 1;
+				blitBarrier.subresourceRange.baseArrayLayer = 0;
+				blitBarrier.subresourceRange.levelCount = 1;
+				blitBarrier.subresourceRange.baseMipLevel = 0;
+
+				CommandTransitionImageLayout(commandBuffer, shadowMapper.pointShadowMaps[resourceIndex].image, VK_FORMAT_R32_SFLOAT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 6);
+
+				for (uint32_t i = 0; i < 6; i++)
+				{
+					vkCmdBeginRenderPass(commandBuffer, &shadowMappingRenderPassBI, VK_SUBPASS_CONTENTS_INLINE);
+
+					vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shadowMapper.pointShadowMappingPipeline.pipeline);
+					vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shadowMapper.pointShadowMappingPipeline.pipelineLayout, 0, 1, &shadowMapper.pointUniformBufferDescriptorSets[resourceIndex], 0, nullptr);
+
+					vkCmdPushConstants(commandBuffer, shadowMapper.pointShadowMappingPipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, TO_UINT32_T(sizeof(ShadowMappingModelConstant)), sizeof(uint32_t), &i);
+
+					ShadowMappingModelConstant shadowMappingModelConstant = {};
+
+					for (size_t j = 0; j < meshCount; j++)
+					{
+						scene::MeshNode* meshNode = meshes[j];
+
+						shadowMappingModelConstant.model = meshNode->GetWorldTransform();
+						vkCmdPushConstants(commandBuffer, shadowMapper.pointShadowMappingPipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, TO_UINT32_T(sizeof(ShadowMappingModelConstant)), &shadowMappingModelConstant);
+
+						const resource::Mesh& mesh = meshNode->GetMesh();
+						vkCmdBindVertexBuffers(commandBuffer, 0, 1, &mesh.vertexBuffer.buffer, vertexBufferOffsets);
+						vkCmdBindIndexBuffer(commandBuffer, mesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+						vkCmdDrawIndexed(commandBuffer, mesh.indexCount, 1, 0, 0, 0);
+					}
+
+					vkCmdEndRenderPass(commandBuffer);
+
+					blitRegion.dstSubresource.baseArrayLayer = i;
+
+					vkCmdBlitImage(commandBuffer, shadowMapper.pointShadowMapIntermediate.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, shadowMapper.pointShadowMaps[resourceIndex].image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blitRegion, VK_FILTER_NEAREST);
+					vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &blitBarrier);
+				}
+
+				CommandTransitionImageLayout(commandBuffer, shadowMapper.pointShadowMaps[resourceIndex].image, VK_FORMAT_R32_SFLOAT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 6);
 
 				pointLightIndex++;
 			}
 			break;
+
+			default:
+				ASSERT(false);
+				break;
 			}
 		}
 
@@ -313,6 +615,14 @@ namespace lux::rhi
 			VkDescriptorImageInfo& shadowMapDescriptorInfo = directionalShadowMapsImageDescriptorInfo[directionalLightIndex];
 			shadowMapDescriptorInfo.imageView = shadowMapper.dummyDirectionalShadowMap.imageView;
 			shadowMapDescriptorInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+			shadowMapDescriptorInfo.sampler = forward.sampler;
+		}
+
+		for (; pointLightIndex < POINT_LIGHT_MAX_COUNT; pointLightIndex++)
+		{
+			VkDescriptorImageInfo& shadowMapDescriptorInfo = pointShadowMapsImageDescriptorInfo[pointLightIndex];
+			shadowMapDescriptorInfo.imageView = shadowMapper.dummyPointShadowMap.imageView;
+			shadowMapDescriptorInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 			shadowMapDescriptorInfo.sampler = forward.sampler;
 		}
 
@@ -328,7 +638,21 @@ namespace lux::rhi
 		writeDirectionalShadowMapsDescriptorSet.pImageInfo = directionalShadowMapsImageDescriptorInfo.data();
 		writeDirectionalShadowMapsDescriptorSet.dstSet = forward.rtViewDescriptorSets[currentFrame];
 
-		vkUpdateDescriptorSets(device, 1, &writeDirectionalShadowMapsDescriptorSet, 0, nullptr);
+		VkWriteDescriptorSet writePointShadowMapsDescriptorSet = {};
+		writePointShadowMapsDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writePointShadowMapsDescriptorSet.descriptorCount = POINT_LIGHT_MAX_COUNT;
+		writePointShadowMapsDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		writePointShadowMapsDescriptorSet.dstBinding = 4;
+		writePointShadowMapsDescriptorSet.dstArrayElement = 0;
+		writePointShadowMapsDescriptorSet.pImageInfo = pointShadowMapsImageDescriptorInfo.data();
+		writePointShadowMapsDescriptorSet.dstSet = forward.rtViewDescriptorSets[currentFrame];
+
+		std::array<VkWriteDescriptorSet, 2> descriptorSetWrites = {
+			writeDirectionalShadowMapsDescriptorSet,
+			writePointShadowMapsDescriptorSet
+		};
+
+		vkUpdateDescriptorSets(device, TO_UINT32_T(descriptorSetWrites.size()), descriptorSetWrites.data(), 0, nullptr);
 	}
 
 	int16_t RHI::CreateLightShadowMappingResources(scene::LightType lightType) noexcept
@@ -343,34 +667,24 @@ namespace lux::rhi
 				return -1;
 
 			shadowMapper.directionalShadowMaps.resize(newResourceIndex + 1);
-			shadowMapper.directionalFramebuffers.resize(newResourceIndex + 1);
 			shadowMapper.directionalUniformBuffers.resize(newResourceIndex + 1);
 			shadowMapper.directionalUniformBufferDescriptorSets.resize(newResourceIndex + 1);
 
+			Image& shadowMap = shadowMapper.directionalShadowMaps[newResourceIndex];
+
 			ImageCreateInfo imageCI = {};
 			imageCI.format = depthImageFormat;
-			imageCI.width = SHADOW_MAP_TEXTURE_SIZE;
-			imageCI.height = SHADOW_MAP_TEXTURE_SIZE;
+			imageCI.width = DIRECTIONAL_SHADOW_MAP_TEXTURE_SIZE;
+			imageCI.height = DIRECTIONAL_SHADOW_MAP_TEXTURE_SIZE;
 			imageCI.arrayLayers = 1;
-			imageCI.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+			imageCI.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 			imageCI.subresourceRangeLayerCount = 1;
 			imageCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 			imageCI.imageViewType = VK_IMAGE_VIEW_TYPE_2D;
 
-			CreateImage(imageCI, shadowMapper.directionalShadowMaps[newResourceIndex]);
+			CreateImage(imageCI, shadowMap);
 
-			CommandTransitionImageLayout(shadowMapper.directionalShadowMaps[newResourceIndex].image, depthImageFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-
-			VkFramebufferCreateInfo framebufferCI = {};
-			framebufferCI.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-			framebufferCI.renderPass = shadowMapper.renderPass;
-			framebufferCI.width = SHADOW_MAP_TEXTURE_SIZE;
-			framebufferCI.height = SHADOW_MAP_TEXTURE_SIZE;
-			framebufferCI.layers = 1;
-			framebufferCI.attachmentCount = 1;
-			framebufferCI.pAttachments = &shadowMapper.directionalShadowMaps[newResourceIndex].imageView;
-
-			CHECK_VK(vkCreateFramebuffer(device, &framebufferCI, nullptr, &shadowMapper.directionalFramebuffers[newResourceIndex]));
+			CommandTransitionImageLayout(shadowMap.image, depthImageFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
 
 			BufferCreateInfo uniformBufferCI = {};
 			uniformBufferCI.usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
@@ -407,42 +721,73 @@ namespace lux::rhi
 			return TO_INT16_T(newResourceIndex);
 		}
 
+		case scene::LightType::LIGHT_TYPE_POINT:
+		{
+			size_t newResourceIndex = shadowMapper.pointShadowMaps.size();
+
+			if (newResourceIndex > POINT_LIGHT_MAX_COUNT)
+				return -1;
+
+			shadowMapper.pointShadowMaps.resize(newResourceIndex + 1);
+			shadowMapper.pointUniformBuffers.resize(newResourceIndex + 1);
+			shadowMapper.pointUniformBufferDescriptorSets.resize(newResourceIndex + 1);
+
+			Image& shadowMap = shadowMapper.pointShadowMaps[newResourceIndex];
+
+			ImageCreateInfo imageCI = {};
+			imageCI.format = VK_FORMAT_R32_SFLOAT;
+			imageCI.width = POINT_SHADOW_MAP_TEXTURE_SIZE;
+			imageCI.height = POINT_SHADOW_MAP_TEXTURE_SIZE;
+			imageCI.arrayLayers = 6;
+			imageCI.mipmapCount = 1;
+			imageCI.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+			imageCI.subresourceRangeLayerCount = 6;
+			imageCI.subresourceRangeAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			imageCI.imageViewType = VK_IMAGE_VIEW_TYPE_CUBE;
+
+			CreateImage(imageCI, shadowMap);
+
+			CommandTransitionImageLayout(shadowMap.image, VK_FORMAT_R32_SFLOAT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 6);
+
+			BufferCreateInfo uniformBufferCI = {};
+			uniformBufferCI.usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+			uniformBufferCI.size = sizeof(PointShadowMappingViewProjUniform);
+			uniformBufferCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+			uniformBufferCI.memoryProperty = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+			CreateBuffer(uniformBufferCI, shadowMapper.pointUniformBuffers[newResourceIndex]);
+
+			VkDescriptorSetAllocateInfo descriptorSetAI = {};
+			descriptorSetAI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+			descriptorSetAI.descriptorPool = shadowMapper.descriptorPool;
+			descriptorSetAI.descriptorSetCount = 1;
+			descriptorSetAI.pSetLayouts = &shadowMapper.directionalShadowMappingPipeline.viewDescriptorSetLayout;
+
+			CHECK_VK(vkAllocateDescriptorSets(device, &descriptorSetAI, &shadowMapper.pointUniformBufferDescriptorSets[newResourceIndex]));
+
+			VkDescriptorBufferInfo viewProjDescriptorBufferInfo = {};
+			viewProjDescriptorBufferInfo.offset = 0;
+			viewProjDescriptorBufferInfo.range = sizeof(PointShadowMappingViewProjUniform);
+			viewProjDescriptorBufferInfo.buffer = shadowMapper.pointUniformBuffers[newResourceIndex].buffer;
+
+			VkWriteDescriptorSet writeViewProjUniformBufferDescriptorSet = {};
+			writeViewProjUniformBufferDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			writeViewProjUniformBufferDescriptorSet.descriptorCount = 1;
+			writeViewProjUniformBufferDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			writeViewProjUniformBufferDescriptorSet.dstBinding = 0;
+			writeViewProjUniformBufferDescriptorSet.dstArrayElement = 0;
+			writeViewProjUniformBufferDescriptorSet.pBufferInfo = &viewProjDescriptorBufferInfo;
+			writeViewProjUniformBufferDescriptorSet.dstSet = shadowMapper.pointUniformBufferDescriptorSets[newResourceIndex];
+
+			vkUpdateDescriptorSets(device, 1, &writeViewProjUniformBufferDescriptorSet, 0, nullptr);
+
+			return TO_INT16_T(newResourceIndex);
+		}
+
 		default:
+			ASSERT(false);
 			return -1;
 		}
-	}
-
-	void RHI::UpdateLightsUniformBuffers(const std::vector<scene::LightNode*>& lights) noexcept
-	{
-		/*size_t lightCount = std::min(lights.size(), TO_SIZE_T(LIGHT_MAX_COUNT));
-
-		if (lightCount != lightCountPushConstant.lightCount)
-		{
-			lightCountPushConstant.lightCount = TO_UINT32_T(lightCount);
-		}
-
-		// Lights
-
-		std::vector<LightBuffer> lightDatas(lightCount);
-		scene::LightNode* currentNode;
-		for (size_t i = 0; i < lightCount; i++)
-		{
-			currentNode = lights[i];
-
-			if (currentNode->GetType() == scene::LightType::LIGHT_TYPE_DIRECTIONAL)
-			{
-				glm::vec3 worldRotation = glm::rotate(currentNode->GetWorldRotation(), glm::vec3(0.0f, 0.0f, -1.0f));
-				lightDatas[i].position = glm::vec4(worldRotation, 0.0f);
-			}
-			else // if (currentNode->GetType() == scene::LightType::LIGHT_TYPE_POINT)
-			{
-				lightDatas[i].position = glm::vec4(currentNode->GetWorldPosition(), 1.0f);
-			}
-
-			lightDatas[i].color = currentNode->GetColor();
-		}
-
-		UpdateBuffer(lightUniformBuffers[currentFrame], lightDatas.data());*/
 	}
 
 } // namespace lux::rhi

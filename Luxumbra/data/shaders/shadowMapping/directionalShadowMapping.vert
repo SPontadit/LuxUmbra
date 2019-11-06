@@ -8,12 +8,12 @@ layout(set = 0, binding = 0) uniform ViewProj
 	mat4 viewProj;
 } vp;
 
-layout(push_constant) uniform Model
+layout(push_constant) uniform PushConsts
 {
-	mat4 model;
-} m;
+	layout(offset = 0)  mat4 model;
+} pushConsts;
 
 void main()
 {
-	gl_Position = vp.viewProj * m.model * vec4(inPosition, 1.0);
+	gl_Position = vp.viewProj * pushConsts.model * vec4(inPosition, 1.0);
 }

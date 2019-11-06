@@ -26,6 +26,7 @@ namespace lux::rhi
 		VkFrontFace rasterizerFrontFace;
 		VkBool32 disableColorWriteMask;
 		VkBool32 enableBlend;
+		uint32_t colorBlendAttachmentStateCount = 1;
 		VkBool32 disableMSAA;
 		VkBool32 enableDepthTest;
 		VkBool32 enableDepthWrite;

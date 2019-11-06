@@ -8,6 +8,7 @@
 layout(location = 0) in FsIn
 {
 	vec3 positionWS;
+	vec3 positionVS;
 	vec2 textureCoordinateLS;
 	vec3 normalWS;
 	mat4 viewMatrix;
@@ -15,18 +16,25 @@ layout(location = 0) in FsIn
 } fsIn;
 
 layout(location = 0) out vec4 outColor;
+layout(location = 1) out vec4 outPositionVS;
+layout(location = 2) out vec4 outNormalVS;
+layout(location = 3) out vec4 outIndirectColor;
 
 struct DirectionalLight
 {
 	vec3 direction;
 	vec3 color;
 	mat4 viewProj;
+	float shadowMapTexelSize;
+	float pcfExtent;
+	float pcfKernelSize;
 };
 
 struct PointLight
 {
 	vec3 position;
 	vec3 color;
+	float radius;
 };
 
 layout(set = 0, binding = 1) uniform DirectionalLightBuffer
@@ -41,10 +49,10 @@ layout(set = 0, binding = 2) uniform pointLightBuffer
 
 layout(set = 0, binding = 3) uniform sampler2D[DIRECTIONAL_LIGHT_MAX_COUNT] directionalShadowMaps;
 layout(set = 0, binding = 4) uniform samplerCube[POINT_LIGHT_MAX_COUNT] pointLightShadowMaps;
-
 layout(set = 0, binding = 5) uniform samplerCube irradianceMap;
 layout(set = 0, binding = 6) uniform samplerCube prefilteredMap;
 layout(set = 0, binding = 7) uniform sampler2D BRDFLut;
+
 
 layout(push_constant) uniform PushConsts
 {
@@ -73,10 +81,15 @@ layout(set = 1, binding = 4) uniform sampler2D ambientOcclusionMap;
 
 const float PI = 3.1415926;
 
+// Lights and shadows
+
 vec3 DirectColor(vec3 lightDir, vec3 radiance, vec3 normal, float roughness, vec3 F0, float NdotV, vec3 diffuseColor, vec3 radiance, float shadow, float clearCoatRoughness);
-float DirectionalShadow(vec4 shadowCoord, int shadowMapIndex);
+
+float DirectionalShadow(vec4 shadowCoord, int lightIndex);
+float PointShadow(vec3 lightDir, float sqrLightDist, int lightIndex);
 
 // PBR
+
 vec3 RemapDiffuseColor(vec3 baseColor, float metallic);
 vec3 GetF0(float reflectance, float metallic, vec3 baseColor);
 float D_GGX(float VdotH, float roughness);
@@ -89,9 +102,19 @@ float Fd_Lambert();
 float Fd_Burley(float NdotV, float NdotL, float LdotH, float roughness);
 vec3 PrefilteredReflection(vec3 R, float roughness);
 
+#define NEAR_PLANE 0.1
+#define FAR_PLANE 500.0
 
-void main() 
+float linearDepth(float depth)
 {
+	float z = depth * 2.0f - 1.0f; 
+	return (2.0f * NEAR_PLANE * FAR_PLANE) / (FAR_PLANE + NEAR_PLANE - z * (FAR_PLANE - NEAR_PLANE));	
+}
+
+void main()
+{
+	outPositionVS = vec4(fsIn.positionVS, linearDepth(gl_FragCoord.z));
+
 	vec3 directColor  = vec3(0.0);
 	vec4 textureColor = texture(albedo, fsIn.textureCoordinateLS);
 
@@ -102,6 +125,8 @@ void main()
 	vec3 normal = texture(normalMap, fsIn.textureCoordinateLS).rgb;
 	normal = normalize(normal * 2.0 - 1.0) * inv;
 	normal = normalize(fsIn.textureToViewMatrix * normal);
+	outNormalVS  = vec4(normal * 0.5 + 0.5, 1.0);
+
 	vec3 normalVS = normalize(mat3(fsIn.viewMatrix) * fsIn.normalWS);
 
 	float NdotV = max(dot(normal, viewDir), 0.001);
@@ -140,14 +165,15 @@ void main()
 	// Point lights
 	for (int i = 0; i < pushConsts.pointLightCount; i++)
 	{
-		vec3 lightPosVS = mat3(fsIn.viewMatrix) * (pointLights[i].position - fsIn.positionWS);
-		lightDir = normalize(lightPosVS);
-		float distance = length(lightPosVS);
-		float attenuation = 1.0 / (distance * distance);
-		
+		vec3 fragToLight = pointLights[i].position - fsIn.positionWS;
+
+		lightDir = normalize(mat3(fsIn.viewMatrix) * fragToLight);
+
+		float sqrLightDist = dot(fragToLight, fragToLight);
+		float attenuation = pointLights[i].radius / sqrLightDist;
 		radiance = pointLights[i].color * attenuation;
 
-		shadow = 1.0;
+		shadow = PointShadow(-fragToLight, length(fragToLight), i);
 
 		directColor += DirectColor(lightDir, viewDir, normal, roughness, F0, NdotV, diffuseColor, radiance, shadow, clearCoatRoughness);
 	}
@@ -170,14 +196,11 @@ void main()
 	
 	vec3 F = F_SchlickRoughness(NdotV, F0, roughness);
 	float clearCoatF = F_Schlick(clearCoatNdotV, 0.04, 1.0) * material.clearCoat;
-//	float clearCoatF = F_Schlick(NdotV, 0.04, 1.0) * material.clearCoat;
 	float attenuation = 1.0 - clearCoatF;
-	//vec3 indirectSpecularColor = reflection * (F * BRDF.x + BRDF.y);
 
 	vec3 indirectSpecularColor = reflection * mix(BRDF.xxx, BRDF.yyy, F0);
 	indirectSpecularColor *= attenuation;
 	indirectSpecularColor += PrefilteredReflection(clearCoatR, clearCoatPerceptualRoughness).rgb * clearCoatF;
-//	indirectSpecularColor += PrefilteredReflection(R, clearCoatPerceptualRoughness).rgb * clearCoatF;
 
 	vec3 Kdiff = 1.0 - F;
 	vec3 indirectDiffuseColor = irradiance * diffuseColor * Kdiff;
@@ -189,8 +212,10 @@ void main()
 	float ao = texture(ambientOcclusionMap, fsIn.textureCoordinateLS).r;
 
 	indirectColor *= ao;
+	
+	outIndirectColor = vec4(indirectColor, 1.0);
 
-	outColor = vec4(directColor + indirectColor, textureColor.a);
+	outColor = vec4(directColor, textureColor.a);
 }
 
 vec3 getNormalFromMap()
@@ -245,16 +270,40 @@ vec3 DirectColor(vec3 lightDir, vec3 viewDir, vec3 normal, float roughness, vec3
 
 }
 
-float DirectionalShadow(vec4 shadowCoord, int shadowMapIndex)
+float DirectionalShadow(vec4 shadowCoord, int lightIndex)
 {
 	if (abs(shadowCoord.x) > 1.0 || abs(shadowCoord.y) > 1.0 || abs(shadowCoord.z) > 1.0)
 		return 0.0;
 
 	vec2 shadowUV = shadowCoord.xy * 0.5 + 0.5;
-	if (shadowCoord.z > texture(directionalShadowMaps[shadowMapIndex], shadowUV).x)
-		return 0.0;
 
-	return 1.0;
+	float shadowMapTexelSize = directionalLights[lightIndex].shadowMapTexelSize;
+	float pcfExtent = directionalLights[lightIndex].pcfExtent;
+
+	float lightedCount = 0.0;
+
+	for (float x = -pcfExtent; x <= pcfExtent; x += 1.0)
+	{
+		for (float y = -pcfExtent; y <= pcfExtent; y += 1.0)
+		{
+			vec2 pcfUV = shadowUV + vec2(x, y) * shadowMapTexelSize;
+
+			if (shadowCoord.z <= texture(directionalShadowMaps[lightIndex], pcfUV).x)
+				lightedCount += 1.0;
+		}
+	}
+
+	return lightedCount / directionalLights[lightIndex].pcfKernelSize;
+}
+
+float PointShadow(vec3 lightToFrag, float lightDist, int lightIndex)
+{
+	float sampledDist = texture(pointLightShadowMaps[lightIndex], normalize(lightToFrag)).r;
+
+	if (lightDist <= sampledDist + 0.15)
+		return 1.0;
+
+	return 0.0;
 }
 
 vec3 PrefilteredReflection(vec3 R, float roughness)

@@ -35,14 +35,20 @@ namespace lux::scene
 
 		LightType GetType() const noexcept;
 
-		void SetColor(glm::vec3 newColor) noexcept;
 		glm::vec3 GetColor() const noexcept;
+		void SetColor(glm::vec3 newColor) noexcept;
+
+		float GetRadius() const noexcept;
+		void SetRadius(float newRadius) noexcept;
 
 		int16_t GetShadowMappingResourceIndex() const noexcept;
 
 	private:
 		LightType type;
 		glm::vec3 color;
+
+		// For point lights only
+		float radius;
 
 		int16_t shadowMappingResourceIndex;
 	};

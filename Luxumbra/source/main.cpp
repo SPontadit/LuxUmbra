@@ -1,6 +1,6 @@
 #include "Engine.h"
 
-void CornellBox(lux::Engine& luxUmbra) noexcept;
+void SSAOTest(lux::Engine& luxUmbra) noexcept;
 void ShadowTest(lux::Engine& luxUmbra) noexcept;
 void TexturedPBR(lux::Engine& luxUmbra) noexcept;
 void TestSphere(lux::Engine& luxUmbra) noexcept;
@@ -12,7 +12,7 @@ int main(int ac, char* av[])
 
 	luxUmbra.Initialize(1200, 800);
 
-	TestSphere(luxUmbra);
+	TexturedPBR(luxUmbra);
 
 	luxUmbra.Run();
 
@@ -93,21 +93,47 @@ void TexturedPBR(lux::Engine& luxUmbra) noexcept
 	resourceManager.CreateMaterial("Helmet", defaultMaterialCI);
 
 
-	scene.AddCameraNode(nullptr, { 0.f, 1.f, 5.f }, { 0.f, 0.f, 0.f }, false, 45.f, 0.01f, 1000.f, true);
+	scene.AddCameraNode(nullptr, { 0.f, 1.f, 5.f }, { 0.f, 0.f, 0.f }, false, 45.f, 0.1f, 50.f, true);
 
-	lux::scene::MeshNode* plane = scene.AddMeshNode(nullptr, glm::vec3(0.f, 1.f, -2.f), glm::radians(glm::vec3(0.f, 90.f, 0.f)), false, lux::resource::MeshPrimitive::MESH_PLANE_PRIMITIVE, "White");
-	plane = scene.AddMeshNode(nullptr, glm::vec3(-2.f, 1.f, 0.f), glm::radians(glm::vec3(0.f, 180.f, 0.f)), false, lux::resource::MeshPrimitive::MESH_PLANE_PRIMITIVE, "White");
-	plane = scene.AddMeshNode(nullptr, glm::vec3(2.f, 1.f, 0.f), glm::radians(glm::vec3(0.f, 0.f, 0.f)), false, lux::resource::MeshPrimitive::MESH_PLANE_PRIMITIVE, "White");
+	glm::vec3 planeScale(1.f, 3.f, 3.f);
 
-	scene.AddMeshNode(nullptr, glm::vec3(0.f), glm::vec3(0.f), false, "data/DamagedHelmet/DamagedHelmet.gltf", "Helmet");
+	lux::scene::MeshNode* plane = scene.AddMeshNode(nullptr, glm::vec3(0.f, 0.f, -3.f), glm::radians(glm::vec3(0.f, 90.f, 0.f)), false, lux::resource::MeshPrimitive::MESH_PLANE_PRIMITIVE, "White");
+	plane->SetLocalScale(planeScale);
+	plane = scene.AddMeshNode(nullptr, glm::vec3(-3.f, 0.f, 0.f), glm::radians(glm::vec3(0.f, 180.f, 0.f)), false, lux::resource::MeshPrimitive::MESH_PLANE_PRIMITIVE, "White");
+	plane->SetLocalScale(planeScale);
+	plane = scene.AddMeshNode(nullptr, glm::vec3(3.f, 0.f, 0.f), glm::radians(glm::vec3(0.f, 0.f, 0.f)), false, lux::resource::MeshPrimitive::MESH_PLANE_PRIMITIVE, "White");
+	plane->SetLocalScale(planeScale);
 
-	scene.AddLightNode(nullptr, { 0.0f, 0.0f, 0.0f }, glm::radians(glm::vec3(0.f, 15.f, 0.f)), false, lux::scene::LightType::LIGHT_TYPE_DIRECTIONAL, { 1.0f, 1.0f, 1.0f });
-	scene.AddLightNode(nullptr, { 0.0f, 0.0f, 0.0f }, glm::radians(glm::vec3(0.f, -15.f, 0.f)), false, lux::scene::LightType::LIGHT_TYPE_DIRECTIONAL, { 1.0f, 1.0f, 1.0f });
-	scene.AddLightNode(nullptr, { 0.f, 1.f, -1.5f }, { 0.f, 0.f, 0.f }, false, lux::scene::LightType::LIGHT_TYPE_POINT, glm::vec3(1.f, 0.f, 0.f));
+	scene.AddMeshNode(nullptr, glm::vec3(-1.5f, 0.f, 0.f), glm::vec3(0.f), false, "data/DamagedHelmet/DamagedHelmet.gltf", "Helmet");
+
+	//scene.AddLightNode(nullptr, { 0.0f, 0.0f, 0.0f }, glm::radians(glm::vec3(0.f, 15.f, 0.f)), false, lux::scene::LightType::LIGHT_TYPE_DIRECTIONAL, { 1.0f, 1.0f, 1.0f });
+	//scene.AddLightNode(nullptr, { 0.0f, 0.0f, 0.0f }, glm::radians(glm::vec3(0.f, -15.f, 0.f)), false, lux::scene::LightType::LIGHT_TYPE_DIRECTIONAL, { 1.0f, 1.0f, 1.0f });
+	lux::scene::LightNode* pointLight = scene.AddLightNode(nullptr, glm::vec3(1.5f, 0.f, 0.f), { 0.f, 0.f, 0.f }, false, lux::scene::LightType::LIGHT_TYPE_POINT, glm::vec3(1.f, 0.f, 0.f));
+	pointLight->SetRadius(10.f);
 }
 
-void CornellBox(lux::Engine& luxUmbra) noexcept
+void SSAOTest(lux::Engine& luxUmbra) noexcept
 {
+	lux::scene::Scene& scene = luxUmbra.GetScene();
+	lux::resource::ResourceManager& resourceManager = luxUmbra.GetResourceManager();
+
+	resourceManager.UseCubemap("data/envmaps/Ridgecrest_Road_Ref.hdr");
+
+	lux::resource::MaterialCreateInfo defaultMaterialCI;
+	defaultMaterialCI.baseColor = glm::vec3(1.0f);
+	//defaultMaterialCI.albedo = resourceManager.GetTexture("data/textures/ironman.dff.png");
+	defaultMaterialCI.metallic = false;
+	defaultMaterialCI.perceptualRoughness = 0.0f;
+	defaultMaterialCI.reflectance = 0.5f;
+	defaultMaterialCI.isTransparent = false;
+	defaultMaterialCI.textureMask = 0;
+	resourceManager.CreateMaterial("White", defaultMaterialCI);
+
+	
+	scene.AddMeshNode(nullptr, glm::vec3(0.f), glm::vec3(0.f), false, "data/models/ironman.fbx", "White");
+
+	scene.AddCameraNode(nullptr, { 0.9f, 1.0f, 3.0f }, glm::radians(glm::vec3(0.f, 0.f, 0.f )), false, 45.f, 0.1f, 500.f, true);
+	scene.AddLightNode(nullptr, { 0.0f, 0.0f, -1.0f }, { 0.f, 0.f, 0.f }, false, lux::scene::LightType::LIGHT_TYPE_DIRECTIONAL, { 1.0f, 1.0f, 1.0f });
 
 }
 
