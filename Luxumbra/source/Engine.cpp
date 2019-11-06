@@ -34,7 +34,7 @@ namespace lux
 
 		resourceManager.Initialize();
 
-		scene.Initialize(window, resourceManager);
+		scene.Initialize(window, rhi, resourceManager);
 
 		isInitialized = true;
 
@@ -48,7 +48,7 @@ namespace lux
 		{
 			DrawImgui();
 
-			rhi.Render(scene.GetCurrentCamera(), scene.GetShadowCastingDirectional(), scene.GetMeshNodes(), scene.GetLightNodes());
+			rhi.Render(scene.GetCurrentCamera(), scene.GetMeshNodes(), scene.GetLightNodes());
 
 			window.PollEvents();
 		}
@@ -337,15 +337,6 @@ namespace lux
 						currentLight->SetColor(color);
 					}
 
-					int lightType = static_cast<int>((currentLight->GetType()));
-					int newLightType = lightType;
-					ImGui::Combo("Light Type", &newLightType, "Directional\0Point");
-					
-					if (newLightType != lightType)
-					{
-						currentLight->SetType(static_cast<scene::LightType>(newLightType));
-					}
-
 					ImGui::TreePop();
 				}
 			}
@@ -378,12 +369,16 @@ namespace lux
 						ImGui::Checkbox("Metallic", &metallic);
 						matParameters.metallic = metallic;
 
-						if (metallic == false)
+						if (matParameters.metallic == 0.f)
 						{
 							ImGui::SliderFloat("Reflectance", &matParameters.reflectance, 0.0f, 1.0f, "%.3f");
 						}
 
-						ImGui::SliderFloat("Roughness", &matParameters.perceptualRoughness, 0.0f, 1.0f, "%.3f");
+						ImGui::SliderFloat("Roughness", &matParameters.perceptualRoughness, 0.045f, 1.0f, "%.3f");
+
+						ImGui::SliderFloat("Clear Coat", &matParameters.clearCoat, 0.0f, 1.0f, "%.3f");
+
+						ImGui::SliderFloat("Cleat Coat Roughness", &matParameters.clearCoatPerceptualRoughness, 0.045f, 1.0f, "%.3f");
 
 						ImGui::TreePop();
 					}

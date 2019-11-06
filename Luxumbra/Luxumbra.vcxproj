@@ -194,7 +194,6 @@
     <ClInclude Include="include\rhi\LuxVkImpl.h" />
     <ClInclude Include="include\rhi\GraphicsPipeline.h" />
     <ClInclude Include="include\rhi\RHI.h" />
-    <ClInclude Include="include\rhi\ShadowMappingPipeline.h" />
     <ClInclude Include="include\rhi\ShadowMapper.h" />
     <ClInclude Include="include\scene\CameraNode.h" />
     <ClInclude Include="include\scene\LightNode.h" />
@@ -233,6 +232,8 @@
     <None Include="data\shaders\shadowMapping\directionalShadowMapping.vert" />
     <None Include="data\shaders\SSAO\SSAO.frag" />
     <None Include="data\shaders\SSAO\SSAO.vert" />
+    <None Include="data\shaders\shadowMapping\pointShadowMapping.frag" />
+    <None Include="data\shaders\shadowMapping\pointShadowMapping.vert" />
     <None Include="data\shaders\texture\triangle.frag" />
     <None Include="data\shaders\texture\triangle.vert" />
     <None Include="data\shaders\CompileShaders.bat" />

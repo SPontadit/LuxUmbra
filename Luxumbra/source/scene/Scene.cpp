@@ -23,9 +23,10 @@ namespace lux::scene
 		lightNodes.clear();
 	}
 
-	void Scene::Initialize(const Window& window, resource::ResourceManager& resourceManager) noexcept
+	void Scene::Initialize(const Window& window, rhi::RHI& rhi, resource::ResourceManager& resourceManager) noexcept
 	{
 		this->window = &window;
+		this->rhi = &rhi;
 		this->resourceManager = &resourceManager;
 
 		nodes.reserve(128);
@@ -36,11 +37,6 @@ namespace lux::scene
 	CameraNode* Scene::GetCurrentCamera() const noexcept
 	{
 		return currentCamera;
-	}
-
-	LightNode* Scene::GetShadowCastingDirectional() const noexcept
-	{
-		return shadowCastingDirectional;
 	}
 
 	const std::vector<MeshNode*>& Scene::GetMeshNodes() const noexcept
@@ -137,20 +133,19 @@ namespace lux::scene
 	{
 		LightNode* lightNode;
 
+		int16_t shadowMappingResourceIndex = rhi->CreateLightShadowMappingResources(type);
+
 		if (isWorldPosition)
 		{
-			lightNode = new LightNode(parent, type, color);
+			lightNode = new LightNode(parent, type, color, shadowMappingResourceIndex);
 			lightNode->SetWorldPosition(position);
 			lightNode->SetWorldRotation(rotation);
 		}
 		else
-			lightNode = new LightNode(parent, position, rotation, type, color);
+			lightNode = new LightNode(parent, position, rotation, type, color, shadowMappingResourceIndex);
 
 		nodes.push_back(lightNode);
 		lightNodes.push_back(lightNode);
-
-		if (type == LightType::LIGHT_TYPE_DIRECTIONAL && shadowCastingDirectional == nullptr)
-			shadowCastingDirectional = lightNode;
 
 		return lightNode;
 	}

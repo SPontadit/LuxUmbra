@@ -18,8 +18,9 @@ namespace lux::rhi
 	struct ComputePipeline
 	{
 		ComputePipeline() noexcept;
-		ComputePipeline(const ComputePipeline&) = delete;
-		ComputePipeline(ComputePipeline&&) = delete;
+		// TODO: TMP FOR IBL DESTRUCTION
+		ComputePipeline(const ComputePipeline&) = default;
+		ComputePipeline(ComputePipeline&&) = default;
 
 		~ComputePipeline() noexcept = default;
 

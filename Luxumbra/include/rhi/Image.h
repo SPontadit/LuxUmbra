@@ -19,10 +19,11 @@ namespace lux::rhi
 		VkImageUsageFlags usage;
 		VkSampleCountFlagBits sampleCount = VK_SAMPLE_COUNT_1_BIT;
 		uint32_t subresourceRangeLayerCount;
-		VkImageAspectFlagBits subresourceRangeAspectMask;
+		VkImageAspectFlags subresourceRangeAspectMask;
 		VkImageViewType imageViewType;
 		void* imageData;
 		uint64_t imageSize;
+		bool useInComputeShader;
 	};
 
 	struct CubeMapCreateInfo

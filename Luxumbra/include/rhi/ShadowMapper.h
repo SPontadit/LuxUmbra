@@ -9,12 +9,21 @@
 #include "rhi\Buffer.h"
 #include "rhi\Image.h"
 
+#define DIRECTIONAL_SHADOW_MAP_TEXTURE_SIZE 2048
+#define POINT_SHADOW_MAP_TEXTURE_SIZE 512
+
 namespace lux::rhi
 {
 
-	struct ShadowMappingViewProjUniform
+	struct DirectionalShadowMappingViewProjUniform
 	{
 		glm::mat4 viewProj;
+	};
+
+	struct PointShadowMappingViewProjUniform
+	{
+		glm::mat4 view[6];
+		glm::mat4 proj;
 	};
 
 	struct ShadowMappingModelConstant
@@ -33,17 +42,28 @@ namespace lux::rhi
 		const ShadowMapper& operator =(const ShadowMapper&) = delete;
 		const ShadowMapper& operator =(ShadowMapper&&) = delete;
 
-		VkRenderPass renderPass;
-
-		Image shadowMap;
-		VkFramebuffer framebuffer;
+		VkRenderPass directionalShadowMappingRenderPass;
+		VkRenderPass pointShadowMappingRenderPass;
 
 		GraphicsPipeline directionalShadowMappingPipeline;
-
-		Buffer viewProjUniformBuffer;
+		GraphicsPipeline pointShadowMappingPipeline;
 
 		VkDescriptorPool descriptorPool;
-		VkDescriptorSet viewProjUniformBufferDescriptorSet;
+
+		Image directionalShadowMapIntermediate;
+		Image dummyDirectionalShadowMap;
+		VkFramebuffer directionalFramebuffer;
+		std::vector<Image> directionalShadowMaps;
+		std::vector<Buffer> directionalUniformBuffers;
+		std::vector<VkDescriptorSet> directionalUniformBufferDescriptorSets;
+
+		Image pointShadowMapIntermediate;
+		Image pointShadowMapDepth;
+		Image dummyPointShadowMap;
+		VkFramebuffer pointFramebuffer;
+		std::vector<Image> pointShadowMaps;
+		std::vector<Buffer> pointUniformBuffers;
+		std::vector<VkDescriptorSet> pointUniformBufferDescriptorSets;
 	};
 
 } // namespace lux::rhi

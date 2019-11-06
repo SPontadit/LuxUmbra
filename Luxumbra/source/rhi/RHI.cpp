@@ -17,7 +17,7 @@ namespace lux::rhi
 		presentSemaphores(0), acquireSemaphores(0), fences(0),
 		imguiDescriptorPool(VK_NULL_HANDLE), materialDescriptorPool(VK_NULL_HANDLE), commandPool(VK_NULL_HANDLE), commandBuffers(0),
 		computeCommandPool(VK_NULL_HANDLE),
-		lightUniformBuffers(0), lightCountPushConstant(), frameCount(0), currentFrame(0), cube(nullptr),
+		directionalLightUniformBuffers(0), pointLightUniformBuffers(0), lightCountsPushConstant(), frameCount(0), currentFrame(0), cube(nullptr),
 		shadowMapper(), forward()
 #ifdef VULKAN_ENABLE_VALIDATION
 		, debugReportCallback(VK_NULL_HANDLE)
@@ -69,17 +69,13 @@ namespace lux::rhi
 
 		// Shadow mapper
 
-		InitShadowMapperRenderPass();
-
-		InitShadowMapperFramebuffer();
+		InitShadowMapperRenderPasses();
 
 		InitShadowMapperPipelines();
 
-		InitShadowMapperViewProjUniformBuffer();
-
 		InitShadowMapperDescriptorPool();
 
-		InitShadowMapperDescriptorSets();
+		InitShadowMapperDefaultResources();
 
 		// Forward renderer
 
@@ -536,60 +532,7 @@ namespace lux::rhi
 
 	}
 
-	//void RHI::InitComputePipeline() noexcept
-	//{
-	//	VkDescriptorSetLayoutBinding cubemapInputDescriptorSetLayoutBinding = {};
-	//	cubemapInputDescriptorSetLayoutBinding.binding = 0;
-	//	cubemapInputDescriptorSetLayoutBinding.descriptorCount = 1;
-	//	cubemapInputDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	//	cubemapInputDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-	//	VkDescriptorSetLayoutBinding irradianceOutputDescriptorSetLayoutBinding = {};
-	//	irradianceOutputDescriptorSetLayoutBinding.binding = 1;
-	//	irradianceOutputDescriptorSetLayoutBinding.descriptorCount = 1;
-	//	irradianceOutputDescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-	//	irradianceOutputDescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-	//	VkPushConstantRange generateIrradiancePushConstantRange = {};
-	//	generateIrradiancePushConstantRange.offset = 0;
-	//	generateIrradiancePushConstantRange.size = sizeof(GenerateIrradianceParameters);
-	//	generateIrradiancePushConstantRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-	//	ComputePipelineCreateInfo computePipelineCI = {};
-	//	computePipelineCI.binaryComputeFilePath = "data/shaders/generateIrradianceMap/generateIrradianceMap.comp.spv";
-	//	computePipelineCI.descriptorSetLayoutBindings = { cubemapInputDescriptorSetLayoutBinding, irradianceOutputDescriptorSetLayoutBinding };
-	//	computePipelineCI.pushConstants = { generateIrradiancePushConstantRange };
-
-	//	CreateComputePipeline(computePipelineCI, computePipeline);
-
-
-	//	VkCommandBufferAllocateInfo commandBufferAI = {};
-	//	commandBufferAI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	//	commandBufferAI.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	//	commandBufferAI.commandBufferCount = 1;
-	//	commandBufferAI.commandPool = computeCommandPool;
-
-	//	CHECK_VK(vkAllocateCommandBuffers(device, &commandBufferAI, &computeCommandBuffer));
-
-	//	VkDescriptorPoolSize sourceComputeDescriptorPoolSize = {};
-	//	sourceComputeDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	//	sourceComputeDescriptorPoolSize.descriptorCount = 1;
-
-	//	VkDescriptorPoolSize destinationComputeDescriptorPoolSize = {};
-	//	destinationComputeDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-	//	destinationComputeDescriptorPoolSize.descriptorCount = 1;
-
-	//	std::array<VkDescriptorPoolSize, 2> poolSizes = { sourceComputeDescriptorPoolSize, destinationComputeDescriptorPoolSize };
-	//	VkDescriptorPoolCreateInfo descriptorPoolCI = {};
-	//	descriptorPoolCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	//	descriptorPoolCI.poolSizeCount = TO_UINT32_T(poolSizes.size());
-	//	descriptorPoolCI.pPoolSizes = poolSizes.data();
-	//	descriptorPoolCI.maxSets = 2;
-
-	//	CHECK_VK(vkCreateDescriptorPool(device, &descriptorPoolCI, nullptr, &computeDescriptorPool));
-	//}
-
-	void RHI::Render(const scene::CameraNode* camera, scene::LightNode* shadowCastingDirectional, const std::vector<scene::MeshNode*> meshes, const std::vector<scene::LightNode*>& lights) noexcept
+	void RHI::Render(const scene::CameraNode* camera, const std::vector<scene::MeshNode*> meshes, const std::vector<scene::LightNode*>& lights) noexcept
 	{
 		// Acquire next image
 		VkFence* fence = &fences[currentFrame];
@@ -615,7 +558,7 @@ namespace lux::rhi
 
 		CHECK_VK(vkBeginCommandBuffer(commandBuffer, &commandBufferBI));
 
-		RenderShadowMaps(commandBuffer, imageIndex, shadowCastingDirectional, meshes);
+		RenderShadowMaps(commandBuffer, lights, meshes);
 
 		RenderForward(commandBuffer, imageIndex, camera, meshes, lights);
 
@@ -739,15 +682,18 @@ namespace lux::rhi
 	{
 		BufferCreateInfo lightBufferCI = {};
 		lightBufferCI.usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-		lightBufferCI.size = sizeof(LightBuffer) * LIGHT_MAX_COUNT;
 		lightBufferCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		lightBufferCI.memoryProperty = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-		lightUniformBuffers.resize(TO_SIZE_T(swapchainImageCount));
+		lightBufferCI.size = sizeof(DirectionalLightBuffer) * DIRECTIONAL_LIGHT_MAX_COUNT;
+		directionalLightUniformBuffers.resize(TO_SIZE_T(swapchainImageCount));
 		for (size_t i = 0; i < swapchainImageCount; i++)
-		{
-			CreateBuffer(lightBufferCI, lightUniformBuffers[i]);
-		}
+			CreateBuffer(lightBufferCI, directionalLightUniformBuffers[i]);
+
+		lightBufferCI.size = sizeof(PointLightBuffer) * POINT_LIGHT_MAX_COUNT;
+		pointLightUniformBuffers.resize(TO_SIZE_T(swapchainImageCount));
+		for (size_t i = 0; i < swapchainImageCount; i++)
+			CreateBuffer(lightBufferCI, pointLightUniformBuffers[i]);
 	}
 
 	void RHI::CreateMaterial(resource::Material& material) noexcept
@@ -968,11 +914,11 @@ namespace lux::rhi
 		vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
 	}
 
-	void RHI::CommandTransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) noexcept
+	void RHI::CommandTransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t layerCount, uint32_t levelCount, uint32_t baseMipLevel) noexcept
 	{
 		VkCommandBuffer commandBuffer = BeginSingleTimeCommandBuffer();
 
-		CommandTransitionImageLayout(commandBuffer, image, format, oldLayout, newLayout);
+		CommandTransitionImageLayout(commandBuffer, image, format, oldLayout, newLayout, layerCount, levelCount, baseMipLevel);
 
 		EndSingleTimeCommandBuffer(commandBuffer);
 	}
@@ -1028,16 +974,44 @@ namespace lux::rhi
 			imageMemoryBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 			srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 			break;
+
+		case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+			imageMemoryBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+			if (format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT)
+			{
+				imageMemoryBarrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+			}
+
+			imageMemoryBarrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+
+		case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+			imageMemoryBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+			if (format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT)
+			{
+				imageMemoryBarrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+			}
+
+			imageMemoryBarrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+			srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 		}
 
 		switch (newLayout)
 		{
 		case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+			if (format == depthImageFormat)
+				imageMemoryBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
 			imageMemoryBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 			dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 			break;
 
 		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+			if (format == depthImageFormat)
+				imageMemoryBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
 			imageMemoryBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 			dstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
 			break;
@@ -1049,7 +1023,6 @@ namespace lux::rhi
 
 		case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
 			imageMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-			//dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 			dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 			break;
 
@@ -1068,6 +1041,18 @@ namespace lux::rhi
 
 			imageMemoryBarrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 			dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+			break;
+
+		case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+			imageMemoryBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+			if (format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT)
+			{
+				imageMemoryBarrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+			}
+
+			imageMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+			dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 			break;
 		}
 
@@ -1097,7 +1082,8 @@ namespace lux::rhi
 		for (size_t i = 0; i < swapchainImageCount; i++)
 		{
 			vkDestroyImageView(device, swapchainImageViews[i], nullptr);
-			DestroyBuffer(lightUniformBuffers[i]);
+			DestroyBuffer(directionalLightUniformBuffers[i]);
+			DestroyBuffer(pointLightUniformBuffers[i]);
 		}
 
 		vkDestroySwapchainKHR(device, swapchain, nullptr);

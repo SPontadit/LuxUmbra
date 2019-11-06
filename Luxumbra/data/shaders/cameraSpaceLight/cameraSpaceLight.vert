@@ -15,15 +15,13 @@ layout(location = 0) out VsOut
 	vec3 normalWS;
 	mat4 viewMatrix;
 	mat3 textureToViewMatrix;
-	vec4 shadowCoord;
 } vsOut;
 
 
-layout(binding = 0) uniform ViewProj
+layout(set = 0, binding = 0) uniform ViewProj
 {
 	mat4 view;
 	mat4 proj;
-	mat4 lightViewProj;
 } vp;
 
 layout(push_constant) uniform Model
@@ -52,6 +50,4 @@ void main()
 	vec3 N = normalize(modelToView * inNormal);
 
 	vsOut.textureToViewMatrix = mat3(T, B, N);
-
-	vsOut.shadowCoord = vp.lightViewProj * fragPosition;
 }
