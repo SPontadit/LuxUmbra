@@ -218,21 +218,20 @@ namespace lux::rhi
 		// MSAA 
 		VkSampleCountFlags counts = std::min(physicalDeviceProperties.limits.framebufferColorSampleCounts, physicalDeviceProperties.limits.framebufferDepthSampleCounts);
 
-		//if (counts & VK_SAMPLE_COUNT_64_BIT)
-		//	msaaSamples = VK_SAMPLE_COUNT_64_BIT;
-		//else if (counts & VK_SAMPLE_COUNT_32_BIT)
-		//	msaaSamples = VK_SAMPLE_COUNT_32_BIT;
-		//else if (counts & VK_SAMPLE_COUNT_16_BIT)
-		//	msaaSamples = VK_SAMPLE_COUNT_16_BIT;
-		//else if (counts & VK_SAMPLE_COUNT_8_BIT)
-		//	msaaSamples = VK_SAMPLE_COUNT_8_BIT;
-		//else if (counts & VK_SAMPLE_COUNT_4_BIT)
-		//	msaaSamples = VK_SAMPLE_COUNT_4_BIT;
-		//else if (counts & VK_SAMPLE_COUNT_2_BIT)
-		//	msaaSamples = VK_SAMPLE_COUNT_2_BIT;
+		if (counts & VK_SAMPLE_COUNT_64_BIT)
+			msaaSamples = VK_SAMPLE_COUNT_64_BIT;
+		else if (counts & VK_SAMPLE_COUNT_32_BIT)
+			msaaSamples = VK_SAMPLE_COUNT_32_BIT;
+		else if (counts & VK_SAMPLE_COUNT_16_BIT)
+			msaaSamples = VK_SAMPLE_COUNT_16_BIT;
+		else if (counts & VK_SAMPLE_COUNT_8_BIT)
+			msaaSamples = VK_SAMPLE_COUNT_8_BIT;
+		else if (counts & VK_SAMPLE_COUNT_4_BIT)
+			msaaSamples = VK_SAMPLE_COUNT_4_BIT;
+		else if (counts & VK_SAMPLE_COUNT_2_BIT)
+			msaaSamples = VK_SAMPLE_COUNT_2_BIT;
 
 		// Device
-
 		uint32_t queueFamilieCount;
 		vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilieCount, nullptr);
 

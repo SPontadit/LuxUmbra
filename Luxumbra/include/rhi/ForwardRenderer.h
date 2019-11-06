@@ -107,10 +107,7 @@ namespace lux::rhi
 		std::vector<VkImageView> rtColorAttachmentImageViews;
 		std::vector<VkDeviceMemory> rtColorAttachmentImageMemories;
 
-		VkImage rtResolveColorAttachmentImage;
-		VkImageView rtResolveColorAttachmentImageView;
-		VkDeviceMemory rtResolveColorAttachmentMemory;
-
+		Image rtResolveColorAttachment;
 
 		VkImage rtDepthAttachmentImage;
 		VkImageView rtDepthAttachmentImageView;
@@ -122,9 +119,8 @@ namespace lux::rhi
 		Image rtNormalMap;
 		Image rtResolveNormalMap;
 
-		Image rtResolveDepth;
-
 		Image rtIndirectColorMap;
+		Image rtResolveIndirectColorMap;
 
 		VkSampler sampler;
 		VkSampler cubemapSampler;
@@ -142,6 +138,10 @@ namespace lux::rhi
 			FORWARD_RT_POSITION_ATTACHMENT_BIND_POINT,
 			FORWARD_RT_NORMAL_ATTACHMENT_BIND_POINT,
 			FORWARD_RT_INDIRECT_COLOR_ATTACHMENT_BIND_POINT,
+			FORWARD_RT_RESOLVE_COLOR_ATTACHMENT_BIND_POINT,
+			FORWARD_RT_RESOLVE_POSITION_ATTACHMENT_BIND_POINT,
+			FORWARD_RT_RESOLVE_NORMAL_ATTACHMENT_BIND_POINT,
+			FORWARD_RT_RESOLVE_INDIRECT_COLOR_ATTACHMENT_BIND_POINT,
 			FORWARD_RT_ATTACHMENT_BIND_POINT_COUNT
 		};
 

@@ -12,7 +12,7 @@ int main(int ac, char* av[])
 
 	luxUmbra.Initialize(1200, 800);
 
-	TexturedPBR(luxUmbra);
+	SSAOTest(luxUmbra);
 
 	luxUmbra.Run();
 
