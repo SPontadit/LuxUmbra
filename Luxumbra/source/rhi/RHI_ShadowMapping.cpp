@@ -108,6 +108,7 @@ namespace lux::rhi
 		shadowMapper.directionalShadowMappingPipelineCI.renderPass = shadowMapper.directionalShadowMappingRenderPass;
 		shadowMapper.directionalShadowMappingPipelineCI.subpassIndex = 0;
 		shadowMapper.directionalShadowMappingPipelineCI.binaryVertexFilePath = "data/shaders/shadowMapping/directionalShadowMapping.vert.spv";
+		shadowMapper.directionalShadowMappingPipelineCI.cacheFilePath = "data/pipelineCache/directionalShadowMapping.bin";
 		shadowMapper.directionalShadowMappingPipelineCI.vertexLayout = VertexLayout::VERTEX_POSITION_ONLY_LAYOUT;
 		shadowMapper.directionalShadowMappingPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		shadowMapper.directionalShadowMappingPipelineCI.viewportWidth = DIRECTIONAL_SHADOW_MAP_TEXTURE_SIZE;
@@ -139,6 +140,7 @@ namespace lux::rhi
 		shadowMapper.pointShadowMappingPipelineCI.subpassIndex = 0;
 		shadowMapper.pointShadowMappingPipelineCI.binaryVertexFilePath = "data/shaders/shadowMapping/pointShadowMapping.vert.spv";
 		shadowMapper.pointShadowMappingPipelineCI.binaryFragmentFilePath = "data/shaders/shadowMapping/pointShadowMapping.frag.spv";
+		shadowMapper.pointShadowMappingPipelineCI.cacheFilePath = "data/pipelineCache/pointShadowMapping.bin";
 		shadowMapper.pointShadowMappingPipelineCI.vertexLayout = VertexLayout::VERTEX_POSITION_ONLY_LAYOUT;
 		shadowMapper.pointShadowMappingPipelineCI.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		shadowMapper.pointShadowMappingPipelineCI.viewportWidth = POINT_SHADOW_MAP_TEXTURE_SIZE;
