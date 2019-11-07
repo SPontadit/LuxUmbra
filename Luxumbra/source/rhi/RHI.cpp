@@ -471,6 +471,7 @@ namespace lux::rhi
 		rtFenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 		rtFenceCI.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
+
 		presentSemaphores.resize(TO_SIZE_T(swapchainImageCount));
 		acquireSemaphores.resize(TO_SIZE_T(swapchainImageCount));
 		fences.resize(TO_SIZE_T(swapchainImageCount));
@@ -486,10 +487,6 @@ namespace lux::rhi
 		rtFenceCI.flags = 0;
 		CHECK_VK(vkCreateFence(device, &rtFenceCI, nullptr, &shadowFence));
 
-		VkEventCreateInfo rtEventCI = {};
-		rtEventCI.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
-
-		CHECK_VK(vkCreateEvent(device, &rtEventCI, nullptr, &shadowEvent));
 
 		VkDescriptorPoolSize materialsUniformDescriptorPoolSize = {};
 		materialsUniformDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -580,7 +577,6 @@ namespace lux::rhi
 
 
 		CHECK_VK(vkQueueSubmit(graphicsQueue, 1, &submitInfo, shadowFence));
-
 
 		vkWaitForFences(device, 1, &shadowFence, false, UINT64_MAX);
 		vkResetFences(device, 1, &shadowFence);

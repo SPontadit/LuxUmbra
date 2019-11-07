@@ -12,8 +12,8 @@ namespace lux
 {
 
 	Engine::Engine() noexcept
-		: isInitialized(false), window(), rhi(), scene(), resourceManager(rhi),
-		currentTime(0.0f), previousTime(0.0f)
+		: isInitialized(false), window(), rhi(), scenes(), resourceManager(rhi),
+		currentScene(0), currentTime(0.0f), previousTime(0.0f)
 	{
 
 	}
@@ -34,7 +34,8 @@ namespace lux
 
 		resourceManager.Initialize();
 
-		scene.Initialize(window, rhi, resourceManager);
+		for (size_t i = 0; i < scenes.size(); i++)
+			scenes[i].Initialize(window, rhi, resourceManager);
 
 		isInitialized = true;
 
@@ -44,9 +45,12 @@ namespace lux
 
 	void Engine::Run() noexcept
 	{
+		currentScene = 1;
 		while (!window.ShouldClose())
 		{
-			DrawImgui();
+			scene::Scene& scene = scenes[TO_SIZE_T(currentScene)];
+
+			DrawImgui(scene);
 
 			rhi.Render(scene.GetCurrentCamera(), scene.GetMeshNodes(), scene.GetLightNodes());
 
@@ -54,9 +58,9 @@ namespace lux
 		}
 	}
 
-	scene::Scene& Engine::GetScene() noexcept
+	scene::Scene& Engine::GetScene(SCENE scene) noexcept
 	{
-		return scene;
+		return scenes[static_cast<int32_t>(scene)];
 	}
 
 	resource::ResourceManager& Engine::GetResourceManager() noexcept
@@ -64,11 +68,8 @@ namespace lux
 		return resourceManager;
 	}
 
-	void Engine::DrawImgui() noexcept
+	void Engine::DrawImgui(scene::Scene& scene) noexcept
 	{
-		//ImGuiStyle& style = ImGui::GetStyle();
-		//style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
@@ -83,6 +84,13 @@ namespace lux
 		sprintf_s(buf, "Luxumbra Engine %d###Luxumbra Engine", (int)framerate);
 	
 		ImGui::Begin(buf);
+
+		ImGui::RadioButton("Sphere Scene", &currentScene, TO_INT32_T(SCENE::SPHERE_SCENE));
+		ImGui::RadioButton("PostProcess Scene", &currentScene, TO_INT32_T(SCENE::POST_PROCESS_SCENE));
+		ImGui::RadioButton("PBR Models Scene", &currentScene, TO_INT32_T(SCENE::PBR_MODELS_SCENE));
+		ImGui::RadioButton("PBR Materials Scene", &currentScene, TO_INT32_T(SCENE::PBR_MATERIALS_SCENE));
+		//ImGui::RadioButton("Transparent Scene", &currentScene, TO_INT32_T(SCENE::TRANSPARENT_SCENE));
+		ImGui::RadioButton("Shadow Scene", &currentScene, TO_INT32_T(SCENE::SHADOW_SCENE));
 
 		if (ImGui::Button("Reload Shader"))
 		{
@@ -106,19 +114,23 @@ namespace lux
 					bool showToneMapping = splitViewMask & lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_TONE_MAPPING_MASK;
 					bool showFXAA = splitViewMask & lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_FXAA_MASK;
 					bool showSSAO = splitViewMask & lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_SSAO_MASK;
+					bool showSSAOOnly = splitViewMask & lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_SSAO_ONLY_MASK;
 					bool newShowToneMapping = showToneMapping;
 					bool newShowFXAA = showFXAA;
 					bool newShowSSAO = showSSAO;
+					bool newShowSSAOOnly = showSSAOOnly;
 
 					ImGui::Checkbox("Show Tone Mapping", &newShowToneMapping);
 					ImGui::Checkbox("Show FXAA", &newShowFXAA);
 					ImGui::Checkbox("Show SSAO", &newShowSSAO);
+					ImGui::Checkbox("Show SSAO Only", &newShowSSAOOnly);
 
 					int newSplitViewMask = 0;
 
 					newSplitViewMask |= newShowToneMapping ? lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_TONE_MAPPING_MASK : 0;
 					newSplitViewMask |= newShowFXAA ? lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_FXAA_MASK : 0;
 					newSplitViewMask |= newShowSSAO ? lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_SSAO_MASK : 0;
+					newSplitViewMask |= newShowSSAOOnly ? lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_SSAO_ONLY_MASK : 0;
 
 					if (newSplitViewMask != splitViewMask)
 						postProcess.splitViewMask = newSplitViewMask;
@@ -284,7 +296,7 @@ namespace lux
 				DisplayLightNodes(scene.GetLightNodes());
 				ImGui::NewLine();
 
-				DisplayMaterials();
+				DisplayMaterials(scene.GetMeshNodes());
 
 				ImGui::EndTabItem();
 			}
@@ -392,15 +404,14 @@ namespace lux
 		}
 	}
 
-	void Engine::DisplayMaterials() noexcept
+	void Engine::DisplayMaterials(const std::vector<scene::MeshNode*>& meshes) noexcept
 	{
 		if (ImGui::TreeNodeEx("Materials", ImGuiTreeNodeFlags_DefaultOpen))
 		{
 			std::set<std::string> materialNames;
-			const std::vector<scene::MeshNode*>& meshNodes = scene.GetMeshNodes();
-			for (size_t i = 0; i < meshNodes.size(); i++)
+			for (size_t i = 0; i < meshes.size(); i++)
 			{
-				resource::Material* currentMaterial = &meshNodes[i]->GetMaterial();
+				resource::Material* currentMaterial = &meshes[i]->GetMaterial();
 				std::set<std::string>::iterator mat = materialNames.find(currentMaterial->name);
 
 				if (mat == materialNames.end())

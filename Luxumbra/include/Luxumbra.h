@@ -7,7 +7,7 @@
 
 #define PI 3.14159265359f
 
-#define CUBEMAP_TEXTURE_SIZE 512
+#define CUBEMAP_TEXTURE_SIZE 1024
 #define IRRADIANCE_TEXTURE_SIZE 64
 #define PREFILTERED_TEXTURE_SIZE 512
 #define BRDF_LUT_TEXTURE_SIZE 512
@@ -16,6 +16,7 @@
 
 #define TO_SIZE_T(x) static_cast<size_t>(x)
 #define TO_INT16_T(x) static_cast<int16_t>(x)
+#define TO_INT32_T(x) static_cast<int32_t>(x)
 #define TO_UINT32_T(x) static_cast<uint32_t>(x)
 #define TO_FLOAT(x) static_cast<float>(x)
 

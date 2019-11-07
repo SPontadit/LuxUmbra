@@ -28,6 +28,7 @@ layout(push_constant) uniform PushConstants
 #define SPLIT_VIEW_TONE_MAPPING_MASK 1
 #define SPLIT_VIEW_FXAA_MASK 2
 #define SPLIT_VIEW_SSAO_MASK 4
+#define SPLIT_VIEW_SSAO_ONLY_MASK 8
 
 #define ITERATIONS 12
 #define SUBPIXEL_QUALITY 0.75
@@ -47,6 +48,12 @@ void main()
 
 	if (splitViewMask != 0)
 	{
+		if ((splitViewMask & SPLIT_VIEW_SSAO_ONLY_MASK) == SPLIT_VIEW_SSAO_ONLY_MASK)
+		{
+			outColor = vec4(vec3(BlurSSAO()), 1.0);
+			return;
+		}
+
 		if (textureCoordinate.x < splitViewRatio)
 		{
 			if ((splitViewMask & SPLIT_VIEW_FXAA_MASK) == SPLIT_VIEW_FXAA_MASK)
@@ -137,7 +144,7 @@ vec3 ToneMapGammaCorrect(vec3 color)
 
 	vec3 indirect = texture(IndirectColorMap, textureCoordinate).rgb * ssao;
 
-	if ((splitViewMask & SPLIT_VIEW_TONE_MAPPING_MASK) == SPLIT_VIEW_TONE_MAPPING_MASK)
+	if (splitViewMask == 0 || (splitViewMask & SPLIT_VIEW_TONE_MAPPING_MASK) == SPLIT_VIEW_TONE_MAPPING_MASK)
 	{
 		switch(toneMapping)
 		{
