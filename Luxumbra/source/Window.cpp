@@ -10,7 +10,6 @@ namespace lux
 
 	void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) noexcept;
 	void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) noexcept;
-	void CursorPositionCallback(GLFWwindow* window, double x, double y) noexcept;
 
 	Window::Window() noexcept
 		: isInitialized(false), width(0), height(0), window(nullptr),
@@ -54,7 +53,6 @@ namespace lux
 
 		glfwSetKeyCallback(window, KeyCallback);
 		glfwSetMouseButtonCallback(window, MouseButtonCallback);
-		glfwSetCursorPosCallback(window, CursorPositionCallback);
 
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
@@ -174,10 +172,6 @@ namespace lux
 			luxWindow->SetActionStatus(Action::FREE_LOOK, action != GLFW_RELEASE);
 			break;
 		}
-	}
-
-	void CursorPositionCallback(GLFWwindow* window, double x, double y) noexcept
-	{
 	}
 
 } // namespace lux
