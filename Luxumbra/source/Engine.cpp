@@ -325,7 +325,14 @@ namespace lux
 			{
 				currentLight = lights[i];
 
-				if (ImGui::TreeNode(("Light " + std::to_string(i)).c_str()))
+				const char* lightType;
+
+				if (currentLight->GetType() == lux::scene::LightType::LIGHT_TYPE_POINT)
+					lightType = "Point Light ";
+				else
+					lightType = "Directional Light ";
+
+				if (ImGui::TreeNode((lightType + std::to_string(i)).c_str()))
 				{
 					DisplayNode(currentLight);
 
@@ -335,6 +342,17 @@ namespace lux
 					if (color != currentLight->GetColor())
 					{
 						currentLight->SetColor(color);
+					}
+
+					if (currentLight->GetType() == lux::scene::LightType::LIGHT_TYPE_POINT)
+					{
+						float radius = currentLight->GetRadius();
+						float newRadius = radius;
+
+						ImGui::DragFloat("Radius", &newRadius, 0.1f, 0.0f, 100.0f, "%.2f");
+
+						if (newRadius != radius)
+							currentLight->SetRadius(newRadius);
 					}
 
 					ImGui::TreePop();
