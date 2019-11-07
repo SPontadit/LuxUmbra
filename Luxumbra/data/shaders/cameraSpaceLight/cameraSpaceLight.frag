@@ -13,6 +13,8 @@ layout(location = 0) in FsIn
 	vec3 normalWS;
 	mat4 viewMatrix;
 	mat3 textureToViewMatrix;
+	float nearPlane;
+	float farPlane;
 } fsIn;
 
 layout(location = 0) out vec4 outColor;
@@ -52,7 +54,6 @@ layout(set = 0, binding = 4) uniform samplerCube[POINT_LIGHT_MAX_COUNT] pointLig
 layout(set = 0, binding = 5) uniform samplerCube irradianceMap;
 layout(set = 0, binding = 6) uniform samplerCube prefilteredMap;
 layout(set = 0, binding = 7) uniform sampler2D BRDFLut;
-
 
 layout(push_constant) uniform PushConsts
 {
@@ -102,13 +103,11 @@ float Fd_Lambert();
 float Fd_Burley(float NdotV, float NdotL, float LdotH, float roughness);
 vec3 PrefilteredReflection(vec3 R, float roughness);
 
-#define NEAR_PLANE 0.1
-#define FAR_PLANE 500.0
 
 float linearDepth(float depth)
 {
 	float z = depth * 2.0f - 1.0f; 
-	return (2.0f * NEAR_PLANE * FAR_PLANE) / (FAR_PLANE + NEAR_PLANE - z * (FAR_PLANE - NEAR_PLANE));	
+	return (2.0f * fsIn.nearPlane * fsIn.farPlane) / (fsIn.farPlane + fsIn.nearPlane - z * (fsIn.farPlane - fsIn.nearPlane));	
 }
 
 void main()

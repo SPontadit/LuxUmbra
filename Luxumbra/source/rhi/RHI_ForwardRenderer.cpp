@@ -1352,6 +1352,7 @@ namespace lux::rhi
 
 		forward.rtViewProjUniform.view = camera->GetViewTransform();
 		forward.rtViewProjUniform.projection = camera->GetPerspectiveProjectionTransform();
+		forward.rtViewProjUniform.nearFarPlane = glm::vec2(camera->GetNearDistance(), camera->GetFarDistance());
 
 		UpdateBuffer(forward.viewProjUniformBuffers[currentFrame], &forward.rtViewProjUniform);
 

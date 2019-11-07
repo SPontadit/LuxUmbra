@@ -33,4 +33,14 @@ namespace lux::scene
 
 		return perspectiveTransform;
 	}
+
+	float CameraNode::GetNearDistance() const noexcept
+	{
+		return nearDist;
+	}
+
+	float CameraNode::GetFarDistance() const noexcept
+	{
+		return farDist;
+	}
 }

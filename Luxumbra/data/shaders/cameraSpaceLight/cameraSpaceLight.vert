@@ -15,6 +15,8 @@ layout(location = 0) out VsOut
 	vec3 normalWS;
 	mat4 viewMatrix;
 	mat3 textureToViewMatrix;
+	float nearPlane;
+	float farPlane;
 } vsOut;
 
 
@@ -22,6 +24,7 @@ layout(set = 0, binding = 0) uniform ViewProj
 {
 	mat4 view;
 	mat4 proj;
+	vec2 nearFarPlane;
 } vp;
 
 layout(push_constant) uniform Model
@@ -50,4 +53,7 @@ void main()
 	vec3 N = normalize(modelToView * inNormal);
 
 	vsOut.textureToViewMatrix = mat3(T, B, N);
+
+	vsOut.nearPlane = vp.nearFarPlane.x;
+	vsOut.farPlane = vp.nearFarPlane.y;
 }

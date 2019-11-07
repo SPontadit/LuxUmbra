@@ -25,6 +25,10 @@ namespace lux::scene
 
 		glm::mat4 GetViewTransform() const noexcept;
 		glm::mat4 GetPerspectiveProjectionTransform() const noexcept;
+		float GetNearDistance() const noexcept;
+		float GetFarDistance() const noexcept;
+
+		
 
 	private:
 		const Window* window;
