@@ -306,6 +306,16 @@ namespace lux
 					currentMesh = meshes[i];
 					DisplayNode(currentMesh);
 
+					ImGui::NewLine();
+
+					bool castShadow = currentMesh->GetIsCastingShadow();
+					bool newCastShadow = castShadow;
+					ImGui::Checkbox("Cast Shadow", &newCastShadow);
+
+					if (castShadow != newCastShadow)
+						currentMesh->SetIsCastingShadow(newCastShadow);
+
+
 					ImGui::TreePop();
 				}
 			}

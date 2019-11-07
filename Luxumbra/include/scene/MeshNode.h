@@ -29,9 +29,13 @@ namespace lux::scene
 		const resource::Mesh& GetMesh() const noexcept;
 		resource::Material& GetMaterial() const noexcept;
 
+		bool GetIsCastingShadow() const noexcept;
+		void SetIsCastingShadow(bool newIsCastingShadow) noexcept;
+
 	private:
 		std::shared_ptr<resource::Mesh> mesh;
 		std::shared_ptr<resource::Material> material;
+		bool isCastingShadow;
 	};
 
 } // namespace lux::scene

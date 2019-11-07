@@ -370,6 +370,10 @@ namespace lux::rhi
 				{
 					scene::MeshNode* meshNode = meshes[j];
 
+					if (meshNode->GetIsCastingShadow() == false)
+						continue;
+
+
 					glm::mat4 localtoLightTransform = inverseLightTransform * meshNode->GetWorldTransform();
 
 					AABB meshAABB = meshNode->GetMesh().aabb;
@@ -445,6 +449,10 @@ namespace lux::rhi
 				for (size_t j = 0; j < meshCount; j++)
 				{
 					scene::MeshNode* meshNode = meshes[j];
+
+					if (meshNode->GetIsCastingShadow() == false)
+						continue;
+
 
 					shadowMappingModelConstant.model = meshNode->GetWorldTransform();
 					vkCmdPushConstants(commandBuffer, shadowMapper.directionalShadowMappingPipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, TO_UINT32_T(sizeof(ShadowMappingModelConstant)), &shadowMappingModelConstant);
@@ -578,6 +586,10 @@ namespace lux::rhi
 					for (size_t j = 0; j < meshCount; j++)
 					{
 						scene::MeshNode* meshNode = meshes[j];
+
+						if (meshNode->GetIsCastingShadow() == false)
+							continue;
+
 
 						shadowMappingModelConstant.model = meshNode->GetWorldTransform();
 						vkCmdPushConstants(commandBuffer, shadowMapper.pointShadowMappingPipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, TO_UINT32_T(sizeof(ShadowMappingModelConstant)), &shadowMappingModelConstant);
