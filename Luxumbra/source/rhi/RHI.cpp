@@ -46,6 +46,8 @@ namespace lux::rhi
 			vkDestroyFence(device, fences[i], nullptr);
 		}
 
+		vkDestroyFence(device, shadowFence, nullptr);
+
 		vkDestroyDevice(device, nullptr);
 
 #ifdef VULKAN_ENABLE_VALIDATION
@@ -481,6 +483,13 @@ namespace lux::rhi
 			CHECK_VK(vkCreateFence(device, &rtFenceCI, nullptr, &fences[i]));
 		}
 
+		rtFenceCI.flags = 0;
+		CHECK_VK(vkCreateFence(device, &rtFenceCI, nullptr, &shadowFence));
+
+		VkEventCreateInfo rtEventCI = {};
+		rtEventCI.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
+
+		CHECK_VK(vkCreateEvent(device, &rtEventCI, nullptr, &shadowEvent));
 
 		VkDescriptorPoolSize materialsUniformDescriptorPoolSize = {};
 		materialsUniformDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -559,6 +568,26 @@ namespace lux::rhi
 
 		RenderShadowMaps(commandBuffer, lights, meshes);
 
+		CHECK_VK(vkEndCommandBuffer(commandBuffer));
+		
+		VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+		VkSubmitInfo submitInfo = {};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &commandBuffer;
+		submitInfo.pWaitDstStageMask = &stageMask;
+
+
+		CHECK_VK(vkQueueSubmit(graphicsQueue, 1, &submitInfo, shadowFence));
+
+
+		vkWaitForFences(device, 1, &shadowFence, false, UINT64_MAX);
+		vkResetFences(device, 1, &shadowFence);
+		vkResetCommandBuffer(commandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+		
+		CHECK_VK(vkBeginCommandBuffer(commandBuffer, &commandBufferBI));
+
 		RenderForward(commandBuffer, imageIndex, camera, meshes, lights);
 
 		RenderPostProcess(commandBuffer, imageIndex, camera);
@@ -566,9 +595,9 @@ namespace lux::rhi
 		CHECK_VK(vkEndCommandBuffer(commandBuffer));
 
 		// Submit Command Buffer
-		VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-		VkSubmitInfo submitInfo = {};
+
+		submitInfo = {};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 		submitInfo.commandBufferCount = 1;
 		submitInfo.pCommandBuffers = &commandBuffer;

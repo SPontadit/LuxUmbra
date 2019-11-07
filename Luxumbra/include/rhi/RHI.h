@@ -134,6 +134,8 @@ namespace lux::rhi
 		std::vector<VkSemaphore> acquireSemaphores;
 
 		std::vector<VkFence> fences;
+		VkFence shadowFence;
+		VkEvent shadowEvent;
 
 		VkDescriptorPool imguiDescriptorPool;
 		VkDescriptorPool materialDescriptorPool;

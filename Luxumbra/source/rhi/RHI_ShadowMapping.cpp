@@ -33,6 +33,7 @@ namespace lux::rhi
 		depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 		VkAttachmentReference depthAttachmentRef = {};
 		depthAttachmentRef.attachment = 0;
@@ -49,7 +50,7 @@ namespace lux::rhi
 		// Directional lights
 
 		depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		depthAttachment.finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		//depthAttachment.finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 
 		subpass.colorAttachmentCount = 0;
 		subpass.pColorAttachments = nullptr;
@@ -63,7 +64,7 @@ namespace lux::rhi
 		// Point lights
 
 		depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		//depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 		VkAttachmentDescription& colorAttachment = attachments[1];
 		colorAttachment.format = VK_FORMAT_R32_SFLOAT;
@@ -464,6 +465,15 @@ namespace lux::rhi
 				shadowMappingRenderPassBI.clearValueCount = 1;
 				shadowMappingRenderPassBI.pClearValues = &depthClearValue;
 
+				VkImageSubresourceRange imageTransitionSubresourceRange = {};
+				imageTransitionSubresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+				imageTransitionSubresourceRange.layerCount = 1;
+				imageTransitionSubresourceRange.baseArrayLayer = 0;
+				imageTransitionSubresourceRange.levelCount = 1;
+				imageTransitionSubresourceRange.baseMipLevel = 0;
+
+				// Render pass
+
 				vkCmdBeginRenderPass(commandBuffer, &shadowMappingRenderPassBI, VK_SUBPASS_CONTENTS_INLINE);
 
 				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shadowMapper.directionalShadowMappingPipeline.pipeline);
@@ -492,7 +502,43 @@ namespace lux::rhi
 
 				vkCmdEndRenderPass(commandBuffer);
 
-				CommandTransitionImageLayout(commandBuffer, shadowMapper.directionalShadowMaps[resourceIndex].image, depthImageFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+				// Image transitions for copy
+
+				VkImageMemoryBarrier intermediateMapTransitionToTransfer = {};
+				intermediateMapTransitionToTransfer.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+				intermediateMapTransitionToTransfer.image = shadowMapper.directionalShadowMapIntermediate.image;
+				intermediateMapTransitionToTransfer.subresourceRange = imageTransitionSubresourceRange;
+
+				intermediateMapTransitionToTransfer.srcQueueFamilyIndex = graphicsQueueIndex;
+				intermediateMapTransitionToTransfer.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+				intermediateMapTransitionToTransfer.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+				intermediateMapTransitionToTransfer.dstQueueFamilyIndex = graphicsQueueIndex;
+				intermediateMapTransitionToTransfer.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+				intermediateMapTransitionToTransfer.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+
+				vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_DEPENDENCY_BY_REGION_BIT,
+					0, nullptr, 0, nullptr, 1, &intermediateMapTransitionToTransfer);
+
+				VkImageMemoryBarrier shadowMapTransitionToTransfer = {};
+				shadowMapTransitionToTransfer.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+				shadowMapTransitionToTransfer.image = shadowMapper.directionalShadowMaps[resourceIndex].image;
+				shadowMapTransitionToTransfer.subresourceRange = imageTransitionSubresourceRange;
+
+				shadowMapTransitionToTransfer.srcQueueFamilyIndex = graphicsQueueIndex;
+				shadowMapTransitionToTransfer.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+				shadowMapTransitionToTransfer.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+
+				shadowMapTransitionToTransfer.dstQueueFamilyIndex = graphicsQueueIndex;
+				shadowMapTransitionToTransfer.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				shadowMapTransitionToTransfer.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
+				vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_DEPENDENCY_BY_REGION_BIT,
+					0, nullptr, 0, nullptr, 1, &shadowMapTransitionToTransfer);
+
+				//CommandTransitionImageLayout(commandBuffer, shadowMapper.directionalShadowMaps[resourceIndex].image, depthImageFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+				// Intermediate map copy to shadow map
 
 				VkImageCopy imageCopy = {};
 				imageCopy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -513,7 +559,41 @@ namespace lux::rhi
 
 				vkCmdCopyImage(commandBuffer, shadowMapper.directionalShadowMapIntermediate.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, shadowMapper.directionalShadowMaps[resourceIndex].image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageCopy);
 
-				CommandTransitionImageLayout(commandBuffer, shadowMapper.directionalShadowMaps[resourceIndex].image, depthImageFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+				// Image transitions after copy
+
+				VkImageMemoryBarrier intermediateMapTransitionToRender = {};
+				intermediateMapTransitionToRender.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+				intermediateMapTransitionToRender.image = shadowMapper.directionalShadowMapIntermediate.image;
+				intermediateMapTransitionToRender.subresourceRange = imageTransitionSubresourceRange;
+
+				intermediateMapTransitionToRender.srcQueueFamilyIndex = graphicsQueueIndex;
+				intermediateMapTransitionToRender.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+				intermediateMapTransitionToRender.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+
+				intermediateMapTransitionToRender.dstQueueFamilyIndex = graphicsQueueIndex;
+				intermediateMapTransitionToRender.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+				intermediateMapTransitionToRender.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+				vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_DEPENDENCY_BY_REGION_BIT,
+					0, nullptr, 0, nullptr, 1, &intermediateMapTransitionToRender);
+
+				VkImageMemoryBarrier shadowMapTransitionToSample = {};
+				shadowMapTransitionToSample.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+				shadowMapTransitionToSample.image = shadowMapper.directionalShadowMaps[resourceIndex].image;
+				shadowMapTransitionToSample.subresourceRange = imageTransitionSubresourceRange;
+
+				shadowMapTransitionToSample.srcQueueFamilyIndex = graphicsQueueIndex;
+				shadowMapTransitionToSample.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				shadowMapTransitionToSample.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
+				shadowMapTransitionToSample.dstQueueFamilyIndex = graphicsQueueIndex;
+				shadowMapTransitionToSample.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+				shadowMapTransitionToSample.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+
+				vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_DEPENDENCY_BY_REGION_BIT,
+					0, nullptr, 0, nullptr, 1, &shadowMapTransitionToSample);
+
+				//CommandTransitionImageLayout(commandBuffer, shadowMapper.directionalShadowMaps[resourceIndex].image, depthImageFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
 
 				directionalLightIndex++;
 			}
