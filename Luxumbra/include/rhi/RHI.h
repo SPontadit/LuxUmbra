@@ -85,7 +85,7 @@ namespace lux::rhi
 		void GenerateCubemapFromHDR(const Image& HDRSource, Image& cubemap) noexcept;
 		void GenerateIBLResources(const Image& cubemapSource, Image& irradiance, Image& prefiltered, Image& BRDFLut) noexcept;
 		void CreateEnvMapDescriptorSet(Image& image) noexcept;
-		
+
 
 
 		int16_t CreateLightShadowMappingResources(scene::LightType lightType) noexcept;
@@ -93,6 +93,12 @@ namespace lux::rhi
 		void SetCubeMesh(std::shared_ptr<resource::Mesh> mesh) noexcept;
 
 		void RebuildPipelines() noexcept;
+
+
+		float GetShadowMappingDepthBiasConstantFactor() const noexcept;
+		float GetShadowMappingDepthBiasSlopeFactor() const noexcept;
+		void SetShadowMappingDepthBiasConstantFactor(float newConstantFactor) noexcept;
+		void SetShadowMappingDepthBiasSlopeFactor(float newSlopeFactor) noexcept;
 
 		static const uint32_t SWAPCHAIN_MIN_IMAGE_COUNT = 2;
 		ForwardRenderer forward;

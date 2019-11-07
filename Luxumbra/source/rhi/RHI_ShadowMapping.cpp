@@ -9,7 +9,8 @@ namespace lux::rhi
 	using namespace lux;
 
 	ShadowMapper::ShadowMapper() noexcept
-		: directionalShadowMappingRenderPass(VK_NULL_HANDLE), pointShadowMappingRenderPass(VK_NULL_HANDLE),
+		: depthBiasConstantFactor(4.f), depthBiasSlopeFactor(2.5f),
+		directionalShadowMappingRenderPass(VK_NULL_HANDLE), pointShadowMappingRenderPass(VK_NULL_HANDLE),
 		directionalShadowMappingPipeline(), pointShadowMappingPipeline(),
 		directionalShadowMappingPipelineCI(), pointShadowMappingPipelineCI(),
 		descriptorPool(VK_NULL_HANDLE),
@@ -122,6 +123,7 @@ namespace lux::rhi
 		shadowMapper.directionalShadowMappingPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS;
 		shadowMapper.directionalShadowMappingPipelineCI.viewDescriptorSetLayoutBindings = { viewProjUniformBufferDescriptorSetLayoutBinding };
 		shadowMapper.directionalShadowMappingPipelineCI.pushConstants = { modelPushConstantRange };
+		shadowMapper.directionalShadowMappingPipelineCI.dynamicStates = { VK_DYNAMIC_STATE_DEPTH_BIAS };
 
 		CreateGraphicsPipeline(shadowMapper.directionalShadowMappingPipelineCI, shadowMapper.directionalShadowMappingPipeline);
 
@@ -152,6 +154,7 @@ namespace lux::rhi
 		shadowMapper.pointShadowMappingPipelineCI.depthCompareOp = VK_COMPARE_OP_LESS;
 		shadowMapper.pointShadowMappingPipelineCI.viewDescriptorSetLayoutBindings = { viewProjUniformBufferDescriptorSetLayoutBinding };
 		shadowMapper.pointShadowMappingPipelineCI.pushConstants = { modelAndVPIndexPushConstantRange };
+		shadowMapper.pointShadowMappingPipelineCI.dynamicStates = { VK_DYNAMIC_STATE_DEPTH_BIAS };
 
 		CreateGraphicsPipeline(shadowMapper.pointShadowMappingPipelineCI, shadowMapper.pointShadowMappingPipeline);
 	}
@@ -325,6 +328,26 @@ namespace lux::rhi
 		vkDestroyDescriptorPool(device, shadowMapper.descriptorPool, nullptr);
 	}
 
+	float RHI::GetShadowMappingDepthBiasConstantFactor() const noexcept
+	{
+		return shadowMapper.depthBiasConstantFactor;
+	}
+
+	float RHI::GetShadowMappingDepthBiasSlopeFactor() const noexcept
+	{
+		return shadowMapper.depthBiasSlopeFactor;
+	}
+
+	void RHI::SetShadowMappingDepthBiasConstantFactor(float newConstantFactor) noexcept
+	{
+		shadowMapper.depthBiasConstantFactor = newConstantFactor;
+	}
+
+	void RHI::SetShadowMappingDepthBiasSlopeFactor(float newSlopeFactor) noexcept
+	{
+		shadowMapper.depthBiasSlopeFactor = newSlopeFactor;
+	}
+
 	void RHI::RenderShadowMaps(VkCommandBuffer commandBuffer, const std::vector<scene::LightNode*>& lights, const std::vector<scene::MeshNode*>& meshes) noexcept
 	{
 		std::array<DirectionalLightBuffer, DIRECTIONAL_LIGHT_MAX_COUNT> directionalLightBuffer;
@@ -443,6 +466,8 @@ namespace lux::rhi
 
 				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shadowMapper.directionalShadowMappingPipeline.pipeline);
 				vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shadowMapper.directionalShadowMappingPipeline.pipelineLayout, 0, 1, &shadowMapper.directionalUniformBufferDescriptorSets[resourceIndex], 0, nullptr);
+
+				vkCmdSetDepthBias(commandBuffer, shadowMapper.depthBiasConstantFactor, 0.f, shadowMapper.depthBiasSlopeFactor);
 
 				ShadowMappingModelConstant shadowMappingModelConstant = {};
 
@@ -578,6 +603,8 @@ namespace lux::rhi
 
 					vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shadowMapper.pointShadowMappingPipeline.pipeline);
 					vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shadowMapper.pointShadowMappingPipeline.pipelineLayout, 0, 1, &shadowMapper.pointUniformBufferDescriptorSets[resourceIndex], 0, nullptr);
+
+					vkCmdSetDepthBias(commandBuffer, shadowMapper.depthBiasConstantFactor, 0.f, shadowMapper.depthBiasSlopeFactor);
 
 					vkCmdPushConstants(commandBuffer, shadowMapper.pointShadowMappingPipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, TO_UINT32_T(sizeof(ShadowMappingModelConstant)), sizeof(uint32_t), &i);
 

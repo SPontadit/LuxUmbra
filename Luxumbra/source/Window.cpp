@@ -43,6 +43,8 @@ namespace lux
 		this->width = width;
 		this->height = height;
 
+		glfwSetWindowAttrib(window, GLFW_RESIZABLE, 0);
+
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
 		ImGuiIO& io = ImGui::GetIO(); (void)io;
