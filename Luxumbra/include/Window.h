@@ -14,6 +14,20 @@
 namespace lux
 {
 
+	enum class Action : int32_t
+	{
+		FREE_LOOK = 0,
+		FORWARD,
+		BACKWARD,
+		RIGHT,
+		LEFT,
+		UP,
+		DOWN,
+		TOGGLE_UI,
+
+		ACTION_MAX_ENUM
+	};
+
 	class Window
 	{
 	public:
@@ -30,16 +44,23 @@ namespace lux
 		HWND GetHandle() const noexcept;
 		GLFWwindow* GetGLFWWindow() const noexcept;
 
-		void PollEvents() const noexcept;
+		void PollEvents() noexcept;
 		bool ShouldClose() const noexcept;
 
 		float GetAspect() const noexcept;
+
+		bool GetActionsStatus(Action action) const noexcept;
+		void SetActionStatus(Action action, bool status) noexcept;
+		void GetMouseDelta(float& x, float& y) const noexcept;
 
 	private:
 		bool isInitialized;
 
 		uint32_t width, height;
 		GLFWwindow* window;
+
+		bool actionsStatus[TO_SIZE_T(Action::ACTION_MAX_ENUM)];
+		float mouseXDelta, mouseYDelta;
 	};
 
 } // namespace lux

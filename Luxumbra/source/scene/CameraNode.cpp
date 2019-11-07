@@ -16,11 +16,7 @@ namespace lux::scene
 
 	glm::mat4 CameraNode::GetViewTransform() const noexcept
 	{
-		glm::vec3 eye = GetWorldPosition();
-		glm::vec3 center = eye + glm::rotate(GetWorldRotation(), glm::vec3(0.f, 0.f, -1.f));
-		glm::vec3 up = glm::vec3(0.f, 1.f, 0.f);
-
-		return glm::lookAtRH(eye, center, up);;
+		return glm::inverse(GetWorldTransform());
 	}
 
 	glm::mat4 CameraNode::GetPerspectiveProjectionTransform() const noexcept

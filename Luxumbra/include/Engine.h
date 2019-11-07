@@ -41,6 +41,7 @@ namespace lux
 		resource::ResourceManager& GetResourceManager() noexcept;
 
 	private:
+		void Update(scene::Scene& scene) noexcept;
 		void DrawImgui(scene::Scene& scene) noexcept;
 		void DisplayCameraNode(scene::CameraNode* node) noexcept;
 		void DisplayMeshNodes(const std::vector<scene::MeshNode*>& meshes) noexcept;
@@ -59,6 +60,8 @@ namespace lux
 
 		double currentTime;
 		double previousTime;
+
+		bool drawGUI;
 	};
 
 } // namespace lux

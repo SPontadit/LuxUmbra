@@ -13,7 +13,7 @@ namespace lux
 
 	Engine::Engine() noexcept
 		: isInitialized(false), window(), rhi(), scenes(), resourceManager(rhi),
-		currentScene(0), currentTime(0.0f), previousTime(0.0f)
+		currentScene(0), currentTime(0.0f), previousTime(0.0f), drawGUI(true)
 	{
 
 	}
@@ -48,13 +48,16 @@ namespace lux
 		currentScene = 1;
 		while (!window.ShouldClose())
 		{
+			window.PollEvents();
+
 			scene::Scene& scene = scenes[TO_SIZE_T(currentScene)];
 
-			DrawImgui(scene);
+			Update(scene);
+
+			if (drawGUI)
+				DrawImgui(scene);
 
 			rhi.Render(scene.GetCurrentCamera(), scene.GetMeshNodes(), scene.GetLightNodes());
-
-			window.PollEvents();
 		}
 	}
 
@@ -66,6 +69,88 @@ namespace lux
 	resource::ResourceManager& Engine::GetResourceManager() noexcept
 	{
 		return resourceManager;
+	}
+
+	void Engine::Update(scene::Scene& scene) noexcept
+	{
+		scene::CameraNode* camera = scene.GetCurrentCamera();
+		float moveDelta = 0.01f;
+
+		if (window.GetActionsStatus(Action::FREE_LOOK))
+		{
+			float mouseXDelta, mouseYDelta;
+			window.GetMouseDelta(mouseXDelta, mouseYDelta);
+
+			glm::vec3 cameraRotation = camera->GetLocalRotation();
+
+			cameraRotation.y += glm::radians(-mouseXDelta);
+			cameraRotation.x += glm::radians(-mouseYDelta);
+
+			camera->SetLocalRotation(cameraRotation);
+		}
+
+		if (window.GetActionsStatus(Action::FORWARD))
+		{
+			glm::vec3 cameraPosition = camera->GetLocalPosition();
+			glm::vec3 cameraForward = glm::rotate(glm::quat(camera->GetLocalRotation()), glm::vec3(0.f, 0.f, -1.f));
+
+			cameraPosition += cameraForward * moveDelta;
+
+			camera->SetLocalPosition(cameraPosition);
+		}
+
+		if (window.GetActionsStatus(Action::BACKWARD))
+		{
+			glm::vec3 cameraPosition = camera->GetLocalPosition();
+			glm::vec3 cameraBackward = glm::rotate(glm::quat(camera->GetLocalRotation()), glm::vec3(0.f, 0.f, 1.f));
+
+			cameraPosition += cameraBackward * moveDelta;
+
+			camera->SetLocalPosition(cameraPosition);
+		}
+
+		if (window.GetActionsStatus(Action::RIGHT))
+		{
+			glm::vec3 cameraPosition = camera->GetLocalPosition();
+			glm::vec3 cameraRight = glm::rotate(glm::quat(camera->GetLocalRotation()), glm::vec3(1.f, 0.f, 0.f));
+
+			cameraPosition += cameraRight * moveDelta;
+
+			camera->SetLocalPosition(cameraPosition);
+		}
+
+		if (window.GetActionsStatus(Action::LEFT))
+		{
+			glm::vec3 cameraPosition = camera->GetLocalPosition();
+			glm::vec3 cameraLeft = glm::rotate(glm::quat(camera->GetLocalRotation()), glm::vec3(-1.f, 0.f, 0.f));
+
+			cameraPosition += cameraLeft * moveDelta;
+
+			camera->SetLocalPosition(cameraPosition);
+		}
+
+		if (window.GetActionsStatus(Action::UP))
+		{
+			glm::vec3 cameraPosition = camera->GetLocalPosition();
+			glm::vec3 cameraUp = glm::rotate(glm::quat(camera->GetLocalRotation()), glm::vec3(0.f, 1.f, 0.f));
+
+			cameraPosition += cameraUp * moveDelta;
+
+			camera->SetLocalPosition(cameraPosition);
+		}
+
+		if (window.GetActionsStatus(Action::DOWN))
+		{
+			glm::vec3 cameraPosition = camera->GetLocalPosition();
+			glm::vec3 cameraDown = glm::rotate(glm::quat(camera->GetLocalRotation()), glm::vec3(0.f, -1.f, -0.f));
+
+			cameraPosition += cameraDown * moveDelta;
+
+			camera->SetLocalPosition(cameraPosition);
+		}
+
+		if (window.GetActionsStatus(Action::TOGGLE_UI))
+			drawGUI = !drawGUI;
 	}
 
 	void Engine::DrawImgui(scene::Scene& scene) noexcept
