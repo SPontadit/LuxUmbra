@@ -23,10 +23,10 @@ int main(int ac, char* av[])
 	CreateMaterials(luxUmbra);
 
 	BuildSphereScene(luxUmbra);
-	BuildPostProcessScene(luxUmbra);
-	BuildDirectionalShadowScene(luxUmbra);
-	BuildPBRModels(luxUmbra);
-	BuildPBRMaterials(luxUmbra);
+	//BuildPostProcessScene(luxUmbra);
+	//BuildDirectionalShadowScene(luxUmbra);
+	//BuildPBRModels(luxUmbra);
+	//BuildPBRMaterials(luxUmbra);
 
 	luxUmbra.Run();
 
@@ -46,7 +46,7 @@ void BuildSphereScene(lux::Engine& luxUmbra) noexcept
 	defaultMaterialCI.isTransparent = false;
 
 	size_t row = 3;
-	size_t column = 7;
+	size_t column = 6;
 
 	for (size_t i = 0; i <= row; i++)
 	{
@@ -66,7 +66,8 @@ void BuildSphereScene(lux::Engine& luxUmbra) noexcept
 
 	defaultMaterialCI.baseColor = glm::vec3(1.0f, 1.0f, 1.0f);
 
-	for (size_t j = 0; j < column; j++)
+	row ++;
+	for (size_t j = 0; j <= column; j++)
 	{
 		defaultMaterialCI.perceptualRoughness = TO_FLOAT(j) / TO_FLOAT(column);
 
@@ -76,33 +77,76 @@ void BuildSphereScene(lux::Engine& luxUmbra) noexcept
 		scene.AddMeshNode(nullptr, { j, row, 0.f }, { 0.0f, 0.0f, 0.0f }, false, lux::resource::MeshPrimitive::MESH_SPHERE_PRIMITIVE, name);
 	}
 
+	row ++;
+	defaultMaterialCI.baseColor = glm::vec3(0.83137254902f, 0.6862745098f, 0.21568627451f);
+
+	for (size_t j = 0; j <= column; j++)
+	{
+		defaultMaterialCI.perceptualRoughness = TO_FLOAT(j) / TO_FLOAT(column);
+
+		defaultMaterialCI.metallic = true;
+		std::string name = ("Gold_" + std::to_string(j));
+		resourceManager.CreateMaterial(name, defaultMaterialCI);
+		scene.AddMeshNode(nullptr, { j, row, 0.f }, { 0.0f, 0.0f, 0.0f }, false, lux::resource::MeshPrimitive::MESH_SPHERE_PRIMITIVE, name);
+	}
+
 	defaultMaterialCI.baseColor = glm::vec3(1.0f, 0.0f, 0.0f);
 
-	for (size_t j = 0; j < column; j++)
+
+	// Clear Coat
+	defaultMaterialCI.reflectance = 0.5f;
+	defaultMaterialCI.perceptualRoughness = 0.5f;
+	row += 2;
+	for (size_t j = 0; j <= column; j++)
 	{
-		defaultMaterialCI.clearCoatPerceptualRoughness = 0.4f;
+		defaultMaterialCI.clearCoatPerceptualRoughness = 0.25f;
+		defaultMaterialCI.clearCoat = TO_FLOAT(j) / TO_FLOAT(column);
+
+		defaultMaterialCI.metallic = false;
+		std::string name = ("ClearCoatLowRough_" + std::to_string(j));
+		resourceManager.CreateMaterial(name, defaultMaterialCI);
+		scene.AddMeshNode(nullptr, { j, row, 0.f }, { 0.0f, 0.0f, 0.0f }, false, lux::resource::MeshPrimitive::MESH_SPHERE_PRIMITIVE, name);
+	}
+
+	row++;
+	for (size_t j = 0; j <= column; j++)
+	{
+		defaultMaterialCI.clearCoatPerceptualRoughness = 1.0 - TO_FLOAT(j) / TO_FLOAT(column);
+		defaultMaterialCI.clearCoat = 0.8f;
+
+		defaultMaterialCI.metallic = false;
+		std::string name = ("ClearCoatHighRough_" + std::to_string(j));
+		resourceManager.CreateMaterial(name, defaultMaterialCI);
+		scene.AddMeshNode(nullptr, { j, row, 0.f }, { 0.0f, 0.0f, 0.0f }, false, lux::resource::MeshPrimitive::MESH_SPHERE_PRIMITIVE, name);
+	}
+
+	row++;
+	for (size_t j = 0; j <= column; j++)
+	{
+		defaultMaterialCI.clearCoatPerceptualRoughness = 0.2f;
 		defaultMaterialCI.clearCoat = TO_FLOAT(j) / TO_FLOAT(column);
 
 		defaultMaterialCI.metallic = true;
-		std::string name = ("ClearCoat_" + std::to_string(j));
+		std::string name = ("ClearCoatMetLowRough_" + std::to_string(j));
 		resourceManager.CreateMaterial(name, defaultMaterialCI);
-		scene.AddMeshNode(nullptr, { j, row + 1.0f, 0.f }, { 0.0f, 0.0f, 0.0f }, false, lux::resource::MeshPrimitive::MESH_SPHERE_PRIMITIVE, name);
+		scene.AddMeshNode(nullptr, { j, row, 0.f }, { 0.0f, 0.0f, 0.0f }, false, lux::resource::MeshPrimitive::MESH_SPHERE_PRIMITIVE, name);
 	}
 
-	for (size_t j = 0; j < column; j++)
+	row++;
+	for (size_t j = 0; j <= column; j++)
 	{
+		defaultMaterialCI.clearCoatPerceptualRoughness = 1.0f - TO_FLOAT(j) / TO_FLOAT(column);
 		defaultMaterialCI.clearCoat = 0.8f;
-		defaultMaterialCI.clearCoatPerceptualRoughness = TO_FLOAT(j) / TO_FLOAT(column);
 
-		defaultMaterialCI.metallic = false;
-		std::string name = ("ClearCoatRough_" + std::to_string(j));
+		defaultMaterialCI.metallic = true;
+		std::string name = ("ClearCoatMetHighRough_" + std::to_string(j));
 		resourceManager.CreateMaterial(name, defaultMaterialCI);
-		scene.AddMeshNode(nullptr, { j, row + 2.0f, 0.f }, { 0.0f, 0.0f, 0.0f }, false, lux::resource::MeshPrimitive::MESH_SPHERE_PRIMITIVE, name);
+		scene.AddMeshNode(nullptr, { j, row, 0.f }, { 0.0f, 0.0f, 0.0f }, false, lux::resource::MeshPrimitive::MESH_SPHERE_PRIMITIVE, name);
 	}
 
-	scene.AddLightNode(nullptr, { 0.0f, 0.0f, -1.0f }, glm::radians(glm::vec3(-45.f, 70.f, 0.f)), false, lux::scene::LightType::LIGHT_TYPE_DIRECTIONAL, { 1.0f, 1.0f, 1.0f });
+	scene.AddLightNode(nullptr, { 0.0f, 0.0f, -1.0f }, glm::radians(glm::vec3(-30.f, 45.f, 0.f)), false, lux::scene::LightType::LIGHT_TYPE_DIRECTIONAL, { 1.0f, 1.0f, 1.0f });
 
-	scene.AddCameraNode(nullptr, { 3.f, 2.5f, 7.5f }, { 0.f, 0.f, 0.f }, false, 45.f, 0.01f, 1000.f, true);
+	scene.AddCameraNode(nullptr, { 3.f, 2.5f, 6.0f }, { 0.f, 0.f, 0.f }, false, 45.f, 0.01f, 1000.f, true);
 }
 
 void BuildDirectionalShadowScene(lux::Engine& luxUmbra) noexcept
@@ -260,6 +304,11 @@ void BuildPBRMaterials(lux::Engine& luxUmbra) noexcept
 	std::shared_ptr<lux::resource::Texture> metRoughWallpaper = resourceManager.GetTexture("data/textures/Wallpaper_Metallic_Roughness.png");
 	std::shared_ptr<lux::resource::Texture> aoWallpaper = resourceManager.GetTexture("data/textures/Wallpaper_AO.png");
 
+	std::shared_ptr<lux::resource::Texture> albedoTriangle = resourceManager.GetTexture("data/textures/Triangle_BaseColor.jpg");
+	std::shared_ptr<lux::resource::Texture> normalTriangle = resourceManager.GetTexture("data/textures/Triangle_Normal.png");
+	std::shared_ptr<lux::resource::Texture> metRoughTriangle = resourceManager.GetTexture("data/textures/Triangle_Metallic_Roughness.png");
+	std::shared_ptr<lux::resource::Texture> aoTriangle = resourceManager.GetTexture("data/textures/Triangle_AO.png");
+
 	lux::resource::MaterialCreateInfo BloodyGutsMaterialCI = {};
 	BloodyGutsMaterialCI.baseColor = glm::vec3(1.0f);
 	BloodyGutsMaterialCI.albedo = albedoBloody;
@@ -314,14 +363,30 @@ void BuildPBRMaterials(lux::Engine& luxUmbra) noexcept
 	WallpaperMaterialCI.clearCoatPerceptualRoughness = 0.0f;
 	resourceManager.CreateMaterial("Wallpaper", WallpaperMaterialCI);
 
+
+	lux::resource::MaterialCreateInfo TriangleMaterialCI = {};
+	TriangleMaterialCI.baseColor = glm::vec3(1.0f);
+	TriangleMaterialCI.albedo = albedoTriangle;
+	TriangleMaterialCI.normal = normalTriangle;
+	TriangleMaterialCI.metallicRoughness = metRoughTriangle;
+	TriangleMaterialCI.ambientOcclusion = aoTriangle;
+	TriangleMaterialCI.textureMask = lux::resource::TextureMask::ROUGHNESS_TEXTURE_MASK | lux::resource::TextureMask::METALLIC_TEXTURE_MASK;;
+	TriangleMaterialCI.reflectance = 0.0f;
+	TriangleMaterialCI.isTransparent = false;
+	TriangleMaterialCI.clearCoat = 0.0f;
+	TriangleMaterialCI.clearCoatPerceptualRoughness = 0.0f;
+	resourceManager.CreateMaterial("Triangle", TriangleMaterialCI);
+
+
 	scene.AddCameraNode(nullptr, { 1.f, 3.f, 4.f }, glm::radians(glm::vec3(-30.0f, 15.0f, 0.0f)), false, 45.f, 0.1f, 50.f, true);
 
 	glm::vec3 rotation = glm::vec3(-90.0f, 40.0f, 0.0f);
 
-	scene.AddMeshNode(nullptr, glm::vec3(-2.0f, 0.f, 0.f), glm::radians(rotation), false, lux::resource::MeshPrimitive::MESH_PREVIEW_MATERIAL_PRIMITIVE, "Wallpaper");
-	scene.AddMeshNode(nullptr, glm::vec3(-1.0f, 0.f, 0.f), glm::radians(rotation), false, lux::resource::MeshPrimitive::MESH_PREVIEW_MATERIAL_PRIMITIVE, "BloodyGuts");
-	scene.AddMeshNode(nullptr, glm::vec3(0.0f, 0.f, 0.f), glm::radians(rotation), false, lux::resource::MeshPrimitive::MESH_PREVIEW_MATERIAL_PRIMITIVE, "Blue_Granite");
-	scene.AddMeshNode(nullptr, glm::vec3(1.0f, 0.f, 0.f), glm::radians(rotation), false, lux::resource::MeshPrimitive::MESH_PREVIEW_MATERIAL_PRIMITIVE, "Marble");
+	scene.AddMeshNode(nullptr, glm::vec3(2.0f, 0.f, 0.f), glm::radians(rotation), false, lux::resource::MeshPrimitive::MESH_PREVIEW_MATERIAL_PRIMITIVE, "Wallpaper");
+	scene.AddMeshNode(nullptr, glm::vec3(1.0f, 0.f, 0.f), glm::radians(rotation), false, lux::resource::MeshPrimitive::MESH_PREVIEW_MATERIAL_PRIMITIVE, "BloodyGuts");
+	scene.AddMeshNode(nullptr, glm::vec3(0.0f, 0.f, 0.f), glm::radians(rotation), false, lux::resource::MeshPrimitive::MESH_PREVIEW_MATERIAL_PRIMITIVE, "Triangle");
+	scene.AddMeshNode(nullptr, glm::vec3(-1.0f, 0.f, 0.f), glm::radians(rotation), false, lux::resource::MeshPrimitive::MESH_PREVIEW_MATERIAL_PRIMITIVE, "Blue_Granite");
+	scene.AddMeshNode(nullptr, glm::vec3(-2.0f, 0.f, 0.f), glm::radians(rotation), false, lux::resource::MeshPrimitive::MESH_PREVIEW_MATERIAL_PRIMITIVE, "Marble");
 
 	lux::scene::MeshNode* plane = scene.AddMeshNode(nullptr, glm::vec3(0.0f, 0.0f, 0.0f), glm::radians(glm::vec3(0.0f, 0.0f, -90.0f)), false, lux::resource::MeshPrimitive::MESH_PLANE_PRIMITIVE, "White_Plane");
 	plane->SetLocalScale(glm::vec3(2.0f));

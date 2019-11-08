@@ -45,7 +45,7 @@ namespace lux
 
 	void Engine::Run() noexcept
 	{
-		currentScene = 3;
+		currentScene = 0;
 		while (!window.ShouldClose())
 		{
 			window.PollEvents();
