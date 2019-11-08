@@ -70,6 +70,7 @@ layout(set = 1, binding = 0) uniform Material
 	float clearCoat;
 	float clearCoatPerceptualRoughness;
 	int useTextureMask;
+	int isUnlit;
 } material;
 
 layout(set = 1, binding = 1) uniform sampler2D albedo;
@@ -149,6 +150,13 @@ void main()
 	vec3 radiance;
 	float shadow;
 
+	if(material.isUnlit != 0)
+	{
+		outColor = vec4(baseColor, 1.0);
+		outIndirectColor= vec4(0.0);
+		return;
+	}
+
 	// Directional lights
 	for(int i = 0; i < pushConsts.directionalLightCount; i++)
 	{
@@ -177,6 +185,8 @@ void main()
 		directColor += DirectColor(lightDir, viewDir, normal, roughness, F0, NdotV, diffuseColor, radiance, shadow, clearCoatRoughness);
 	}
 
+
+
 	viewDir = -fsIn.viewMatrix[3].xyz  * mat3(fsIn.viewMatrix);
 	viewDir = normalize(viewDir - fsIn.positionWS);
 
@@ -192,25 +202,33 @@ void main()
 	vec2 BRDF = texture(BRDFLut, vec2(NdotV, roughness)).rg;
 	vec3 reflection = PrefilteredReflection(R, roughness).rgb;
 	vec3 irradiance = texture(irradianceMap, normal).xyz;
-	
+	float ao = texture(ambientOcclusionMap, fsIn.textureCoordinateLS).r;
+	float so = clamp(pow(NdotV + ao, 2) - 1 + ao, 0.0, 1.0);
+
 	vec3 F = F_SchlickRoughness(NdotV, F0, roughness);
 	float clearCoatF = F_Schlick(clearCoatNdotV, 0.04, 1.0) * material.clearCoat;
 	float attenuation = 1.0 - clearCoatF;
 
-	vec3 indirectSpecularColor = reflection * mix(BRDF.xxx, BRDF.yyy, F0);
+	vec3 E = mix(BRDF.xxx, BRDF.yyy, F0);
+	vec3 indirectSpecularColor = reflection * E	;
+	indirectSpecularColor *= so;
+
+	// Apply Clear Coat Specular
 	indirectSpecularColor *= attenuation;
 	indirectSpecularColor += PrefilteredReflection(clearCoatR, clearCoatPerceptualRoughness).rgb * clearCoatF;
 
 	vec3 Kdiff = 1.0 - F;
-	vec3 indirectDiffuseColor = irradiance * diffuseColor * Kdiff;
+	Kdiff *= 1.0 - metallic;
+
+	vec3 indirectDiffuseColor = irradiance * diffuseColor * (1.0 - E);
+	indirectDiffuseColor *= ao;
 	indirectDiffuseColor *= attenuation;
 	
 	vec3 indirectColor = indirectDiffuseColor + indirectSpecularColor;
 	
 
-	float ao = texture(ambientOcclusionMap, fsIn.textureCoordinateLS).r;
 
-	indirectColor *= ao;
+//	indirectColor *= ao;
 	
 	outIndirectColor = vec4(indirectColor, 1.0);
 

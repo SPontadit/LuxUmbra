@@ -15,6 +15,7 @@ namespace lux::resource
 		parameter.clearCoatPerceptualRoughness = materialCI.clearCoatPerceptualRoughness;
 		parameter.metallic = materialCI.metallic;
 		parameter.textureMask = materialCI.textureMask;
+		parameter.isUnlit = materialCI.isUnlit;
 	}
 
 } // namespace lux::resource

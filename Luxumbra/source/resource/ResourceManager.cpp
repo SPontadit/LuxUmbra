@@ -178,7 +178,7 @@ namespace lux::resource
 		primitiveMeshes[TO_UINT32_T(MeshPrimitive::MESH_SPHERE_PRIMITIVE)] = LoadMesh("data/models/Sphere.fbx", 0.75f, true);
 		primitiveMeshes[TO_UINT32_T(MeshPrimitive::MESH_CUBE_PRIMITIVE)] = LoadMesh("data/models/Cube.fbx", 0.5f, true);
 		primitiveMeshes[TO_UINT32_T(MeshPrimitive::MESH_PLANE_PRIMITIVE)] = LoadMesh("data/models/Plane.fbx", 1.0f, true);
-		primitiveMeshes[TO_UINT32_T(MeshPrimitive::MESH_PREVIEW_MATERIAL_PRIMITIVE)] = LoadMesh("data/models/PreviewMaterial.fbx", 0.5f, true);
+		primitiveMeshes[TO_UINT32_T(MeshPrimitive::MESH_PREVIEW_MATERIAL_PRIMITIVE)] = LoadMesh("data/models/PreviewMaterial.fbx", 0.25f, true);
 		
 		rhi.SetCubeMesh(primitiveMeshes[TO_UINT32_T(MeshPrimitive::MESH_CUBE_PRIMITIVE)]);
 	}

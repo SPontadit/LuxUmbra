@@ -45,7 +45,7 @@ namespace lux
 
 	void Engine::Run() noexcept
 	{
-		currentScene = 1;
+		currentScene = 3;
 		while (!window.ShouldClose())
 		{
 			window.PollEvents();
@@ -175,7 +175,7 @@ namespace lux
 		ImGui::RadioButton("PBR Models Scene", &currentScene, TO_INT32_T(SCENE::PBR_MODELS_SCENE));
 		ImGui::RadioButton("PBR Materials Scene", &currentScene, TO_INT32_T(SCENE::PBR_MATERIALS_SCENE));
 		//ImGui::RadioButton("Transparent Scene", &currentScene, TO_INT32_T(SCENE::TRANSPARENT_SCENE));
-		ImGui::RadioButton("Shadow Scene", &currentScene, TO_INT32_T(SCENE::SHADOW_SCENE));
+		ImGui::RadioButton("Shadow Scene", &currentScene, TO_INT32_T(SCENE::DIRECTIONAL_SHADOW_SCENE));
 
 		if (ImGui::Button("Reload Shader"))
 		{

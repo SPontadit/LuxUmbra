@@ -34,6 +34,7 @@ namespace lux::resource
 		float clearCoatPerceptualRoughness = 0.045f;
 		bool isTransparent;
 		int textureMask;
+		int isUnlit = 0;
 	};
 
 	struct MaterialParameters
@@ -45,6 +46,7 @@ namespace lux::resource
 		float clearCoat;
 		float clearCoatPerceptualRoughness;
 		int textureMask;
+		int isUnlit;
 	};
 
 
