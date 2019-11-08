@@ -158,8 +158,13 @@ namespace lux
 			camera->SetLocalPosition(cameraPosition);
 		}
 
-		if (window.GetActionsStatus(Action::TOGGLE_UI))
+		static bool lastToggleUI = true;
+		bool toggleUI = window.GetActionsStatus(Action::TOGGLE_UI);
+
+		if (toggleUI && !lastToggleUI)
 			drawGUI = !drawGUI;
+
+		lastToggleUI = toggleUI;
 	}
 
 	void Engine::DrawImgui(scene::Scene& scene, float deltaTime) noexcept

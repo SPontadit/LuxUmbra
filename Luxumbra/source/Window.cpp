@@ -187,15 +187,8 @@ namespace lux
 			break;
 
 		case GLFW_KEY_I:
-		{
-			static int lastAction = GLFW_RELEASE;
-
-			luxWindow->SetActionStatus(Action::TOGGLE_UI, lastAction != GLFW_PRESS && action == GLFW_PRESS);
-
-			lastAction = action;
-
+			luxWindow->SetActionStatus(Action::TOGGLE_UI, action != GLFW_RELEASE);
 			break;
-		}
 
 		case GLFW_KEY_ESCAPE:
 			luxWindow->SetActionStatus(Action::EXIT, action != GLFW_RELEASE);
