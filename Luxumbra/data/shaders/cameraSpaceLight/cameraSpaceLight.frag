@@ -267,8 +267,8 @@ vec3 DirectColor(vec3 lightDir, vec3 viewDir, vec3 normal, float roughness, vec3
 		vec3 specular = (D * V) * F;
 		vec3 Kdiff = vec3(1.0) - (F0 + (vec3(1.0) - F0) * pow(1.0 - NdotL, 5.0));
 
-		//vec3 directDiffuseColor = diffuseColor * Kdiff * Fd_Burley(NdotV, NdotL, LdotH, roughness);
-		vec3 directDiffuseColor = diffuseColor * Kdiff * Fd_Lambert();
+		vec3 directDiffuseColor = diffuseColor * Kdiff * Fd_Burley(NdotV, NdotL, LdotH, roughness);
+		//vec3 directDiffuseColor = diffuseColor * Kdiff * Fd_Lambert();
 
 
 		// Clear Coat
