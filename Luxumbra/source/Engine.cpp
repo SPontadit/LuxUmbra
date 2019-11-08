@@ -212,15 +212,18 @@ namespace lux
 						bool showFXAA = splitViewMask & lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_FXAA_MASK;
 						bool showSSAO = splitViewMask & lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_SSAO_MASK;
 						bool showSSAOOnly = splitViewMask & lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_SSAO_ONLY_MASK;
+						bool showDirectOnly = splitViewMask & lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_DIRECT_ONLY_MASK;
 						bool newShowToneMapping = showToneMapping;
 						bool newShowFXAA = showFXAA;
 						bool newShowSSAO = showSSAO;
 						bool newShowSSAOOnly = showSSAOOnly;
+						bool newShowDirectOnly = showDirectOnly;
 
 						ImGui::Checkbox("Show Tone Mapping", &newShowToneMapping);
 						ImGui::Checkbox("Show FXAA", &newShowFXAA);
 						ImGui::Checkbox("Show SSAO", &newShowSSAO);
 						ImGui::Checkbox("Show SSAO Only", &newShowSSAOOnly);
+						ImGui::Checkbox("Show Direct Only", &newShowDirectOnly);
 
 						int newSplitViewMask = 0;
 
@@ -228,6 +231,7 @@ namespace lux
 						newSplitViewMask |= newShowFXAA ? lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_FXAA_MASK : 0;
 						newSplitViewMask |= newShowSSAO ? lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_SSAO_MASK : 0;
 						newSplitViewMask |= newShowSSAOOnly ? lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_SSAO_ONLY_MASK : 0;
+						newSplitViewMask |= newShowDirectOnly ? lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_DIRECT_ONLY_MASK : 0;
 
 						if (newSplitViewMask != splitViewMask)
 							postProcess.splitViewMask = newSplitViewMask;

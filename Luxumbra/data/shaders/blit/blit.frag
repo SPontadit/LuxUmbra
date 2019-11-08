@@ -29,6 +29,7 @@ layout(push_constant) uniform PushConstants
 #define SPLIT_VIEW_FXAA_MASK 2
 #define SPLIT_VIEW_SSAO_MASK 4
 #define SPLIT_VIEW_SSAO_ONLY_MASK 8
+#define SPLIT_VIEW_DIRECT_ONLY_MASK 16
 
 #define ITERATIONS 12
 #define SUBPIXEL_QUALITY 0.75
@@ -70,23 +71,6 @@ void main()
 		if (textureCoordinate.x < splitViewRatio + 0.001 && textureCoordinate.x > splitViewRatio - 0.001)
 			outColor = vec4(1.0);
 	}
-}
-
-float BlurSSAO2()
-{
-	vec2 texelSize = vec2(1.0) / textureSize(SSAOMap, 0);
-	vec2 f = fract(textureCoordinate * textureSize(SSAOMap, 0));
-	vec2 uv = textureCoordinate + (0.5 - f) * texelSize;
-
-	float tl = texture(SSAOMap, uv).r;
-	float tr = texture(SSAOMap, uv + vec2(texelSize.x, 0.0)).r;
-	float bl = texture(SSAOMap, uv + vec2(0.0, texelSize.y)).r;
-	float br = texture(SSAOMap, uv + vec2(texelSize.x, texelSize.y)).r;
-
-	float tA = mix(tl, tr, f.x);
-	float tB = mix(bl, br, f.x);
-
-	return mix(tA, tB, f.y);
 }
 
 float BlurSSAO()
@@ -143,6 +127,9 @@ vec3 ToneMapGammaCorrect(vec3 color)
 		ssao = ((splitViewMask & SPLIT_VIEW_SSAO_MASK) == SPLIT_VIEW_SSAO_MASK) ? ssao : 1.0;
 
 	vec3 indirect = texture(IndirectColorMap, textureCoordinate).rgb * ssao;
+
+	if ((splitViewMask & SPLIT_VIEW_DIRECT_ONLY_MASK) == SPLIT_VIEW_DIRECT_ONLY_MASK)
+		indirect = vec3(0.0f);
 
 	if (splitViewMask == 0 || (splitViewMask & SPLIT_VIEW_TONE_MAPPING_MASK) == SPLIT_VIEW_TONE_MAPPING_MASK)
 	{
