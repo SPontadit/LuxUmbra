@@ -13,7 +13,7 @@ namespace lux
 
 	Engine::Engine() noexcept
 		: isInitialized(false), window(), rhi(), scenes(), resourceManager(rhi),
-		currentScene(0), currentTime(0.0f), previousTime(0.0f), drawGUI(true)
+		currentScene(0), drawGUI(true)
 	{
 
 	}
@@ -50,14 +50,18 @@ namespace lux
 		{
 			window.PollEvents();
 
+			float deltaTime = window.GetDeltaTime();
+
 			scene::Scene& scene = scenes[TO_SIZE_T(currentScene)];
 
-			Update(scene);
+			if (window.GetHasFocus())
+			{
+				Update(scene, deltaTime);
 
-			if (drawGUI)
-				DrawImgui(scene);
+				DrawImgui(scene, deltaTime);
 
-			rhi.Render(scene.GetCurrentCamera(), scene.GetMeshNodes(), scene.GetLightNodes());
+				rhi.Render(scene.GetCurrentCamera(), scene.GetMeshNodes(), scene.GetLightNodes());
+			}
 		}
 	}
 
@@ -71,10 +75,10 @@ namespace lux
 		return resourceManager;
 	}
 
-	void Engine::Update(scene::Scene& scene) noexcept
+	void Engine::Update(scene::Scene& scene, float deltaTime) noexcept
 	{
 		scene::CameraNode* camera = scene.GetCurrentCamera();
-		float moveDelta = 0.01f;
+		float moveDelta = 3.f * deltaTime;
 
 		if (window.GetActionsStatus(Action::FREE_LOOK))
 		{
@@ -153,244 +157,243 @@ namespace lux
 			drawGUI = !drawGUI;
 	}
 
-	void Engine::DrawImgui(scene::Scene& scene) noexcept
+	void Engine::DrawImgui(scene::Scene& scene, float deltaTime) noexcept
 	{
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
-		currentTime = glfwGetTime();
-		double deltaTime = currentTime - previousTime;
-		double frameDuration = deltaTime * 1000.0;
-		double framerate = 1.0 / deltaTime;
-		previousTime = currentTime;
-
-		char buf[128];
-		sprintf_s(buf, "Luxumbra Engine %d###Luxumbra Engine", (int)framerate);
-	
-		ImGui::Begin(buf);
-
-		ImGui::RadioButton("Sphere Scene", &currentScene, TO_INT32_T(SCENE::SPHERE_SCENE));
-		ImGui::RadioButton("PostProcess Scene", &currentScene, TO_INT32_T(SCENE::POST_PROCESS_SCENE));
-		ImGui::RadioButton("PBR Models Scene", &currentScene, TO_INT32_T(SCENE::PBR_MODELS_SCENE));
-		ImGui::RadioButton("PBR Materials Scene", &currentScene, TO_INT32_T(SCENE::PBR_MATERIALS_SCENE));
-		//ImGui::RadioButton("Transparent Scene", &currentScene, TO_INT32_T(SCENE::TRANSPARENT_SCENE));
-		ImGui::RadioButton("Shadow Scene", &currentScene, TO_INT32_T(SCENE::DIRECTIONAL_SHADOW_SCENE));
-
-		if (ImGui::Button("Reload Shader"))
+		if (drawGUI)
 		{
-			rhi.RebuildPipelines();
-		}
+			float framerate = 1.f / deltaTime;
 
-		ImGui::NewLine();
+			char buf[128];
+			sprintf_s(buf, "Luxumbra Engine %d###Luxumbra Engine", (int)framerate);
 
-		if (ImGui::BeginTabBar("##TabBar"))
-		{
-			if (ImGui::BeginTabItem("Post Process"))
+			ImGui::Begin(buf);
+
+			ImGui::RadioButton("Sphere Scene", &currentScene, TO_INT32_T(SCENE::SPHERE_SCENE));
+			ImGui::RadioButton("PostProcess Scene", &currentScene, TO_INT32_T(SCENE::POST_PROCESS_SCENE));
+			ImGui::RadioButton("PBR Models Scene", &currentScene, TO_INT32_T(SCENE::PBR_MODELS_SCENE));
+			ImGui::RadioButton("PBR Materials Scene", &currentScene, TO_INT32_T(SCENE::PBR_MATERIALS_SCENE));
+			//ImGui::RadioButton("Transparent Scene", &currentScene, TO_INT32_T(SCENE::TRANSPARENT_SCENE));
+			ImGui::RadioButton("Shadow Scene", &currentScene, TO_INT32_T(SCENE::DIRECTIONAL_SHADOW_SCENE));
+
+			if (ImGui::Button("Reload Shader"))
 			{
-				lux::rhi::PostProcessParameters& postProcess = rhi.forward.postProcessParameters;
-				
-				if (ImGui::CollapsingHeader("Debug:", ImGuiTreeNodeFlags_DefaultOpen))
+				rhi.RebuildPipelines();
+			}
+
+			ImGui::NewLine();
+
+			if (ImGui::BeginTabBar("##TabBar"))
+			{
+				if (ImGui::BeginTabItem("Post Process"))
 				{
-					ImGui::Spacing();
+					lux::rhi::PostProcessParameters& postProcess = rhi.forward.postProcessParameters;
 
-					int splitViewMask = postProcess.splitViewMask;
-
-					bool showToneMapping = splitViewMask & lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_TONE_MAPPING_MASK;
-					bool showFXAA = splitViewMask & lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_FXAA_MASK;
-					bool showSSAO = splitViewMask & lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_SSAO_MASK;
-					bool showSSAOOnly = splitViewMask & lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_SSAO_ONLY_MASK;
-					bool newShowToneMapping = showToneMapping;
-					bool newShowFXAA = showFXAA;
-					bool newShowSSAO = showSSAO;
-					bool newShowSSAOOnly = showSSAOOnly;
-
-					ImGui::Checkbox("Show Tone Mapping", &newShowToneMapping);
-					ImGui::Checkbox("Show FXAA", &newShowFXAA);
-					ImGui::Checkbox("Show SSAO", &newShowSSAO);
-					ImGui::Checkbox("Show SSAO Only", &newShowSSAOOnly);
-
-					int newSplitViewMask = 0;
-
-					newSplitViewMask |= newShowToneMapping ? lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_TONE_MAPPING_MASK : 0;
-					newSplitViewMask |= newShowFXAA ? lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_FXAA_MASK : 0;
-					newSplitViewMask |= newShowSSAO ? lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_SSAO_MASK : 0;
-					newSplitViewMask |= newShowSSAOOnly ? lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_SSAO_ONLY_MASK : 0;
-
-					if (newSplitViewMask != splitViewMask)
-						postProcess.splitViewMask = newSplitViewMask;
-
-					if (newSplitViewMask != 0)
+					if (ImGui::CollapsingHeader("Debug:", ImGuiTreeNodeFlags_DefaultOpen))
 					{
 						ImGui::Spacing();
 
-						// FXAA Percent
-						float splitViewRatio = postProcess.splitViewRatio;
-						float newSplitViewRatio = splitViewRatio;
-						ImGui::SliderFloat("Percent", &newSplitViewRatio, 0.0f, 1.0f, "%.2f");
+						int splitViewMask = postProcess.splitViewMask;
 
-						if (newSplitViewRatio != splitViewRatio)
-							postProcess.splitViewRatio = newSplitViewRatio;
+						bool showToneMapping = splitViewMask & lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_TONE_MAPPING_MASK;
+						bool showFXAA = splitViewMask & lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_FXAA_MASK;
+						bool showSSAO = splitViewMask & lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_SSAO_MASK;
+						bool showSSAOOnly = splitViewMask & lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_SSAO_ONLY_MASK;
+						bool newShowToneMapping = showToneMapping;
+						bool newShowFXAA = showFXAA;
+						bool newShowSSAO = showSSAO;
+						bool newShowSSAOOnly = showSSAOOnly;
+
+						ImGui::Checkbox("Show Tone Mapping", &newShowToneMapping);
+						ImGui::Checkbox("Show FXAA", &newShowFXAA);
+						ImGui::Checkbox("Show SSAO", &newShowSSAO);
+						ImGui::Checkbox("Show SSAO Only", &newShowSSAOOnly);
+
+						int newSplitViewMask = 0;
+
+						newSplitViewMask |= newShowToneMapping ? lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_TONE_MAPPING_MASK : 0;
+						newSplitViewMask |= newShowFXAA ? lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_FXAA_MASK : 0;
+						newSplitViewMask |= newShowSSAO ? lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_SSAO_MASK : 0;
+						newSplitViewMask |= newShowSSAOOnly ? lux::rhi::PostProcessSplitViewMask::SPLIT_VIEW_SSAO_ONLY_MASK : 0;
+
+						if (newSplitViewMask != splitViewMask)
+							postProcess.splitViewMask = newSplitViewMask;
+
+						if (newSplitViewMask != 0)
+						{
+							ImGui::Spacing();
+
+							// FXAA Percent
+							float splitViewRatio = postProcess.splitViewRatio;
+							float newSplitViewRatio = splitViewRatio;
+							ImGui::SliderFloat("Percent", &newSplitViewRatio, 0.0f, 1.0f, "%.2f");
+
+							if (newSplitViewRatio != splitViewRatio)
+								postProcess.splitViewRatio = newSplitViewRatio;
+						}
+
+						ImGui::NewLine();
 					}
 
-					ImGui::NewLine();
-				}
-
-				if (ImGui::CollapsingHeader("ToneMapping:", ImGuiTreeNodeFlags_DefaultOpen))
-				{
-					ImGui::Spacing();
-
-					int toneMapping = postProcess.toneMapping;
-					int newToneMapping = toneMapping;
-					ImGui::Combo("Tone Mapping", &newToneMapping, "ACES Film\0Uncharted 2\0Reinhard");
-
-					if (newToneMapping != toneMapping)
-						postProcess.toneMapping = newToneMapping;
-
-					ImGui::Spacing();
-
-					// Exposure
-					float exposure = postProcess.exposure;
-					float newExposure = exposure;
-					ImGui::SliderFloat("Exposure", &newExposure, 0.0f, 10.0f, "%.2f");
-
-					if (newExposure != exposure)
-						postProcess.exposure = newExposure;
-				
-					ImGui::NewLine();
-				}
-
-				if (ImGui::CollapsingHeader("FXAA:", ImGuiTreeNodeFlags_DefaultOpen))
-				{
-					ImGui::Spacing();
-
-					int FXAAQuality;
-					if (postProcess.FXAARelativeThreshold == 0.250f) FXAAQuality = 0;
-					else if (postProcess.FXAARelativeThreshold == 0.166f) FXAAQuality = 1;
-					else if (postProcess.FXAARelativeThreshold == 0.125f) FXAAQuality = 2;
-
-					int newFXAAQuality = FXAAQuality;
-
-					const char* qualityName[3] = { "Low", "Medium", "High" };
-					ImGui::SliderInt("Quality", &newFXAAQuality, 0, 2, qualityName[newFXAAQuality]);
-
-					if (newFXAAQuality != FXAAQuality)
+					if (ImGui::CollapsingHeader("ToneMapping:", ImGuiTreeNodeFlags_DefaultOpen))
 					{
-						// Low
-						if (newFXAAQuality == 0)
-						{
-							postProcess.FXAAContrastThreshold = 0.0833f;
-							postProcess.FXAARelativeThreshold = 0.250f;
+						ImGui::Spacing();
 
-						}
-						// Medium
-						else if (newFXAAQuality == 1)
-						{
-							postProcess.FXAAContrastThreshold = 0.0625f;
-							postProcess.FXAARelativeThreshold = 0.166f;
+						int toneMapping = postProcess.toneMapping;
+						int newToneMapping = toneMapping;
+						ImGui::Combo("Tone Mapping", &newToneMapping, "ACES Film\0Uncharted 2\0Reinhard");
 
-						}
-						// High
-						else
-						{
-							postProcess.FXAAContrastThreshold = 0.0312f;
-							postProcess.FXAARelativeThreshold = 0.125f;
-						}
+						if (newToneMapping != toneMapping)
+							postProcess.toneMapping = newToneMapping;
+
+						ImGui::Spacing();
+
+						// Exposure
+						float exposure = postProcess.exposure;
+						float newExposure = exposure;
+						ImGui::SliderFloat("Exposure", &newExposure, 0.0f, 10.0f, "%.2f");
+
+						if (newExposure != exposure)
+							postProcess.exposure = newExposure;
+
+						ImGui::NewLine();
 					}
 
-					ImGui::NewLine();
+					if (ImGui::CollapsingHeader("FXAA:", ImGuiTreeNodeFlags_DefaultOpen))
+					{
+						ImGui::Spacing();
+
+						int FXAAQuality;
+						if (postProcess.FXAARelativeThreshold == 0.250f) FXAAQuality = 0;
+						else if (postProcess.FXAARelativeThreshold == 0.166f) FXAAQuality = 1;
+						else if (postProcess.FXAARelativeThreshold == 0.125f) FXAAQuality = 2;
+
+						int newFXAAQuality = FXAAQuality;
+
+						const char* qualityName[3] = { "Low", "Medium", "High" };
+						ImGui::SliderInt("Quality", &newFXAAQuality, 0, 2, qualityName[newFXAAQuality]);
+
+						if (newFXAAQuality != FXAAQuality)
+						{
+							// Low
+							if (newFXAAQuality == 0)
+							{
+								postProcess.FXAAContrastThreshold = 0.0833f;
+								postProcess.FXAARelativeThreshold = 0.250f;
+
+							}
+							// Medium
+							else if (newFXAAQuality == 1)
+							{
+								postProcess.FXAAContrastThreshold = 0.0625f;
+								postProcess.FXAARelativeThreshold = 0.166f;
+
+							}
+							// High
+							else
+							{
+								postProcess.FXAAContrastThreshold = 0.0312f;
+								postProcess.FXAARelativeThreshold = 0.125f;
+							}
+						}
+
+						ImGui::NewLine();
+					}
+
+					if (ImGui::CollapsingHeader("SSAO:", ImGuiTreeNodeFlags_DefaultOpen))
+					{
+						ImGui::Spacing();
+
+						lux::rhi::SSAOParameters& ssaoParameters = rhi.forward.ssaoParameters;
+
+						// Kernel Size
+						int kernelSize = ssaoParameters.kernelSize;
+						//int newKernelSize = kernelSize;
+						//ImGui::SliderInt("KernelSize", &newKernelSize, 2, 32);
+						int kernelSizeID = static_cast<int>(log2(kernelSize)) - 2;
+						ImGui::Combo("Kernel Size", &kernelSizeID, " 4 \0 8 \0 16 \0 32");
+						int newKernelSize = static_cast<int>(pow(2, kernelSizeID + 2));
+
+						if (newKernelSize != kernelSize)
+							ssaoParameters.kernelSize = newKernelSize;
+
+
+						// Kernel Radius
+						float kernelRadius = ssaoParameters.kernelRadius;
+						float newKernelRadius = kernelRadius;
+						ImGui::SliderFloat("Kernel Radius", &newKernelRadius, 0.2f, 2.0f, "%.2f", 0.5f);
+
+						if (newKernelRadius != kernelRadius)
+							ssaoParameters.kernelRadius = newKernelRadius;
+
+
+						// Bias
+						float bias = ssaoParameters.bias;
+						float newBias = bias;
+						ImGui::SliderFloat("Bias", &newBias, 0.0f, 0.05f, "%.3f", 0.5f);
+
+						if (newBias != bias)
+							ssaoParameters.bias = newBias;
+
+
+						// Strenght
+						float strenght = ssaoParameters.strenght;
+						float newStrenght = strenght;
+						ImGui::SliderFloat("Strenght", &newStrenght, 0.0f, 5.0f, "%.2f");
+
+						if (newStrenght != strenght)
+							ssaoParameters.strenght = newStrenght;
+
+						ImGui::NewLine();
+					}
+
+					ImGui::EndTabItem();
 				}
 
-				if (ImGui::CollapsingHeader("SSAO:", ImGuiTreeNodeFlags_DefaultOpen))
+				if (ImGui::BeginTabItem("Render Settings"))
 				{
-					ImGui::Spacing();
+					if (ImGui::CollapsingHeader("Shadow Mapping", ImGuiTreeNodeFlags_DefaultOpen))
+					{
+						ImGui::Spacing();
 
-					lux::rhi::SSAOParameters& ssaoParameters = rhi.forward.ssaoParameters;
+						float depthBiasConstantFactor = rhi.GetShadowMappingDepthBiasConstantFactor();
+						float depthBiasSlopeFactor = rhi.GetShadowMappingDepthBiasSlopeFactor();
 
-					// Kernel Size
-					int kernelSize = ssaoParameters.kernelSize;
-					//int newKernelSize = kernelSize;
-					//ImGui::SliderInt("KernelSize", &newKernelSize, 2, 32);
-					int kernelSizeID = static_cast<int>(log2(kernelSize)) - 2;
-					ImGui::Combo("Kernel Size", &kernelSizeID, " 4 \0 8 \0 16 \0 32");
-					int newKernelSize = static_cast<int>(pow(2, kernelSizeID + 2));
+						if (ImGui::DragFloat("Depth bias constant factor", &depthBiasConstantFactor, 0.01f))
+							rhi.SetShadowMappingDepthBiasConstantFactor(depthBiasConstantFactor);
 
-					if (newKernelSize != kernelSize)
-						ssaoParameters.kernelSize = newKernelSize;
+						if (ImGui::DragFloat("Depth bias slope factor", &depthBiasSlopeFactor, 0.01f))
+							rhi.SetShadowMappingDepthBiasSlopeFactor(depthBiasSlopeFactor);
+					}
 
-
-					// Kernel Radius
-					float kernelRadius = ssaoParameters.kernelRadius;
-					float newKernelRadius = kernelRadius;
-					ImGui::SliderFloat("Kernel Radius", &newKernelRadius, 0.2f, 2.0f, "%.2f", 0.5f);
-
-					if (newKernelRadius != kernelRadius)
-						ssaoParameters.kernelRadius = newKernelRadius;
-
-
-					// Bias
-					float bias = ssaoParameters.bias;
-					float newBias = bias;
-					ImGui::SliderFloat("Bias", &newBias, 0.0f, 0.05f, "%.3f", 0.5f);
-
-					if (newBias != bias)
-						ssaoParameters.bias = newBias;
-
-
-					// Strenght
-					float strenght = ssaoParameters.strenght;
-					float newStrenght = strenght;
-					ImGui::SliderFloat("Strenght", &newStrenght, 0.0f, 5.0f, "%.2f");
-
-					if (newStrenght != strenght)
-						ssaoParameters.strenght = newStrenght;
-
-					ImGui::NewLine();
+					ImGui::EndTabItem();
 				}
 
-				ImGui::EndTabItem();
-			}
-
-			if (ImGui::BeginTabItem("Render Settings"))
-			{
-				if (ImGui::CollapsingHeader("Shadow Mapping", ImGuiTreeNodeFlags_DefaultOpen))
+				if (ImGui::BeginTabItem("Scene"))
 				{
-					ImGui::Spacing();
+					scene::CameraNode* camera = scene.GetCurrentCamera();
+					DisplayCameraNode(camera);
+					ImGui::NewLine();
 
-					float depthBiasConstantFactor = rhi.GetShadowMappingDepthBiasConstantFactor();
-					float depthBiasSlopeFactor = rhi.GetShadowMappingDepthBiasSlopeFactor();
+					DisplayMeshNodes(scene.GetMeshNodes());
+					ImGui::NewLine();
+					DisplayLightNodes(scene.GetLightNodes());
+					ImGui::NewLine();
 
-					if (ImGui::DragFloat("Depth bias constant factor", &depthBiasConstantFactor, 0.01f))
-						rhi.SetShadowMappingDepthBiasConstantFactor(depthBiasConstantFactor);
+					DisplayMaterials(scene.GetMeshNodes());
 
-					if (ImGui::DragFloat("Depth bias slope factor", &depthBiasSlopeFactor, 0.01f))
-						rhi.SetShadowMappingDepthBiasSlopeFactor(depthBiasSlopeFactor);
+					ImGui::EndTabItem();
 				}
 
-				ImGui::EndTabItem();
+				ImGui::EndTabBar();
 			}
 
-			if (ImGui::BeginTabItem("Scene"))
-			{
-				scene::CameraNode* camera = scene.GetCurrentCamera();
-				DisplayCameraNode(camera);
-				ImGui::NewLine();
 
-				DisplayMeshNodes(scene.GetMeshNodes());
-				ImGui::NewLine();
-				DisplayLightNodes(scene.GetLightNodes());
-				ImGui::NewLine();
-
-				DisplayMaterials(scene.GetMeshNodes());
-
-				ImGui::EndTabItem();
-			}
-
-			ImGui::EndTabBar();
+			ImGui::End();
 		}
-
-
-		ImGui::End();
 
 		ImGui::Render();
 	}

@@ -8,12 +8,13 @@ namespace lux
 {
 	Window* luxWindow = nullptr;
 
+	void WindowFocusCallback(GLFWwindow* window, int hasFocus);
 	void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) noexcept;
 	void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) noexcept;
 
 	Window::Window() noexcept
-		: isInitialized(false), width(0), height(0), window(nullptr),
-		actionsStatus{ false }, mouseXDelta(0.f), mouseYDelta(0.f)
+		: isInitialized(false), width(0), height(0), window(nullptr), hasFocus(true),
+		actionsStatus{ false }, mouseXDelta(0.f), mouseYDelta(0.f), deltaTime(0.f)
 	{
 		luxWindow = this;
 	}
@@ -39,7 +40,10 @@ namespace lux
 
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
-		window = glfwCreateWindow(static_cast<int>(width), static_cast<int>(height), "Luxumbra_demo", nullptr, nullptr);
+		GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+		const GLFWvidmode* videoMode = glfwGetVideoMode(monitor);
+
+		window = glfwCreateWindow(videoMode->width, videoMode->height, "Luxumbra_demo", monitor, nullptr);
 		if (!window)
 		{
 			glfwTerminate();
@@ -50,6 +54,8 @@ namespace lux
 		this->height = height;
 
 		glfwSetWindowAttrib(window, GLFW_RESIZABLE, 0);
+
+		glfwSetWindowFocusCallback(window, WindowFocusCallback);
 
 		glfwSetKeyCallback(window, KeyCallback);
 		glfwSetMouseButtonCallback(window, MouseButtonCallback);
@@ -80,6 +86,9 @@ namespace lux
 		glfwPollEvents();
 
 		static double oldX = 0., oldY = 0.;
+		static double oldTime = 0.;
+
+		// Mouse movement
 
 		double x, y;
 		glfwGetCursorPos(window, &x, &y);
@@ -89,6 +98,12 @@ namespace lux
 
 		oldX = x;
 		oldY = y;
+
+		// Delta time
+
+		double time = glfwGetTime();
+		deltaTime = TO_FLOAT(time - oldTime);
+		oldTime = time;
 	}
 
 	bool Window::ShouldClose() const noexcept
@@ -99,6 +114,16 @@ namespace lux
 	float Window::GetAspect() const noexcept
 	{
 		return TO_FLOAT(width) / TO_FLOAT(height);
+	}
+
+	bool Window::GetHasFocus() const noexcept
+	{
+		return hasFocus;
+	}
+
+	void Window::SetHasFocus(bool newHasFocus) noexcept
+	{
+		hasFocus = newHasFocus;
 	}
 
 	bool Window::GetActionsStatus(Action action) const noexcept
@@ -115,6 +140,16 @@ namespace lux
 	{
 		x = mouseXDelta;
 		y = mouseYDelta;
+	}
+
+	float Window::GetDeltaTime() const noexcept
+	{
+		return deltaTime;
+	}
+
+	void WindowFocusCallback(GLFWwindow* window, int hasFocus)
+	{
+		luxWindow->SetHasFocus(hasFocus != GLFW_FALSE);
 	}
 
 	void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) noexcept

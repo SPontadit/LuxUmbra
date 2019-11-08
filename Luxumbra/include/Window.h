@@ -49,9 +49,14 @@ namespace lux
 
 		float GetAspect() const noexcept;
 
+		bool GetHasFocus() const noexcept;
+		void SetHasFocus(bool newHasFocus) noexcept;
+
 		bool GetActionsStatus(Action action) const noexcept;
 		void SetActionStatus(Action action, bool status) noexcept;
 		void GetMouseDelta(float& x, float& y) const noexcept;
+
+		float GetDeltaTime() const noexcept;
 
 	private:
 		bool isInitialized;
@@ -59,8 +64,12 @@ namespace lux
 		uint32_t width, height;
 		GLFWwindow* window;
 
+		bool hasFocus;
+
 		bool actionsStatus[TO_SIZE_T(Action::ACTION_MAX_ENUM)];
 		float mouseXDelta, mouseYDelta;
+
+		float deltaTime;
 	};
 
 } // namespace lux
