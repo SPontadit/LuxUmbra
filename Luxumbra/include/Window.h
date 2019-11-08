@@ -24,6 +24,7 @@ namespace lux
 		UP,
 		DOWN,
 		TOGGLE_UI,
+		EXIT,
 
 		ACTION_MAX_ENUM
 	};

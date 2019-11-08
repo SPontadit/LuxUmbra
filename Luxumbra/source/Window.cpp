@@ -196,6 +196,10 @@ namespace lux
 
 			break;
 		}
+
+		case GLFW_KEY_ESCAPE:
+			luxWindow->SetActionStatus(Action::EXIT, action != GLFW_RELEASE);
+			break;
 		}
 	}
 

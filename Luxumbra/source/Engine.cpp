@@ -46,9 +46,14 @@ namespace lux
 	void Engine::Run() noexcept
 	{
 		currentScene = 0;
-		while (!window.ShouldClose())
+
+		bool inputExit = false;
+
+		while (!window.ShouldClose() && !inputExit)
 		{
 			window.PollEvents();
+
+			inputExit = window.GetActionsStatus(Action::EXIT);
 
 			float deltaTime = window.GetDeltaTime();
 
@@ -87,8 +92,8 @@ namespace lux
 
 			glm::vec3 cameraRotation = camera->GetLocalRotation();
 
-			cameraRotation.y += glm::radians(-mouseXDelta);
-			cameraRotation.x += glm::radians(-mouseYDelta);
+			cameraRotation.y += glm::radians(-mouseXDelta) * 0.25f;
+			cameraRotation.x += glm::radians(-mouseYDelta) * 0.25f;
 
 			camera->SetLocalRotation(cameraRotation);
 		}
