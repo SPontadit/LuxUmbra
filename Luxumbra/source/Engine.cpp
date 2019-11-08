@@ -523,18 +523,24 @@ namespace lux
 					if (ImGui::TreeNode(currentMaterial->name.c_str()))
 					{
 						resource::MaterialParameters& matParameters = currentMaterial->parameter;
+						int textureMask = matParameters.textureMask;
 
 						ImGui::ColorEdit3("Base Color", glm::value_ptr(matParameters.baseColor));
-						bool metallic = (bool)matParameters.metallic;
-						ImGui::Checkbox("Metallic", &metallic);
-						matParameters.metallic = metallic;
+
+						if ((textureMask & resource::TextureMask::METALLIC_TEXTURE_MASK) != resource::TextureMask::METALLIC_TEXTURE_MASK)
+						{
+							bool metallic = (bool)matParameters.metallic;
+							ImGui::Checkbox("Metallic", &metallic);
+							matParameters.metallic = metallic;
+						}
 
 						if (matParameters.metallic == 0.f)
 						{
 							ImGui::SliderFloat("Reflectance", &matParameters.reflectance, 0.0f, 1.0f, "%.3f");
 						}
 
-						ImGui::SliderFloat("Roughness", &matParameters.perceptualRoughness, 0.045f, 1.0f, "%.3f");
+						if((textureMask & resource::TextureMask::ROUGHNESS_TEXTURE_MASK) != resource::TextureMask::ROUGHNESS_TEXTURE_MASK)
+							ImGui::SliderFloat("Roughness", &matParameters.perceptualRoughness, 0.045f, 1.0f, "%.3f");
 
 						ImGui::SliderFloat("Clear Coat", &matParameters.clearCoat, 0.0f, 1.0f, "%.3f");
 
