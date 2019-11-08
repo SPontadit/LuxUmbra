@@ -23,10 +23,10 @@ int main(int ac, char* av[])
 	CreateMaterials(luxUmbra);
 
 	BuildSphereScene(luxUmbra);
-	//BuildPostProcessScene(luxUmbra);
-	//BuildDirectionalShadowScene(luxUmbra);
-	//BuildPBRModels(luxUmbra);
-	//BuildPBRMaterials(luxUmbra);
+	BuildPostProcessScene(luxUmbra);
+	BuildDirectionalShadowScene(luxUmbra);
+	BuildPBRModels(luxUmbra);
+	BuildPBRMaterials(luxUmbra);
 
 	luxUmbra.Run();
 

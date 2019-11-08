@@ -127,7 +127,7 @@ void main()
 	normal = normalize(fsIn.textureToViewMatrix * normal);
 	outNormalVS  = vec4(normal * 0.5 + 0.5, 1.0);
 
-	vec3 normalVS = normalize(mat3(fsIn.viewMatrix) * fsIn.normalWS);
+	vec3 normalWS = normalize(fsIn.normalWS);
 
 	float NdotV = max(dot(normal, viewDir), 0.001);
 	
@@ -194,10 +194,10 @@ void main()
 	normal = normalize(normal);
 
 	vec3 R = reflect(-viewDir, normal);
-	vec3 clearCoatR = reflect(-viewDir, normalVS);
+	vec3 clearCoatR = reflect(-viewDir, normalWS);
 
 	NdotV = max(dot(normal, viewDir), 0.001);
-	float clearCoatNdotV = max(dot(normalVS, viewDir), 0.001);
+	float clearCoatNdotV = max(dot(normalWS, viewDir), 0.001);
 
 	vec2 BRDF = texture(BRDFLut, vec2(NdotV, roughness)).rg;
 	vec3 reflection = PrefilteredReflection(R, roughness).rgb;
