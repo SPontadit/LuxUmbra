@@ -43,7 +43,7 @@ namespace lux
 		GLFWmonitor* monitor = glfwGetPrimaryMonitor();
 		const GLFWvidmode* videoMode = glfwGetVideoMode(monitor);
 
-		window = glfwCreateWindow(videoMode->width, videoMode->height, "Luxumbra_demo", monitor, nullptr);
+		window = glfwCreateWindow(videoMode->width, videoMode->height, "Luxumbra_demo", nullptr, nullptr);
 		if (!window)
 		{
 			glfwTerminate();
