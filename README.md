@@ -11,7 +11,7 @@ It was develop in one month in a group of two people. <br>
 
 ## Table of Contents
 
-+ [Controles](#Controles)
++ [Controls](#Controls)
 + [Illumination Model](#Illumination-Model)
 + [Shadows](#shadows)
 + [Image Based-Lighting](#Image-Based-Lighting)
@@ -20,7 +20,7 @@ It was develop in one month in a group of two people. <br>
 + [Possible Issue](#Possible-Issue)
 <br><br><br>
 
-## **Controles**
+## **Controls**
 
 - W : forward
 - S : backward
