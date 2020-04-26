@@ -1,0 +1,245 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{2E19225C-D45D-4A1C-9FF4-536FA7186DD7}</ProjectGuid>
+    <RootNamespace>Luxumbra</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(VK_SDK_PATH)\Include;..\libs;..\libs\glfw-3.3\include;..\libs\assimp\include;..\libs\glm;include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <PreprocessorDefinitions>VK_USE_PLATFORM_WIN32_KHR;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(VK_SDK_PATH)\Lib;..\libs\glfw-3.3\lib-vc2017;..\libs\assimp\lib\Win32\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>glfw3dll.lib;vulkan-1.lib;assimp-vc141-mtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(VK_SDK_PATH)\Include;..\libs;..\libs\glfw-3.3\include;..\libs\assimp\include;..\libs\glm;include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <PreprocessorDefinitions>VK_USE_PLATFORM_WIN32_KHR;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(VK_SDK_PATH)\Lib;..\libs\glfw-3.3\lib-vc2017;..\libs\assimp\lib\x64\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>glfw3dll.lib;vulkan-1.lib;assimp-vc141-mtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(VK_SDK_PATH)\Include;..\libs;..\libs\glfw-3.3\include;..\libs\assimp\include;..\libs\glm;include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <PreprocessorDefinitions>VK_USE_PLATFORM_WIN32_KHR;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>$(VK_SDK_PATH)\Lib;..\libs\glfw-3.3\lib-vc2017;..\libs\assimp\lib\Win32\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>glfw3dll.lib;vulkan-1.lib;assimp-vc141-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(VK_SDK_PATH)\Include;..\libs;..\libs\glfw-3.3\include;..\libs\assimp\include;..\libs\glm;include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <PreprocessorDefinitions>VK_USE_PLATFORM_WIN32_KHR;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>$(VK_SDK_PATH)\Lib;..\libs\glfw-3.3\lib-vc2017;..\libs\assimp\lib\x64\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>glfw3dll.lib;vulkan-1.lib;assimp-vc141-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\libs\imgui\imgui.cpp" />
+    <ClCompile Include="..\libs\imgui\imgui_demo.cpp" />
+    <ClCompile Include="..\libs\imgui\imgui_draw.cpp" />
+    <ClCompile Include="..\libs\imgui\imgui_impl_glfw.cpp" />
+    <ClCompile Include="..\libs\imgui\imgui_impl_vulkan.cpp" />
+    <ClCompile Include="..\libs\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="..\libs\volk\volk.c" />
+    <ClCompile Include="source\AABB.cpp" />
+    <ClCompile Include="source\Engine.cpp" />
+    <ClCompile Include="source\main.cpp" />
+    <ClCompile Include="source\resource\Material.cpp" />
+    <ClCompile Include="source\resource\Mesh.cpp" />
+    <ClCompile Include="source\resource\ResourceManager.cpp" />
+    <ClCompile Include="source\resource\Texture.cpp" />
+    <ClCompile Include="source\rhi\RHI_Buffer.cpp" />
+    <ClCompile Include="source\rhi\RHI_ComputePipeline.cpp" />
+    <ClCompile Include="source\rhi\RHI_ForwardRenderer.cpp" />
+    <ClCompile Include="source\rhi\RHI_GraphicsPipeline.cpp" />
+    <ClCompile Include="source\rhi\RHI.cpp" />
+    <ClCompile Include="source\rhi\RHI_Image.cpp" />
+    <ClCompile Include="source\rhi\RHI_ShadowMapping.cpp" />
+    <ClCompile Include="source\scene\CameraNode.cpp" />
+    <ClCompile Include="source\scene\LightNode.cpp" />
+    <ClCompile Include="source\scene\MeshNode.cpp" />
+    <ClCompile Include="source\scene\Node.cpp" />
+    <ClCompile Include="source\scene\Scene.cpp" />
+    <ClCompile Include="source\utility\Utility.cpp" />
+    <ClCompile Include="source\Vertex.cpp" />
+    <ClCompile Include="source\Window.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\libs\imgui\imconfig.h" />
+    <ClInclude Include="..\libs\imgui\imgui.h" />
+    <ClInclude Include="..\libs\imgui\imgui_impl_glfw.h" />
+    <ClInclude Include="..\libs\imgui\imgui_impl_vulkan.h" />
+    <ClInclude Include="..\libs\imgui\imgui_internal.h" />
+    <ClInclude Include="..\libs\imgui\imstb_rectpack.h" />
+    <ClInclude Include="..\libs\imgui\imstb_textedit.h" />
+    <ClInclude Include="..\libs\imgui\imstb_truetype.h" />
+    <ClInclude Include="..\libs\volk\volk.h" />
+    <ClInclude Include="include\AABB.h" />
+    <ClInclude Include="include\Engine.h" />
+    <ClInclude Include="include\Logger.h" />
+    <ClInclude Include="include\Luxumbra.h" />
+    <ClInclude Include="include\resource\Material.h" />
+    <ClInclude Include="include\resource\Mesh.h" />
+    <ClInclude Include="include\resource\ResourceManager.h" />
+    <ClInclude Include="include\resource\Texture.h" />
+    <ClInclude Include="include\rhi\Buffer.h" />
+    <ClInclude Include="include\rhi\ComputePipeline.h" />
+    <ClInclude Include="include\rhi\ForwardRenderer.h" />
+    <ClInclude Include="include\rhi\Image.h" />
+    <ClInclude Include="include\rhi\LuxVkImpl.h" />
+    <ClInclude Include="include\rhi\GraphicsPipeline.h" />
+    <ClInclude Include="include\rhi\RHI.h" />
+    <ClInclude Include="include\rhi\ShadowMapper.h" />
+    <ClInclude Include="include\scene\CameraNode.h" />
+    <ClInclude Include="include\scene\LightNode.h" />
+    <ClInclude Include="include\scene\MeshNode.h" />
+    <ClInclude Include="include\scene\Node.h" />
+    <ClInclude Include="include\scene\Scene.h" />
+    <ClInclude Include="include\utility\Utility.h" />
+    <ClInclude Include="include\Vertex.h" />
+    <ClInclude Include="include\Window.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="data\shaders\basicLight\basicLight.frag" />
+    <None Include="data\shaders\basicLight\basicLight.vert" />
+    <None Include="data\shaders\blit\blit.frag" />
+    <None Include="data\shaders\blit\blit.vert" />
+    <None Include="data\shaders\cameraSpaceLight\cameraSpaceLight.frag" />
+    <None Include="data\shaders\cameraSpaceLight\cameraSpaceLight.vert" />
+    <None Include="data\shaders\cameraSpaceLight\cameraSpaceLightCutout.frag" />
+    <None Include="data\shaders\directLighting\directLighting.frag" />
+    <None Include="data\shaders\directLighting\directLighting.vert" />
+    <None Include="data\shaders\envMap\envMap.frag" />
+    <None Include="data\shaders\envMap\envMap.vert" />
+    <None Include="data\shaders\generateBRDFLut\generateBRDFLut.comp" />
+    <None Include="data\shaders\generateBRDFLut\generateBRDFLut.frag" />
+    <None Include="data\shaders\generateBRDFLut\generateBRDFLut.vert" />
+    <None Include="data\shaders\generateCubeMap\generateCubeMap.frag" />
+    <None Include="data\shaders\generateCubeMap\generateCubeMap.vert" />
+    <None Include="data\shaders\generateIrradianceMap\generateIrradianceMap.comp" />
+    <None Include="data\shaders\generateIrradianceMap\generateIrradianceMap.frag" />
+    <None Include="data\shaders\generateIrradianceMap\generateIrradianceMap.vert" />
+    <None Include="data\shaders\generatePrefilteredMap\generatePrefilteredMap.comp" />
+    <None Include="data\shaders\generatePrefilteredMap\generatePrefilteredMap.frag" />
+    <None Include="data\shaders\generatePrefilteredMap\generatePrefilteredMap.vert" />
+    <None Include="data\shaders\mesh\mesh.frag" />
+    <None Include="data\shaders\mesh\mesh.vert" />
+    <None Include="data\shaders\shadowMapping\directionalShadowMapping.vert" />
+    <None Include="data\shaders\SSAO\SSAO.frag" />
+    <None Include="data\shaders\SSAO\SSAO.vert" />
+    <None Include="data\shaders\shadowMapping\pointShadowMapping.frag" />
+    <None Include="data\shaders\shadowMapping\pointShadowMapping.vert" />
+    <None Include="data\shaders\texture\triangle.frag" />
+    <None Include="data\shaders\texture\triangle.vert" />
+    <None Include="data\shaders\CompileShaders.bat" />
+    <None Include="include\Logger.inl" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

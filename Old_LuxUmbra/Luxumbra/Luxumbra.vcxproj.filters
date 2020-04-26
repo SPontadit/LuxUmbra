@@ -1,0 +1,383 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Header Files\RHI">
+      <UniqueIdentifier>{7b764ac1-d0b3-42b3-8bd0-3cc5db8dc696}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\RHI">
+      <UniqueIdentifier>{a668ff6d-60e2-45bd-85a9-968b1d9125a2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\RHI\Volk">
+      <UniqueIdentifier>{8781e80b-7dba-4247-9621-56916e1bd496}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\RHI\Volk">
+      <UniqueIdentifier>{2f71b992-0379-41b7-8ba0-6371524a068d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Scene">
+      <UniqueIdentifier>{8d4db85f-e696-454a-8c10-9baf58329227}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Scene">
+      <UniqueIdentifier>{6634046f-25b1-4e6f-8e93-d65f2ffa2c52}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\blit">
+      <UniqueIdentifier>{f42031fd-70d3-41cc-8c74-672f0054a2c5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\triangle">
+      <UniqueIdentifier>{050aedd5-974b-421c-a901-66c92e5cfa2d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Resource">
+      <UniqueIdentifier>{1d8fa256-1b7b-48ef-9cc5-1326c063fb10}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Resource">
+      <UniqueIdentifier>{a37d6dc9-7eda-4009-a2e4-4ebc69ed53fd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\mesh">
+      <UniqueIdentifier>{aa24ac1b-caed-44d8-b823-6f8d222147fc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\RHI\Imgui">
+      <UniqueIdentifier>{599c9b17-9e62-48a8-b8ae-83a120bc84b6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\RHI\Imgui">
+      <UniqueIdentifier>{24f05ee0-530c-4a5d-859d-1084ee377e51}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\basicLight">
+      <UniqueIdentifier>{0d155caf-aa61-4f5d-b8e4-268a2d41f3a1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\directLighting">
+      <UniqueIdentifier>{c873f7b5-fba2-4586-b1bc-0c54e0dbe7e0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Utility">
+      <UniqueIdentifier>{680412d1-db32-42b6-ba25-d45a3d0d76b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Utility">
+      <UniqueIdentifier>{31951603-222e-4465-8c24-096086b8ef99}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\cameraSpaceLight">
+      <UniqueIdentifier>{9657d792-7a0d-490b-a3e1-6ca30b796184}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\envMap">
+      <UniqueIdentifier>{8014d845-31e5-4aed-b4b6-9e77d00c3700}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\generateIrradianceMap">
+      <UniqueIdentifier>{6bc8c4e2-a1a7-477c-b947-ad6006257918}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\generateCubeMap">
+      <UniqueIdentifier>{417a7c2e-387a-486f-916d-a6590918944e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\generatePrefilteredMap">
+      <UniqueIdentifier>{b0a9a296-de64-45ef-bf17-4045602f2b85}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\generateBRDFLut">
+      <UniqueIdentifier>{de1ea4f4-5462-430f-9bd1-6b6782e19e72}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\shadowMapping">
+      <UniqueIdentifier>{bb890761-e6c5-4237-b3ca-3f80d71c6424}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\SSAO">
+      <UniqueIdentifier>{10f661e3-1428-434b-9643-84fe9d28aed6}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="source\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Engine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Window.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\rhi\RHI.cpp">
+      <Filter>Source Files\RHI</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libs\volk\volk.c">
+      <Filter>Source Files\RHI\Volk</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Vertex.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\rhi\RHI_GraphicsPipeline.cpp">
+      <Filter>Source Files\RHI</Filter>
+    </ClCompile>
+    <ClCompile Include="source\rhi\RHI_Buffer.cpp">
+      <Filter>Source Files\RHI</Filter>
+    </ClCompile>
+    <ClCompile Include="source\rhi\RHI_ForwardRenderer.cpp">
+      <Filter>Source Files\RHI</Filter>
+    </ClCompile>
+    <ClCompile Include="source\rhi\RHI_Image.cpp">
+      <Filter>Source Files\RHI</Filter>
+    </ClCompile>
+    <ClCompile Include="source\scene\Scene.cpp">
+      <Filter>Source Files\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="source\scene\Node.cpp">
+      <Filter>Source Files\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="source\scene\CameraNode.cpp">
+      <Filter>Source Files\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="source\resource\Mesh.cpp">
+      <Filter>Source Files\Resource</Filter>
+    </ClCompile>
+    <ClCompile Include="source\resource\ResourceManager.cpp">
+      <Filter>Source Files\Resource</Filter>
+    </ClCompile>
+    <ClCompile Include="source\scene\MeshNode.cpp">
+      <Filter>Source Files\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libs\imgui\imgui.cpp">
+      <Filter>Source Files\RHI\Imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libs\imgui\imgui_draw.cpp">
+      <Filter>Source Files\RHI\Imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libs\imgui\imgui_impl_glfw.cpp">
+      <Filter>Source Files\RHI\Imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libs\imgui\imgui_impl_vulkan.cpp">
+      <Filter>Source Files\RHI\Imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libs\imgui\imgui_widgets.cpp">
+      <Filter>Source Files\RHI\Imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libs\imgui\imgui_demo.cpp">
+      <Filter>Source Files\RHI\Imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="source\scene\LightNode.cpp">
+      <Filter>Source Files\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="source\resource\Material.cpp">
+      <Filter>Source Files\Resource</Filter>
+    </ClCompile>
+    <ClCompile Include="source\resource\Texture.cpp">
+      <Filter>Source Files\Resource</Filter>
+    </ClCompile>
+    <ClCompile Include="source\utility\Utility.cpp">
+      <Filter>Source Files\Utility</Filter>
+    </ClCompile>
+    <ClCompile Include="source\rhi\RHI_ShadowMapping.cpp">
+      <Filter>Source Files\RHI</Filter>
+    </ClCompile>
+    <ClCompile Include="source\AABB.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\rhi\RHI_ComputePipeline.cpp">
+      <Filter>Source Files\RHI</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\rhi\RHI.h">
+      <Filter>Header Files\RHI</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Engine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Window.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libs\volk\volk.h">
+      <Filter>Header Files\RHI\Volk</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Logger.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\rhi\LuxVkImpl.h">
+      <Filter>Header Files\RHI</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Luxumbra.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\rhi\GraphicsPipeline.h">
+      <Filter>Header Files\RHI</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Vertex.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\rhi\Buffer.h">
+      <Filter>Header Files\RHI</Filter>
+    </ClInclude>
+    <ClInclude Include="include\rhi\ForwardRenderer.h">
+      <Filter>Header Files\RHI</Filter>
+    </ClInclude>
+    <ClInclude Include="include\rhi\Image.h">
+      <Filter>Header Files\RHI</Filter>
+    </ClInclude>
+    <ClInclude Include="include\scene\Scene.h">
+      <Filter>Header Files\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="include\scene\Node.h">
+      <Filter>Header Files\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="include\scene\CameraNode.h">
+      <Filter>Header Files\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="include\resource\Mesh.h">
+      <Filter>Header Files\Resource</Filter>
+    </ClInclude>
+    <ClInclude Include="include\resource\ResourceManager.h">
+      <Filter>Header Files\Resource</Filter>
+    </ClInclude>
+    <ClInclude Include="include\scene\MeshNode.h">
+      <Filter>Header Files\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libs\imgui\imconfig.h">
+      <Filter>Header Files\RHI\Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libs\imgui\imgui.h">
+      <Filter>Header Files\RHI\Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libs\imgui\imgui_impl_glfw.h">
+      <Filter>Header Files\RHI\Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libs\imgui\imgui_impl_vulkan.h">
+      <Filter>Header Files\RHI\Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libs\imgui\imgui_internal.h">
+      <Filter>Header Files\RHI\Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libs\imgui\imstb_rectpack.h">
+      <Filter>Header Files\RHI\Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libs\imgui\imstb_textedit.h">
+      <Filter>Header Files\RHI\Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libs\imgui\imstb_truetype.h">
+      <Filter>Header Files\RHI\Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="include\scene\LightNode.h">
+      <Filter>Header Files\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="include\resource\Material.h">
+      <Filter>Header Files\Resource</Filter>
+    </ClInclude>
+    <ClInclude Include="include\resource\Texture.h">
+      <Filter>Header Files\Resource</Filter>
+    </ClInclude>
+    <ClInclude Include="include\utility\Utility.h">
+      <Filter>Header Files\Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="include\rhi\ShadowMapper.h">
+      <Filter>Header Files\RHI</Filter>
+    </ClInclude>
+    <ClInclude Include="include\AABB.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\rhi\ComputePipeline.h">
+      <Filter>Header Files\RHI</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="include\Logger.inl">
+      <Filter>Header Files</Filter>
+    </None>
+    <None Include="data\shaders\blit\blit.frag">
+      <Filter>Resource Files\blit</Filter>
+    </None>
+    <None Include="data\shaders\blit\blit.vert">
+      <Filter>Resource Files\blit</Filter>
+    </None>
+    <None Include="data\shaders\texture\triangle.frag">
+      <Filter>Resource Files\triangle</Filter>
+    </None>
+    <None Include="data\shaders\texture\triangle.vert">
+      <Filter>Resource Files\triangle</Filter>
+    </None>
+    <None Include="data\shaders\mesh\mesh.frag">
+      <Filter>Resource Files\mesh</Filter>
+    </None>
+    <None Include="data\shaders\mesh\mesh.vert">
+      <Filter>Resource Files\mesh</Filter>
+    </None>
+    <None Include="data\shaders\basicLight\basicLight.frag">
+      <Filter>Resource Files\basicLight</Filter>
+    </None>
+    <None Include="data\shaders\basicLight\basicLight.vert">
+      <Filter>Resource Files\basicLight</Filter>
+    </None>
+    <None Include="data\shaders\directLighting\directLighting.frag">
+      <Filter>Resource Files\directLighting</Filter>
+    </None>
+    <None Include="data\shaders\directLighting\directLighting.vert">
+      <Filter>Resource Files\directLighting</Filter>
+    </None>
+    <None Include="data\shaders\cameraSpaceLight\cameraSpaceLight.frag">
+      <Filter>Resource Files\cameraSpaceLight</Filter>
+    </None>
+    <None Include="data\shaders\cameraSpaceLight\cameraSpaceLight.vert">
+      <Filter>Resource Files\cameraSpaceLight</Filter>
+    </None>
+    <None Include="data\shaders\envMap\envMap.frag">
+      <Filter>Resource Files\envMap</Filter>
+    </None>
+    <None Include="data\shaders\envMap\envMap.vert">
+      <Filter>Resource Files\envMap</Filter>
+    </None>
+    <None Include="data\shaders\generateIrradianceMap\generateIrradianceMap.frag">
+      <Filter>Resource Files\generateIrradianceMap</Filter>
+    </None>
+    <None Include="data\shaders\generateIrradianceMap\generateIrradianceMap.vert">
+      <Filter>Resource Files\generateIrradianceMap</Filter>
+    </None>
+    <None Include="data\shaders\generateCubeMap\generateCubeMap.frag">
+      <Filter>Resource Files\generateCubeMap</Filter>
+    </None>
+    <None Include="data\shaders\generateCubeMap\generateCubeMap.vert">
+      <Filter>Resource Files\generateCubeMap</Filter>
+    </None>
+    <None Include="data\shaders\cameraSpaceLight\cameraSpaceLightCutout.frag">
+      <Filter>Resource Files\cameraSpaceLight</Filter>
+    </None>
+    <None Include="data\shaders\generatePrefilteredMap\generatePrefilteredMap.frag">
+      <Filter>Resource Files\generatePrefilteredMap</Filter>
+    </None>
+    <None Include="data\shaders\generatePrefilteredMap\generatePrefilteredMap.vert">
+      <Filter>Resource Files\generatePrefilteredMap</Filter>
+    </None>
+    <None Include="data\shaders\generateBRDFLut\generateBRDFLut.frag">
+      <Filter>Resource Files\generateBRDFLut</Filter>
+    </None>
+    <None Include="data\shaders\generateBRDFLut\generateBRDFLut.vert">
+      <Filter>Resource Files\generateBRDFLut</Filter>
+    </None>
+    <None Include="data\shaders\CompileShaders.bat">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="data\shaders\generateIrradianceMap\generateIrradianceMap.comp">
+      <Filter>Resource Files\generateIrradianceMap</Filter>
+    </None>
+    <None Include="data\shaders\generatePrefilteredMap\generatePrefilteredMap.comp">
+      <Filter>Resource Files\generatePrefilteredMap</Filter>
+    </None>
+    <None Include="data\shaders\generateBRDFLut\generateBRDFLut.comp">
+      <Filter>Resource Files\generateBRDFLut</Filter>
+    </None>
+    <None Include="data\shaders\SSAO\SSAO.frag">
+      <Filter>Resource Files\SSAO</Filter>
+    </None>
+    <None Include="data\shaders\SSAO\SSAO.vert">
+      <Filter>Resource Files\SSAO</Filter>
+    </None>
+    <None Include="data\shaders\shadowMapping\pointShadowMapping.frag">
+      <Filter>Resource Files\shadowMapping</Filter>
+    </None>
+    <None Include="data\shaders\shadowMapping\pointShadowMapping.vert">
+      <Filter>Resource Files\shadowMapping</Filter>
+    </None>
+    <None Include="data\shaders\shadowMapping\directionalShadowMapping.vert">
+      <Filter>Resource Files\shadowMapping</Filter>
+    </None>
+  </ItemGroup>
+</Project>
