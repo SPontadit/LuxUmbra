@@ -1,7 +1,7 @@
 # LuxUmbra -  Light & Shadow Engine
 
 LuxUmbra is a light & shadow engine that runs with Vulkan API.<br>
-The project's goals were to learn **Vulkan API** and modern rendering techniques like **Phisically Based-Rendering** (PRBR) and **Post-Process**.
+The project's goals were to learn **Vulkan API** and modern rendering techniques like **Phisically Based-Rendering** (PBR) and **Post-Process**.
 
 It was develop in one month in a group of two people. <br>
 
