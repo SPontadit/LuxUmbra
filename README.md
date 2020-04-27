@@ -15,9 +15,8 @@ It was develop in one month in a group of two people. <br>
 + [Illumination Model](#Illumination-Model)
 + [Shadows](#shadows)
 + [Image Based-Lighting](#Image-Based-Lighting)
-+ [Post Process & Anti-Aliasing](#Post-Proscess-&-Anti-Aliasing) 
++ [Post Process & Anti-Aliasing](#Post-Proscess-&-Anti-Aliasing)
 + [Shaders Hot Reload](#Shaders-Hot-Reload)
-+ [Possible Issue](#Possible-Issue)
 <br><br><br>
 
 ## **Controls**
@@ -90,8 +89,4 @@ The last but not least post-process is **Screen-Space Ambient Occlusion** (SSAO)
 
 1. Makes change to shaders
 2. Run LuxUmbra/data/shaders/Compilers.bat
-3. Click on "Reload Shader" button on editor <br><br><br>
-
-## **Possible Issue**
-
-If you do not use Visual Studio 2019 or you do not use Platform Toolset "Visual Studio 2019(v142), you must go to project properties and change Platform Toolset to your current platform toolset.
+3. Click on "Reload Shader" button on editor
