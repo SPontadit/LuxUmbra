@@ -1,13 +1,11 @@
 # LuxUmbra -  Light & Shadow Engine
 
 LuxUmbra is a light & shadow engine that runs with Vulkan API.<br>
-The project's goals were to learn **Vulkan API** and modern rendering techniques like **Phisically Based-Rendering** (PBR) and **Post-Process** effects. We did not focus on performances.
+The project's goals were to learn **Vulkan API** and modern rendering techniques like **Physically Based-Rendering** (PBR) and **Post-Process** effects. We did not focus on performances and optimization.
 
-It was develop in one month in a group of two people.<br>
+It was developed in one month in a group of two people.<br>
 
 ![Overview](README_Resources/Models.jpg)
-
-
 
 ## Table of Contents
 
@@ -30,7 +28,7 @@ It was develop in one month in a group of two people.<br>
 
 + ### Compile the project
 
-> Open "LuxUmbra.sln" solution file. You may need to retarget the project.<br>Compile and run the project.
+> Open "LuxUmbra.sln" solution file. You may need to re-target the project.<br>Compile and run the project.
 
 <br>
 
@@ -47,15 +45,15 @@ It was develop in one month in a group of two people.<br>
 
 <br>
 
-## **[WIP] Illumination Model**
+## **Illumination Model**
 
 ### ***Diffuse***
 
-We implemente two different BRDFs for the diffuse term. We have the **Lambertian BRDF** that assumes a uniform diffuse reponse. And we have **Disney's diffuse BRDF** (by Burley) that take the roughness in account to create reflection at grazing angles. In the engine we use Disney's BRDF by default.
+We implemented two different BRDFs for the diffuse term. We have the **Lambertian BRDF** that assumes a uniform diffuse response. And we have **Disney's diffuse BRDF** (by Burley) that take the roughness in account to create reflection at grazing angles. In the engine, we use Disney's BRDF by default.
 
 ### ***Specular***
 
-For the specular part, we implement **Cook-Torrance BRDF**. The different terms of the BRDF that we choose are:
+For the specular part, we implemented **Cook-Torrance BRDF**. The different terms of the BRDF that we choose are:
 
 + **GGX (Trowbridge-Reitz)** for the Normal Distribution Function
 + **Schlick Approximation** for the Fresnel Equation
@@ -67,7 +65,7 @@ For the specular part, we implement **Cook-Torrance BRDF**. The different terms 
 
 ### ***Clear Coat***
 
-We implement a simplified version of material layering with a **Cleat Coat**. It is calculated with the same Cook-Torrance BRDF but with different terms:
+We implemented a simplified version of material layering with a **Cleat Coat**. It is calculated with the same Cook-Torrance BRDF but with different terms:
 
 + **GGX** for the Normal Distributon Function
 + **Schlick Approximation** for the Fresnel Equation
@@ -79,7 +77,7 @@ We implement a simplified version of material layering with a **Cleat Coat**. It
 
 ### ***Material***
 
-5 different maps are handle: Albedo, Normal, Roughness, Metallic and Ambient Occlusion that allow us to have complex material.<br>
+5 different maps are handled: Albedo, Normal, Roughness, Metallic and Ambient Occlusion that allow us to have complex material.<br>
 
 ![Materials](README_Resources/Materials.jpg)
 
@@ -95,19 +93,19 @@ Description Work-In-Progress
 
 ## **Image Based-Lighting**
 
-Environment map are from HDR texture and we use it to do **Image-Based Lighing**. <br>
+Our environment maps are from HDR textures and we use them to do **Image-Based Lighting**. <br>
 
 ### **Diffuse Irradiance**
 
-The diffuse part of IBL is achieved by compute the irradiance of the environment map by convolution. The result irradiance is store in a cubemap. This is our **irradience map**.
+The diffuse part of IBL is achieved by computing the irradiance of the environment map by convolution. This result is stored in a cubemap. This is our **irradiance map**.
 
 ### **Specular**
 
-Specular part is calculated with the split sum approximation by Epic Games. The first sum is pre-calculated for different roughness values and the results are store in the mip-map levels of a cubemap. This is our **prefiltered map**. The second sum is a 2D LUT that represents the BRDF's responce given an input roughness and an input angle between the normal and the light direction. <br>
+Specular part is calculated with the split sum approximation made famous by Epic Games. The first sum is pre-calculated for different roughness values and the results are stored in the mip-map levels of a cubemap. This is our **prefiltered map**. The second sum is a 2D LUT that represents the BRDF's responce given an input roughness and an input angle between the normal and the light direction. <br>
 
-Objet that use IBL reflection sample the prefiltered map using its roughness value to access mip level of the map. Higher mip levels are blurier than lower mip levels. So rough material have blured reflection and smooth material have sharp reflection.<br>
+Objet that use IBL reflection sample the prefiltered map using its roughness value to access mip level of the map. Higher mip levels are blurrier than lower mip levels. So rough material have blurred reflection and smooth material have sharp reflection.<br>
 
-This two maps depending on the environment map, we compute then at program startup with **compute shader**<br>
+This two maps depending on the environment map, we compute them at program startup with **compute shader**<br>
 
 ![IBL](README_Resources/Helmet_Light.jpg)
 
@@ -117,14 +115,14 @@ This two maps depending on the environment map, we compute then at program start
 
 ### **Anti-Aliasing**
 
-We have two anti-alliasing technique. The first one is the **Multisampling Anti-Aliasing** (MSAA) on the vulkan side. We are up to four samples per pixels. We also have **Fast Approximate Anti-Aliasing** (FXAA) as a post process to smooth edge.
+We implemented two anti-aliasing techniques. The first one is the **Multisampling Anti-Aliasing** (MSAA) on the vulkan side. We are up to four samples per pixels. We also implemented **Fast Approximate Anti-Aliasing** (FXAA) as a post-process to smooth edge.
 
 <br>
 
 ### **Post-Process**
 
-We have several **Tone Mapping algorithms**, Reinhard, ACES Film and Uncharted2. The tone mapping is to remap HDC color to LDC color. All our color calculations are done in linear color space. We do gamma correction on post-process.<br>
-The last but not least post-process is **Screen-Space Ambient Occlusion** (SSAO). We have a part of deferred rendering. We use normal and position buffer to calculate ambient occlusion of the fragment.<br>
+We implemented several **Tone Mapping algorithms**, Reinhard, ACES Film and Uncharted2. The tone mapping remaps HDC color to LDC color. All our color calculations are done in linear color space. We do gamma correction on post-process.<br>
+The last post-process that we implemented is **Screen-Space Ambient Occlusion** (SSAO). We have a part of deferred rendering. We use normal and position buffer to calculate ambient occlusion of the fragment and apply this occlusion during the post-process pass.<br>
 
 ![SSAO](README_Resources/SSAO.gif)
 
