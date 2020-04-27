@@ -123,7 +123,7 @@ We implemented a simplified version of material layering with a **Cleat Coat**. 
 ### **[WIP] Shadows**
 Description Work-In-Progress
 
-<ins>**Figure 5:**</ins> model illuminates by two direction lights
+<ins>**Figure 5:**</ins> model is illuminated by two directional lights that produce shadows on the walls
 
 ![Direction Shadow](README_Resources/Shadow_Directional.jpg)
 <br><br><br>
@@ -144,7 +144,7 @@ Objet that use IBL reflection sample the prefiltered map using its roughness val
 
 This two maps depending on the environment map, we compute them at program startup with **compute shader**<br>
 
-<ins>**Figure 6:**</ins> environment is reflected off the helmet
+<ins>**Figure 6:**</ins> the environment is reflected off the helmet
 
 ![IBL](README_Resources/Helmet_Light.jpg)
 
