@@ -11,12 +11,14 @@ It was developed in one month in a group of two people.<br>
 
 + [How to launch](#How-to-Launch)
 + [Controls](#Controls)
-+ [Illumination Model](#Illumination-Model)
-+ [Shadows](#shadows)
-+ [Image Based-Lighting](#Image-Based-Lighting)
-+ [Post Process & Anti-Aliasing](#Post-Proscess-&-Anti-Aliasing)
-+ [References](#References)
++ [Editor](#Editor)
 + [Shaders Hot Reload](#Shaders-Hot-Reload)
++ [Technical Document](#Technical-Document)
+  + [Illumination Model](#Illumination-Model)
+  + [Shadows](#shadows)
+  + [Image Based-Lighting](#Image-Based-Lighting)
+  + [Post Process & Anti-Aliasing](#Post-Proscess-&-Anti-Aliasing)
+  + [References](#References)
 
 <br>
 
@@ -45,13 +47,38 @@ It was developed in one month in a group of two people.<br>
 
 <br>
 
-## **Illumination Model**
+## **Editor**
 
-### ***Diffuse***
++ **Change Scenes:** Change the current scene by click on the radio butons at the top of the editor.
++ **Post-Process:**
+  + *Debug:* Show tone mapping, FXAA, SSAO or direct color only on the left part of the screen. The "percent" slider allows moving the white line that split the screen.
+  + *Tone Mapping:* Expose the tone mapping algorithm and the exposure factor.
+  + *FXAA:* Expose the overall FXAA quality.
+  + *SSAO:* Expose SSAO settings.
++ **Render Settings:** Expose shadow mapping parameters.
++ **Scenes:**  Expose camera, meshes, lights and materials properties.
+
+<br>
+
+## **Shaders Hot Reload**
+
+1. Make changes to shaders
+2. Run LuxUmbra/data/shaders/Compilers.bat
+3. Click on "Reload Shader" button on editor
+
+<br>
+
+## **Technical Document**
+
+### **Illumination Model**
+
+All the calculation for illumination are done in **"cameraSpaceLight.frag"** shader.
+
+#### **Diffuse**
 
 We implemented two different BRDFs for the diffuse term. We have the **Lambertian BRDF** that assumes a uniform diffuse response. And we have **Disney's diffuse BRDF** (by Burley) that take the roughness in account to create reflection at grazing angles. In the engine, we use Disney's BRDF by default.
 
-### ***Specular***
+#### **Specular**
 
 For the specular part, we implemented **Cook-Torrance BRDF**. The different terms of the BRDF that we choose are:
 
@@ -59,11 +86,13 @@ For the specular part, we implemented **Cook-Torrance BRDF**. The different term
 + **Schlick Approximation** for the Fresnel Equation
 + **Smith GGX** for the Masking-Shadowing Function
 
+<ins>**Figure 1:**</ins> different roughness, reflectance and metalness values
+
 ![PBR Sphere](README_Resources/PBR_Spheres.jpg)
 
 <br>
 
-### ***Clear Coat***
+#### **Clear Coat**
 
 We implemented a simplified version of material layering with a **Cleat Coat**. It is calculated with the same Cook-Torrance BRDF but with different terms:
 
@@ -71,35 +100,43 @@ We implemented a simplified version of material layering with a **Cleat Coat**. 
 + **Schlick Approximation** for the Fresnel Equation
 + **Kelement** for the Masking-Shadowing Function
 
+<ins>**Figure 2:**</ins> different cleat coat roughness and intensity values
+
 ![ClearCoat](README_Resources/Clear_Coat.jpg)
 
 <br>
 
-### ***Material***
+#### **Material**
 
 5 different maps are handled: Albedo, Normal, Roughness, Metallic and Ambient Occlusion that allow us to have complex material.<br>
 
+<ins>**Figure 3:**</ins> collection of complex physically based materials
+
 ![Materials](README_Resources/Materials.jpg)
+
+<ins>**Figure 4:**</ins> marble material with and without clear coat
 
 ![MaterialClearCoat](README_Resources/Marble.gif)
 
 <br>
 
-## **[WIP] Shadows**
+### **[WIP] Shadows**
 Description Work-In-Progress
+
+<ins>**Figure 5:**</ins> model illuminates by two direction lights
 
 ![Direction Shadow](README_Resources/Shadow_Directional.jpg)
 <br><br><br>
 
-## **Image Based-Lighting**
+### **Image Based-Lighting**
 
 Our environment maps are from HDR textures and we use them to do **Image-Based Lighting**. <br>
 
-### **Diffuse Irradiance**
+#### **Diffuse Irradiance**
 
 The diffuse part of IBL is achieved by computing the irradiance of the environment map by convolution. This result is stored in a cubemap. This is our **irradiance map**.
 
-### **Specular**
+#### **Specular**
 
 Specular part is calculated with the split sum approximation made famous by Epic Games. The first sum is pre-calculated for different roughness values and the results are stored in the mip-map levels of a cubemap. This is our **prefiltered map**. The second sum is a 2D LUT that represents the BRDF's responce given an input roughness and an input angle between the normal and the light direction. <br>
 
@@ -107,30 +144,35 @@ Objet that use IBL reflection sample the prefiltered map using its roughness val
 
 This two maps depending on the environment map, we compute them at program startup with **compute shader**<br>
 
+<ins>**Figure 6:**</ins> environment is reflected off the helmet
+
 ![IBL](README_Resources/Helmet_Light.jpg)
 
 <br>
 
-## **Post Proscess & Anti-Aliasing**
+### **Post-Proscess & Anti-Aliasing**
 
-### **Anti-Aliasing**
+All the calculation for post-processing are done in **"blit.frag"** shader.
+
+#### **Anti-Aliasing**
 
 We implemented two anti-aliasing techniques. The first one is the **Multisampling Anti-Aliasing** (MSAA) on the vulkan side. We are up to four samples per pixels. We also implemented **Fast Approximate Anti-Aliasing** (FXAA) as a post-process to smooth edge.
 
-<br>
 
-### **Post-Process**
+#### **Post-Process**
 
 We implemented several **Tone Mapping algorithms**, Reinhard, ACES Film and Uncharted2. The tone mapping remaps HDC color to LDC color. All our color calculations are done in linear color space. We do gamma correction on post-process.<br>
 The last post-process that we implemented is **Screen-Space Ambient Occlusion** (SSAO). We have a part of deferred rendering. We use normal and position buffer to calculate ambient occlusion of the fragment and apply this occlusion during the post-process pass.<br>
+
+<ins>**Figure 7:**</ins> same image with and without SSAO
 
 ![SSAO](README_Resources/SSAO.gif)
 
 <br>
 
-## **References**
+### **References**
 
-### *Rendering*
+#### *Rendering*
 
 + [Real shading in Unreal Engine 4](https://cdn2.unrealengine.com/Resources/files/2013SiggraphPresentationsNotes-26915738.pdf) by Brian Karis, Epic Games, Siggraph 2013 presentation note
 + [Moving Frostbite to Physically Based Rendering 3.0](https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf) by Sébastien Lagarde and Charles de Rousiers, Electronic Arts, Siggraph 2014
@@ -147,11 +189,3 @@ The last post-process that we implemented is **Screen-Space Ambient Occlusion** 
 
 + [Sascha Willems GitHub repository](https://github.com/SaschaWillems/Vulkan) for general references about Vulkan API
 + [NVIDIA Vulkan Shader Resource Binding blog post](https://developer.nvidia.com/vulkan-shader-resource-binding) for optimizing resource bindings by updated them based on usage frequency
-
-<br>
-
-## **Shaders Hot Reload**
-
-1. Makes change to shaders
-2. Run LuxUmbra/data/shaders/Compilers.bat
-3. Click on "Reload Shader" button on editor
