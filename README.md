@@ -49,6 +49,8 @@ It was developed in one month in a group of two people.<br>
 
 ## **Editor**
 
+The editor is build with Omar Cornut's "dear imgui" library.
+
 + **Change Scenes:** Change the current scene by click on the radio butons at the top of the editor.
 + **Post-Process:**
   + *Debug:* Show tone mapping, FXAA, SSAO or direct color only on the left part of the screen. The "percent" slider allows moving the white line that split the screen.
@@ -57,6 +59,8 @@ It was developed in one month in a group of two people.<br>
   + *SSAO:* Expose SSAO settings.
 + **Render Settings:** Expose shadow mapping parameters.
 + **Scenes:**  Expose camera, meshes, lights and materials properties.
+
+![Editor](README_Resources/Editor.png)
 
 <br>
 
