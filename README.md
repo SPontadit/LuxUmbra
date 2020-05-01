@@ -1,9 +1,9 @@
 # LuxUmbra -  Light & Shadow Engine
 
-LuxUmbra is a light & shadow engine that runs with Vulkan API.<br>
-The project's goals were to learn **Vulkan API** and modern rendering techniques like **Physically Based-Rendering** (PBR) and **Post-Process** effects. We did not focus on performances and optimization.
+LuxUmbra is a light & shadow engine that runs with the Vulkan API.<br>
+The goals of the project were to learn the **Vulkan API** and modern rendering techniques like **Physically Based-Rendering** (PBR) and **Post-Process** effects. We did not focus on performance and optimization.
 
-It was developed in one month in a group of two people.<br>
+It was developed in one month by two people.<br>
 
 ![Overview](README_Resources/Models.jpg)
 
@@ -49,16 +49,16 @@ It was developed in one month in a group of two people.<br>
 
 ## **Editor**
 
-The editor is build with Omar Cornut's "dear imgui" library.
+The editor is built with Omar Cornut's "dear imgui" library.
 
-+ **Change Scenes:** Change the current scene by click on the radio butons at the top of the editor.
++ **Change Scenes:** Change the current scene by clicking on the radio butons at the top of the editor.
 + **Post-Process:**
-  + *Debug:* Show tone mapping, FXAA, SSAO or direct color only on the left part of the screen. The "percent" slider allows moving the white line that split the screen.
-  + *Tone Mapping:* Expose the tone mapping algorithm and the exposure factor.
-  + *FXAA:* Expose the overall FXAA quality.
-  + *SSAO:* Expose SSAO settings.
-+ **Render Settings:** Expose shadow mapping parameters.
-+ **Scenes:**  Expose camera, meshes, lights and materials properties.
+  + *Debug:* Show tone mapping, FXAA, SSAO or direct color only on the left part of the screen. The "percent" slider controls the horizontal position of the white line that splits the screen.
+  + *Tone Mapping:* Exposes the tone mapping algorithm and the exposure factor.
+  + *FXAA:* Exposes the overall FXAA quality.
+  + *SSAO:* Exposes SSAO settings.
++ **Render Settings:** Exposes shadow mapping parameters.
++ **Scenes:**  Exposes camera, meshes, lights and materials properties.
 
 ![Editor](README_Resources/Editor.png)
 
@@ -68,7 +68,7 @@ The editor is build with Omar Cornut's "dear imgui" library.
 
 1. Make changes to shaders
 2. Run LuxUmbra/data/shaders/Compilers.bat
-3. Click on "Reload Shader" button on editor
+3. Click on the "Reload Shader" button in the editor
 
 <br>
 
@@ -76,15 +76,15 @@ The editor is build with Omar Cornut's "dear imgui" library.
 
 ### **Illumination Model**
 
-All the calculation for illumination are done in **"cameraSpaceLight.frag"** shader.
+All the calculations for illumination are done in **"cameraSpaceLight.frag"** shader.
 
 #### **Diffuse**
 
-We implemented two different BRDFs for the diffuse term. We have the **Lambertian BRDF** that assumes a uniform diffuse response. And we have **Disney's diffuse BRDF** (by Burley) that take the roughness in account to create reflection at grazing angles. In the engine, we use Disney's BRDF by default.
+We implemented two different BRDFs for the diffuse term. We have the **Lambertian BRDF** that assumes a uniform diffuse response, and we have **Disney's diffuse BRDF** (by Burley) that takes the roughness into account to create reflections at grazing angles. In the engine, we use Disney's BRDF by default.
 
 #### **Specular**
 
-For the specular part, we implemented **Cook-Torrance BRDF**. The different terms of the BRDF that we choose are:
+For the specular part, we implemented the **Cook-Torrance BRDF**. The different terms of the BRDF that we chose are:
 
 + **GGX (Trowbridge-Reitz)** for the Normal Distribution Function
 + **Schlick Approximation** for the Fresnel Equation
@@ -112,9 +112,9 @@ We implemented a simplified version of material layering with a **Cleat Coat**. 
 
 #### **Material**
 
-5 different maps are handled: Albedo, Normal, Roughness, Metallic and Ambient Occlusion that allow us to have complex material.<br>
+5 different maps are handled: Albedo, Normal, Roughness, Metallic and Ambient Occlusion that allow us to have complex materials.<br>
 
-<ins>**Figure 3:**</ins> collection of complex physically based materials
+<ins>**Figure 3:**</ins> a collection of complex physically based materials
 
 ![Materials](README_Resources/Materials.jpg)
 
@@ -124,17 +124,27 @@ We implemented a simplified version of material layering with a **Cleat Coat**. 
 
 <br>
 
-### **[WIP] Shadows**
-Description Work-In-Progress
+### **Shadows**
+
+We implemented shadow-mapping for directional and point lights. <br>
+
+For directional shadow mapping, we create an AABB in the coordinate's frame of the light whose dimension define an orthographic projection matrix. The scene depth is rendered using this projection to create the shadow map. During the scene render, for each light, we transform the position of a fragment in the coordinate's frame of the light and compare its distance to the light with the depth sampled in the shadow map using the transformed position. <br>
+
+Shadows from directional light sources are anti-aliased using the **Percentage Closer Filtering** (PCF) algorithm. <br>
 
 <ins>**Figure 5:**</ins> model is illuminated by two directional lights that produce shadows on the walls
 
 ![Direction Shadow](README_Resources/Shadow_Directional.jpg)
+
+<br>
+
+For point lights, we create the shadow map by rendering the depth of the scene from the position of the light into a cubemap. Then, when we render the scene, just like for directional lights, we transform the position of a fragment in the coordinate's frame of each light and compare the distance to the light with the depth sampled in the shadow map using the direction from the light to the transformed fragment position.
+
 <br><br><br>
 
 ### **Image Based-Lighting**
 
-Our environment maps are from HDR textures and we use them to do **Image-Based Lighting**. <br>
+Our environment maps are computed from HDR textures and we use them to do **Image-Based Lighting**. <br>
 
 #### **Diffuse Irradiance**
 
@@ -142,13 +152,13 @@ The diffuse part of IBL is achieved by computing the irradiance of the environme
 
 #### **Specular**
 
-Specular part is calculated with the split sum approximation made famous by Epic Games. The first sum is pre-calculated for different roughness values and the results are stored in the mip-map levels of a cubemap. This is our **prefiltered map**. The second sum is a 2D LUT that represents the BRDF's responce given an input roughness and an input angle between the normal and the light direction. <br>
+Specular part is calculated with the split sum approximation made famous by Epic Games. The first sum is pre-calculated for different roughness values and the results are stored in the mip-map levels of a cubemap. This is our **prefiltered map**. The second sum is a 2D LUT that represents the BRDF's response given an input roughness and an input angle between the normal and the light direction. <br>
 
-Objet that use IBL reflection sample the prefiltered map using its roughness value to access mip level of the map. Higher mip levels are blurrier than lower mip levels. So rough material have blurred reflection and smooth material have sharp reflection.<br>
+Objet that use IBL reflections sample the prefiltered map using their roughness value to access a mip level of the map. Higher mip levels are blurrier than lower mip levels, so rough material have blurred reflections and smooth material have sharp reflections.<br>
 
-This two maps depending on the environment map, we compute them at program startup with **compute shader**<br>
+These two maps depend on the environment map, we generate them at program startup with a **compute shader**<br>
 
-<ins>**Figure 6:**</ins> the environment is reflected off the helmet
+<ins>**Figure 6:**</ins> the environment is reflected on the surface of the helmet
 
 ![IBL](README_Resources/Helmet_Light.jpg)
 
@@ -160,13 +170,12 @@ All the calculation for post-processing are done in **"blit.frag"** shader.
 
 #### **Anti-Aliasing**
 
-We implemented two anti-aliasing techniques. The first one is the **Multisampling Anti-Aliasing** (MSAA) on the vulkan side. We are up to four samples per pixels. We also implemented **Fast Approximate Anti-Aliasing** (FXAA) as a post-process to smooth edge.
-
+We implemented two anti-aliasing techniques. The first one is the **Multisampling Anti-Aliasing** (MSAA) on the Vulkan side. It uses up to four samples per pixel. We also implemented **Fast Approximate Anti-Aliasing** (FXAA) as a post-process to smooth edges.
 
 #### **Post-Process**
 
-We implemented several **Tone Mapping algorithms**, Reinhard, ACES Film and Uncharted2. The tone mapping remaps HDC color to LDC color. All our color calculations are done in linear color space. We do gamma correction on post-process.<br>
-The last post-process that we implemented is **Screen-Space Ambient Occlusion** (SSAO). We have a part of deferred rendering. We use normal and position buffer to calculate ambient occlusion of the fragment and apply this occlusion during the post-process pass.<br>
+We implemented several **Tone Mapping algorithms**: Reinhard, ACES Film and Uncharted2. The tone mapping remaps HDC color to LDC color. All our color calculations are done in linear color space. We apply gamma correction during the post-process stage.<br>
+The last post-process that we implemented is **Screen-Space Ambient Occlusion** (SSAO). We use a hybrid pipeline with traditional forward rendering plus we keep buffers with the data necessary to SSAO computation. We use a normal and a position buffer to calculate ambient occlusion on a fragment and apply this occlusion during the post-process pass.<br>
 
 <ins>**Figure 7:**</ins> same image with and without SSAO
 
@@ -180,10 +189,10 @@ The last post-process that we implemented is **Screen-Space Ambient Occlusion** 
 
 + [Real shading in Unreal Engine 4](https://cdn2.unrealengine.com/Resources/files/2013SiggraphPresentationsNotes-26915738.pdf) by Brian Karis, Epic Games, Siggraph 2013 presentation note
 + [Moving Frostbite to Physically Based Rendering 3.0](https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf) by Sébastien Lagarde and Charles de Rousiers, Electronic Arts, Siggraph 2014
-+ [Real-time Physiccaly Based Rendering](https://en.ppt-online.org/378584) by Yoshiharu Gotanda and Tatsuya Shoji, R&D Repartment, tri-Ace, Inc.
++ [Real-time Physicaly Based Rendering](https://en.ppt-online.org/378584) by Yoshiharu Gotanda and Tatsuya Shoji, R&D Repartment, tri-Ace, Inc.
 + [Enterprise PBR Shading Model](https://dassaultsystemes-technology.github.io/EnterprisePBRShadingModel/user_guide.md.html) by Dassault Systèmes for general references about PBR and shading
 + [Filament project](https://google.github.io/filament/Filament.md.html) by Google for general references about PBR and shading
-+ [Filament Crafting Physiccaly-Based Materials](https://google.github.io/filament/Material%20Properties.pdf) for material references
++ [Filament Crafting Physicaly-Based Materials](https://google.github.io/filament/Material%20Properties.pdf) for material references
 + [Brian Karis's blog](https://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html) for Specular BRDF Reference
 + [A Simple and Practical Approach to SSAO](https://www.gamedev.net/articles/programming/graphics/a-simple-and-practical-approach-to-ssao-r2753/) for an explanation of the SSAO algorithm
 + [Daniel-Alin Loghin's blog](http://alinloghin.com/articles/compute_ibl.html) for IBL resources calculation
