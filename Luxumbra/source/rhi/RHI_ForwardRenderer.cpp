@@ -1494,10 +1494,10 @@ namespace lux::rhi
 
 				const resource::Mesh& currentMesh = (*itMesh)->GetMesh();
 
-				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.rtCutoutGraphicsPipeline.pipeline);
-				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &currentMesh.vertexBuffer.buffer, vertexBufferOffsets);
-				vkCmdBindIndexBuffer(commandBuffer, currentMesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-				vkCmdDrawIndexed(commandBuffer, currentMesh.indexCount, 1, 0, 0, 0);
+				//vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.rtCutoutGraphicsPipeline.pipeline);
+				//vkCmdBindVertexBuffers(commandBuffer, 0, 1, &currentMesh.vertexBuffer.buffer, vertexBufferOffsets);
+				//vkCmdBindIndexBuffer(commandBuffer, currentMesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+				//vkCmdDrawIndexed(commandBuffer, currentMesh.indexCount, 1, 0, 0, 0);
 
 				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, forward.rtTransparentBackGraphicsPipeline.pipeline);
 				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &currentMesh.vertexBuffer.buffer, vertexBufferOffsets);

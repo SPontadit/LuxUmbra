@@ -1,6 +1,6 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
-#extension GL_KHR_vulkan_glsl : enable
+//#extension GL_KHR_vulkan_glsl : enable
 
 #define DIRECTIONAL_LIGHT_MAX_COUNT 4
 #define POINT_LIGHT_MAX_COUNT 64
@@ -113,6 +113,9 @@ float linearDepth(float depth)
 
 void main()
 {
+	if(texture(albedo, fsIn.textureCoordinateLS).a <= 0.0)
+		discard;
+
 	outPositionVS = vec4(fsIn.positionVS, linearDepth(gl_FragCoord.z));
 
 	vec3 directColor  = vec3(0.0);
@@ -152,8 +155,8 @@ void main()
 
 	if(material.isUnlit != 0)
 	{
-		outColor = vec4(baseColor, 1.0);
-		outIndirectColor= vec4(0.0);
+		outColor = vec4(baseColor, textureColor.a);
+		outIndirectColor = vec4(0.0);
 		return;
 	}
 

@@ -5,6 +5,8 @@ void BuildDirectionalShadowScene(lux::Engine& luxUmbra) noexcept;
 void BuildPBRModels(lux::Engine& luxUmbra) noexcept;
 void BuildPBRMaterials(lux::Engine& luxUmbra) noexcept;
 void BuildSphereScene(lux::Engine& luxUmbra) noexcept;
+void BuildTransparentScene(lux::Engine& luxUmbra) noexcept;
+
 
 void AddDirectionalLightDebugMesh(lux::scene::Scene& scene, lux::scene::LightNode* light) noexcept;
 void AddPointLightDebugMesh(lux::scene::Scene& scene, lux::scene::LightNode* light) noexcept;
@@ -22,6 +24,7 @@ int main(int ac, char* av[])
 
 	CreateMaterials(luxUmbra);
 
+	BuildTransparentScene(luxUmbra);
 	BuildSphereScene(luxUmbra);
 	BuildPostProcessScene(luxUmbra);
 	BuildDirectionalShadowScene(luxUmbra);
@@ -31,6 +34,46 @@ int main(int ac, char* av[])
 	luxUmbra.Run();
 
 	return 0;
+}
+
+void BuildTransparentScene(lux::Engine& luxUmbra) noexcept
+{
+	lux::scene::Scene& scene = luxUmbra.GetScene(lux::SCENE::TRANSPARENT_SCENE);
+	lux::resource::ResourceManager& resourceManager = luxUmbra.GetResourceManager();
+	
+	std::shared_ptr<lux::resource::Texture> luxLogo = resourceManager.GetTexture("data/textures/LuxumbraLogo.png");
+	std::shared_ptr<lux::resource::Texture> vkLogo = resourceManager.GetTexture("data/textures/Vulkan_Logo.png");
+
+	lux::resource::MaterialCreateInfo luxMaterialCI;
+	luxMaterialCI.baseColor = glm::vec3(1.0f);
+	luxMaterialCI.albedo = luxLogo;
+	luxMaterialCI.metallic = false;
+	luxMaterialCI.perceptualRoughness = 0.0f;
+	luxMaterialCI.reflectance = 0.0f;
+	luxMaterialCI.isUnlit = 1;
+	luxMaterialCI.isTransparent = true;
+	resourceManager.CreateMaterial("Lux_Logo", luxMaterialCI);
+
+	lux::resource::MaterialCreateInfo vkMaterialCI;
+	vkMaterialCI.baseColor = glm::vec3(1.0f);
+	vkMaterialCI.albedo = vkLogo;
+	vkMaterialCI.metallic = false;
+	vkMaterialCI.perceptualRoughness = 0.0f;
+	vkMaterialCI.reflectance = 0.0f;
+	vkMaterialCI.isTransparent = true;
+	vkMaterialCI.isUnlit = 1;
+	resourceManager.CreateMaterial("Vk_Logo", vkMaterialCI);
+
+	lux::scene::MeshNode* plane = scene.AddMeshNode(nullptr, glm::vec3(-1.0f, 2.f, 0.f), glm::radians(glm::vec3(0.f, 90.f, 90.f)), false, lux::resource::MeshPrimitive::MESH_PLANE_PRIMITIVE, "Lux_Logo");
+	plane->SetLocalScale(glm::vec3(1.0f, 6.0f, 6.0f));
+
+	scene.AddMeshNode(nullptr, glm::vec3(-1.5f, 2.f, 25.0f), glm::radians(glm::vec3(0.f)), false, lux::resource::MeshPrimitive::MESH_CUBE_PRIMITIVE, "Vk_Logo");
+	scene.AddMeshNode(nullptr, glm::vec3(-1.5f, 4.f, 25.0f), glm::radians(glm::vec3(0.f)), false, lux::resource::MeshPrimitive::MESH_SPHERE_PRIMITIVE, "Vk_Logo");
+
+	scene.AddCameraNode(nullptr, {0.5f, 3.f, 30.0f }, glm::radians(glm::vec3(0.0f)), false, 45.f, 0.01f, 1000.f, true);
+
+	lux::scene::MeshNode* limit = scene.AddMeshNode(nullptr, glm::vec3(-25.0F, 15.0f, -20.0f), glm::radians(glm::vec3(0.0f)), false, lux::resource::MeshPrimitive::MESH_SPHERE_PRIMITIVE, "Limit");
+	limit->SetLocalScale(glm::vec3(0.001f));
 }
 
 void BuildSphereScene(lux::Engine& luxUmbra) noexcept
@@ -111,7 +154,7 @@ void BuildSphereScene(lux::Engine& luxUmbra) noexcept
 	row++;
 	for (size_t j = 0; j <= column; j++)
 	{
-		defaultMaterialCI.clearCoatPerceptualRoughness = 1.0 - TO_FLOAT(j) / TO_FLOAT(column);
+		defaultMaterialCI.clearCoatPerceptualRoughness = 1.0f - TO_FLOAT(j) / TO_FLOAT(column);
 		defaultMaterialCI.clearCoat = 0.8f;
 
 		defaultMaterialCI.metallic = false;
@@ -249,7 +292,7 @@ void BuildPBRModels(lux::Engine& luxUmbra) noexcept
 	defaultMaterialCI.reflectance = 0.2f;
 	resourceManager.CreateMaterial("Corset", defaultMaterialCI);
 
-	scene.AddCameraNode(nullptr, { 0.f, 1.f, 5.f }, { 0.f, 0.f, 0.f }, false, 45.f, 0.1f, 50.f, true);
+	scene.AddCameraNode(nullptr, { -0.2f, 1.9f, 5.f }, glm::radians(glm::vec3(-14.f, -25.5f, 0.f)), false, 45.f, 0.1f, 50.f, true);
 
 	lux::scene::MeshNode* DamagedHelmet = scene.AddMeshNode(nullptr, glm::vec3(-3.0f, 0.5f, 0.f), glm::radians(glm::vec3(0.0f, 30.0f, 0.0f)), false, "data/DamagedHelmet/DamagedHelmet.gltf", "Helmet");
 	DamagedHelmet->SetLocalScale(glm::vec3(0.6f));
@@ -262,6 +305,9 @@ void BuildPBRModels(lux::Engine& luxUmbra) noexcept
 
 	lux::scene::MeshNode* plan = scene.AddMeshNode(nullptr, glm::vec3(0.0f, -0.5f, 0.0f), glm::radians(glm::vec3(0.0f, 0.0f, -90.0f)), false, lux::resource::MeshPrimitive::MESH_PLANE_PRIMITIVE, "White_Plane");
 	plan->SetLocalScale(glm::vec3(5.0f));
+
+	//lux::scene::MeshNode* area = scene.AddMeshNode(nullptr, glm::vec3(0.0f, -0.5f, 0.0f), glm::radians(glm::vec3(0.0f, 0.0f, 0.0f)), false, "data/models/test_area.fbx", "White_Plane");
+
 
 	lux::scene::LightNode* pointLight = scene.AddLightNode(nullptr, glm::vec3(-2.2f, 1.8f, 0.0f), glm::radians(glm::vec3(0.f, 0.f, 0.f)), false, lux::scene::LightType::LIGHT_TYPE_POINT, glm::vec3(1.f, 0.f, 0.f));
 	AddPointLightDebugMesh(scene, pointLight);
@@ -378,7 +424,7 @@ void BuildPBRMaterials(lux::Engine& luxUmbra) noexcept
 	resourceManager.CreateMaterial("Triangle", TriangleMaterialCI);
 
 
-	scene.AddCameraNode(nullptr, { 1.f, 3.f, 4.f }, glm::radians(glm::vec3(-30.0f, 15.0f, 0.0f)), false, 45.f, 0.1f, 50.f, true);
+	scene.AddCameraNode(nullptr, { 1.f, 3.f, 4.f }, glm::radians(glm::vec3(-30.0f, 15.0f, 0.0f)), false, 45.f, 0.01f, 50.f, true);
 
 	glm::vec3 rotation = glm::vec3(-90.0f, 40.0f, 0.0f);
 
