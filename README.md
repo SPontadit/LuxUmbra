@@ -3,7 +3,7 @@
 LuxUmbra is a light & shadow engine that runs with the Vulkan API.<br>
 The goals of the project were to learn the **Vulkan API** and modern rendering techniques like **Physically Based-Rendering** (PBR) and **Post-Process** effects. We did not focus on performance and optimization.
 
-It was developed in one month by two people.<br>
+It was developed in one month by Matthieu de Laharpe and Stephane Pontadit.<br>
 
 ![Overview](README_Resources/Models.jpg)
 
