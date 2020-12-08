@@ -1,3 +1,5 @@
+### Stéphane Pontadit & Matthieu de Laharpe
+
 # LuxUmbra -  Light & Shadow Engine
 
 LuxUmbra is a light & shadow engine that runs with the Vulkan API.<br>
